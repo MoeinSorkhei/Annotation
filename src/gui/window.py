@@ -5,10 +5,16 @@ import logic
 
 
 class Window:
-    def __init__(self, master, file, position, input_type, resized=None):
+    def __init__(self, master, files, position, input_type, resize_to=None):
         # attributes
         self.position = position
-        self.file = file
+        # self.file = file
+        self.files = files
+        print(f'In Window [__init__]: init with files list of len: {len(files)}')
+
+        self.current_index = 0
+        self.current_file = files[self.current_index]  # this first file
+        self.img_size = resize_to  # could be None if no resize is needed
 
         # ======== frame for putting things into it
         self.frame_pos = \
@@ -33,33 +39,52 @@ class Window:
             self.button.pack(side=BOTTOM)
 
         # ======== image resize
-        if resized:
-            self.photo = ImageTk.PhotoImage(self.resize_img(resized))
-        else:
-            self.photo = PhotoImage(file=file)
+        self.photo = self.resize_if_needed()
 
-        # ======== load the photo in a tkinter label
-        self.photo_label = Label(self.frame, image=self.photo)
-        self.photo_label.pack(side=TOP)
+        # ======== load the (first) photo in a tkinter label
+        self.photo_panel = Label(self.frame, image=self.photo)
+        self.photo_panel.pack(side=TOP)
 
-        self.caption = Label(self.frame, text=file.split('/')[-1], font='-size 10')
-        self.caption.pack(side=BOTTOM)
+        self.caption_panel = Label(self.frame, text=self.current_file.split('/')[-1], font='-size 10')
+        self.caption_panel.pack(side=BOTTOM)
 
-    def resize_img(self, size):
-        img = Image.open(self.file)
-        resized = img.resize(size)
-        return resized
+    def update_frame(self):
+        # ======== update window: show next image
+        # new_file = '../tmp/imgs/00000001_001.png'  # update file
+        self.current_index += 1  # index of the next file
+        print('current index', self.current_index)
+        if self.current_index == len(self.files):
+            print('In [update_frame]: all images are rated. Terminating the program...')
+            exit(0)
+
+        self.current_file = self.files[self.current_index]  # next file path
+        self.photo = self.resize_if_needed()  # resize next file
+        self.photo_panel.configure(image=self.photo)  # update the image
+        self.photo_panel.image = self.photo
+        self.caption_panel.configure(text=self.current_file.split('/')[-1])  # update the caption
 
     def keyboard_press(self, event):
         pressed = repr(event.char)
-        print(f'In [keyboard_press]: pressed {pressed}')
+        print(f'In [keyboard_press]: pressed {pressed} for image: "{self.current_file}"')
 
         if eval(pressed) == '1' or eval(pressed) == '2' or eval(pressed) == '3':
             logic.save_keyboard_result(pressed)
+            self.update_frame()
 
     def button_click(self, event):
         chosen = 'left_chosen' if self.position == 'left' else 'right_chosen'
         logic.save_click_result(chosen)
+
+    def resize_if_needed(self):
+        if self.img_size is not None:
+            img = Image.open(self.current_file)
+            resized = img.resize(self.img_size)
+            photo = ImageTk.PhotoImage(resized)
+
+        else:  # no resize
+            photo = PhotoImage(file=self.current_file)
+
+        return photo
 
 
 def show_window_with_button_input():
@@ -72,29 +97,31 @@ def show_window_with_button_input():
                         file="../tmp/imgs/00000001_000.png",
                         position='left',
                         input_type='button',
-                        resized=(512, 512))
+                        resize_to=(512, 512))
 
     # ========= right frame
     right_frame = Window(master=root,
                          file='../tmp/imgs/00000001_001.png',
                          position='right',
                          input_type='button',
-                         resized=(512, 512))
+                         resize_to=(512, 512))
 
     root.mainloop()  # run the main window continuously
 
 
-def show_window_with_keyboard_input():
+def show_window_with_keyboard_input(params):
     root = Tk()  # creates a blank window (or main window)
-    title = Label(root,
-                  text='Which image is harder to read? The left one or the right one?',
-                  bg='light blue',
-                  font='-size 20')
+    text = 'How hard is this image? (press the keyboard) \n Obviously easy: 1 \n Obviously hard: 3 \n Not sure: 2'
+    title = Label(root, text=text, bg='light blue', font='-size 20')
     title.pack(fill=X)
 
-    frame = Window(master=root, file="../tmp/imgs/00000001_000.png",
+    # IMPORTANT: the image directory has only images and not any other file, otherwise code must be refactored
+    # files = ["../tmp/imgs/00000001_000.png", '../tmp/imgs/00000001_001.png']
+    # files = logic.get_files_paths(imgs_dir=params['img_dir'])
+    files = logic.get_files_paths(imgs_dir=params['imgs_dir'])
+    frame = Window(master=root, files=files,
                    position='top',
                    input_type='keyboard',
-                   resized=(512, 512))
+                   resize_to=(512, 512))
 
     root.mainloop()  # run the main window continuously
