@@ -1,5 +1,8 @@
 from tkinter import *
 from PIL import Image, ImageTk
+import ctypes
+import os
+from threading import Thread
 
 import logic
 
@@ -10,9 +13,13 @@ class Window:
         self.position = position
         # self.file = file
         self.files = files
-        print(f'In Window [__init__]: init with files list of len: {len(files)}')
+        logic.log(f"{'*' * 150} \n{'*' * 150} \nIn Window [__init__]: init with files list of len: {len(files)}", no_time=True)
+        # print(f'In Window [__init__]: init with files list of len: {len(files)}')
 
         self.current_index = 0
+        # print('current index', self.current_index)
+        logic.log(f"{'=' * 150} \n current index: {self.current_index}", no_time=True)
+
         self.current_file = files[self.current_index]  # this first file
         self.img_size = resize_to  # could be None if no resize is needed
 
@@ -45,35 +52,43 @@ class Window:
         self.photo_panel = Label(self.frame, image=self.photo)
         self.photo_panel.pack(side=TOP)
 
-        self.caption_panel = Label(self.frame, text=self.current_file.split('/')[-1], font='-size 10')
+        self.caption_panel = Label(self.frame, text=self.current_file.split(os.path.sep)[-1], font='-size 10')
         self.caption_panel.pack(side=BOTTOM)
 
     def update_frame(self):
         # ======== update window: show next image
-        # new_file = '../tmp/imgs/00000001_001.png'  # update file
         self.current_index += 1  # index of the next file
-        print('current index', self.current_index)
+        logic.log(f"{'=' * 150} \ncurrent index: {self.current_index}", no_time=True)
+
         if self.current_index == len(self.files):
-            print('In [update_frame]: all images are rated. Terminating the program...')
+            logic.log('In [update_frame]: all images are rated. Terminating the program...\n\n\n\n\n\n')
             exit(0)
 
         self.current_file = self.files[self.current_index]  # next file path
         self.photo = self.resize_if_needed()  # resize next file
         self.photo_panel.configure(image=self.photo)  # update the image
         self.photo_panel.image = self.photo
-        self.caption_panel.configure(text=self.current_file.split('/')[-1])  # update the caption
+        self.caption_panel.configure(text=self.current_file.split(os.path.sep)[-1])  # update the caption
 
     def keyboard_press(self, event):
         pressed = repr(event.char)
-        print(f'In [keyboard_press]: pressed {pressed} for image: "{self.current_file}"')
+        logic.log(f'In [keyboard_press]: pressed {pressed} for image: "{self.current_file}"')
 
+        # ======== only take action if it is a valid number, otherwise will be ignored
         if eval(pressed) == '1' or eval(pressed) == '2' or eval(pressed) == '3':
-            logic.save_keyboard_result(pressed)
+            logic.save_rating(img_name=self.current_file.split(os.path.sep)[-1], rate=eval(pressed))
+
+            # ======== upload results regularly
+            if self.current_index % 2 == 0:
+                thread = Thread(target=logic.email_results)  # make it non-blocking as emailing takes time
+                thread.start()
+                # logic.email_results()
+
             self.update_frame()
 
     def button_click(self, event):
         chosen = 'left_chosen' if self.position == 'left' else 'right_chosen'
-        logic.save_click_result(chosen)
+        # logic.save_click_result(chosen)
 
     def resize_if_needed(self):
         if self.img_size is not None:
@@ -116,8 +131,6 @@ def show_window_with_keyboard_input(params):
     title.pack(fill=X)
 
     # IMPORTANT: the image directory has only images and not any other file, otherwise code must be refactored
-    # files = ["../tmp/imgs/00000001_000.png", '../tmp/imgs/00000001_001.png']
-    # files = logic.get_files_paths(imgs_dir=params['img_dir'])
     files = logic.get_files_paths(imgs_dir=params['imgs_dir'])
     frame = Window(master=root, files=files,
                    position='top',

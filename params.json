@@ -1,3 +1,4 @@
 {
-  "imgs_dir": "../tmp/imgs"
+  "imgs_dir": "../tmp/imgs",
+  "output_path": "../output"
 }

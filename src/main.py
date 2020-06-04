@@ -7,6 +7,8 @@ import logic
 def read_params_and_args():
     parser = argparse.ArgumentParser(description='Annotation tool')
     parser.add_argument('--imgs_dir', type=str)
+    parser.add_argument('--output_path', type=str)
+
     arguments = parser.parse_args()
     params = logic.read_params('../params.json')
 
@@ -16,6 +18,10 @@ def read_params_and_args():
 def adjust_params(args, params):
     if args.imgs_dir is not None:
         params['imgs_dir'] = args.imgs_dir
+
+    if args.output_path is not None:
+        params['output_path'] = args.output_path  # not used at the moment
+
     return params
 
 
