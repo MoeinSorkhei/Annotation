@@ -1,0 +1,11 @@
+srs/test.py
+commit_msg.txt
+tmp/
+
+*.idea
+__pycache__*
+__pycache__/
+*.pyc
+.DS_Store
+**/.DS_Scleartore
+
