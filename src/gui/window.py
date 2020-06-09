@@ -1,6 +1,5 @@
 from tkinter import *
 from PIL import Image, ImageTk
-import ctypes
 import os
 from threading import Thread
 import pydicom
@@ -8,85 +7,98 @@ import numpy as np
 from matplotlib import cm
 
 import logic
-from logic import log
+from logic import log, split_to_lines, pure_name
+from logic import *
 import globals
 
 
 class Window:
-    def __init__(self, master, files, position, input_type, resize_to=None):
-        # attributes
-        # self.logic_params = logic_params
-        self.position = position
+    def __init__(self, master, cases, input_type, resize_to=None):
+        # ======== attributes
+        self.input_type = input_type
         self.enable_caption = False
-        self.files = files
-        logic.log(f"{'*' * 150} \n{'*' * 150} \nIn Window [__init__]: init with files list of len: {len(files)}", no_time=True)
+        self.cases = cases
+        logic.log(f"{'*' * 150} \n{'*' * 150} \nIn Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
 
         self.current_index = 0
-        self.prev_result = None  # tuple (file name, result)
-
-        self.current_file = files[self.current_index]  # this first file
+        self.prev_result = None  # tuple (img, rate) or (left_img, right_img, rate)
         self.img_size = resize_to  # could be None if no resize is needed
 
         # ======== log the info
-        logic.log(f"{'=' * 150} \ncurrent index: {self.current_index}", no_time=True)
-        logic.log(f'Image: "{self.current_file.split(os.path.sep)[-1]}"')
-        logic.log(f'Full path: "{self.current_file}" \n')
+        logic.log(f"\n{'=' * 150} \nCurrent index: {self.current_index}\n", no_time=True)
+
+        # ======== determine file(s) to show
+        if input_type == 'single':
+            self.current_file = cases[self.current_index]  # this first file
+
+            multi_log([f'Image: "{pure_name(self.current_file)}"', f'Full path: "{self.current_file}" \n'])
+
+        if input_type == 'side_by_side':
+            self.curr_left_file = cases[self.current_index][0]
+            self.curr_right_file = cases[self.current_index][1]
+
+            multi_log([f'Left Image: "{pure_name(self.curr_left_file)}"', f'Left Full path: "{self.curr_left_file}"\n',
+                       f'Right Image: "{pure_name(self.curr_right_file)}"', f'Right Full path: "{self.curr_right_file}"\n'])
 
         # ======== frame for putting things into it
-        self.frame_pos = \
-            LEFT if position == 'left' else RIGHT if position == 'right' else TOP if position == 'top' else BOTTOM
-        self.frame = Frame(master=master)
-        self.frame.pack(side=self.frame_pos)
+        if input_type == 'single':
+            self.frame = Frame(master=master)
+            self.frame.pack(side=TOP)
 
-        # ======== window gets input from keyboard
-        if input_type == 'keyboard':
-            # ======== bind keyboard press to function
-            master.bind("<Key>", self.keyboard_press)
+        if input_type == 'side_by_side':
+            self.left_frame = Frame(master=master)
+            self.left_frame.pack(side=LEFT)
 
-        # ======== window gets input from button
-        if input_type == 'button':
-            # ======== button
-            self.button_text = "Left image is harder" if position == 'left' else "Right image is harder"
-            self.button_fg = 'green' if position == 'left' else 'blue'
-            self.button_fn = self.button_click
+            self.right_frame = Frame(master=master)
+            self.right_frame.pack(side=RIGHT)
 
-            self.button = Button(master=self.frame, text=self.button_text, fg=self.button_fg, height=3, width=20)
-            self.button.bind('<Button-1>', self.button_fn)
-            self.button.pack(side=BOTTOM)
+        # ======== bind keyboard press to function
+        master.bind("<Key>", self.keyboard_press)
 
-        # ======== image resize
-        self.photo = self.read_img_and_resize_if_needed()
+        # ======== show image with caption, if caption enabled
+        if input_type == 'single':
+            self.photo = self.read_img_and_resize_if_needed()
 
-        # ======== load the (first) photo in a tkinter label
-        self.photo_panel = Label(self.frame, image=self.photo)
-        self.photo_panel.pack(side=TOP)
+            # ======== load the (first) photo in a tkinter label
+            self.photo_panel = Label(master, image=self.photo)
+            self.photo_panel.pack(side=TOP)
 
-        if self.enable_caption:
-            self.caption_panel = Label(self.frame, text=self.current_file.split(os.path.sep)[-1], font='-size 10')
-            self.caption_panel.pack(side=TOP)
+            # ======== caption panel (image name) if enabled
+            if self.enable_caption:
+                self.caption_panel = Label(self.frame, text=pure_name(self.current_file), font='-size 10')
+                self.caption_panel.pack(side=TOP)
 
-        stat_text = f'Case 1 of {len(self.files)}' + \
-                    (f'\nPrevious choice: {self.prev_result[1]}' if self.prev_result is not None else '')
+        # ======== show left and right images with caption, if caption enabled
+        if input_type == 'side_by_side':
+            self.left_photo, self.right_photo = self.read_img_and_resize_if_needed()
+            self.left_photo_panel = Label(master, image=self.left_photo)
+            self.left_photo_panel.pack(side=LEFT)
 
-        self.stat_panel = Label(self.frame, text=stat_text, font='-size 15')
-        self.stat_panel.pack(side=RIGHT)
+            self.right_photo_panel = Label(master, image=self.right_photo)
+            self.right_photo_panel.pack(side=RIGHT)
+
+            if self.enable_caption:
+                self.left_caption_panel = Label(self.left_frame, text=pure_name(self.curr_left_file), font='-size 10')
+                self.left_caption_panel.pack(side=TOP)
+
+                self.right_caption_panel = Label(self.right_frame, text=pure_name(self.curr_right_file), font='-size 10')
+                self.right_caption_panel.pack(side=TOP)
+
+        # ======== status panel
+        stat_text = f'Case 1 of {len(self.cases)}' + \
+                    (f'\nPrevious rating: {self.prev_result[1]}' if self.prev_result is not None else '')
+        self.stat_panel = Label(master, text=stat_text, font='-size 15')
+        self.stat_panel.pack(side=BOTTOM)
 
         # ======== prev_button
-        self.prev_button = Button(master=self.frame, text="Show previous case")
+        self.prev_button = Button(master, text="Show previous case")
         self.prev_button.bind('<Button-1>', self.show_previous_case)
 
         # ======== finalize button
-        self.fin_button = Button(master=self.frame, text="Finalize this session \n(Takes a few seconds once clicked)")
+        self.fin_button = Button(master, text="Finalize this session \n(Takes a few seconds once clicked)")
         self.fin_button.bind('<Button-1>', self.finalize_session)
 
-    def update_frame(self, direction):
-        # ======== update current index
-        if direction == 'next':
-            self.current_index += 1  # index of the next file
-        else:
-            self.current_index -= 1  # index of the previous file
-
-        # ======== update the buttons
+    def update_prev_button(self):
         if self.current_index == 0:  # hide the prev_button for the first frame
             self.prev_button.pack_forget()
 
@@ -96,83 +108,167 @@ class Window:
         else:   # hide the prev_button again if we are in the previous window
             self.prev_button.pack_forget()
 
-        # ======== update the image and caption
-        if self.current_index == len(self.files):  # hide image and caption on the final page
-            logic.log(f"{'=' * 150} \nON THE FINAL PAGE", no_time=True)
-            self.photo_panel.pack_forget()
-            if self.enable_caption:
-                self.caption_panel.pack_forget()
-            self.fin_button.pack(side=BOTTOM)
+    def update_photos(self, frame):
+        # ======== for the final frame
+        if frame == 'final':
+            if self.input_type == 'single':
+                self.photo_panel.pack_forget()
+                if self.enable_caption:
+                    self.caption_panel.pack_forget()
 
-        if self.current_index != len(self.files):
-            # ======== update the rest of the window
-            self.current_file = self.files[self.current_index]  # next file path
-            self.photo = self.read_img_and_resize_if_needed()  # resize next file
-            self.photo_panel.configure(image=self.photo)  # update the image
-            self.photo_panel.image = self.photo
+            if self.input_type == 'side_by_side':
+                self.left_photo_panel.pack_forget()
+                self.right_photo_panel.pack_forget()
 
-            if self.enable_caption:
-                self.caption_panel.configure(text=self.current_file.split(os.path.sep)[-1])  # update the caption
+                if self.enable_caption:
+                    self.left_caption_panel.pack_forget()
+                    self.right_caption_panel.pack_forget()
 
-            # ======== log info
-            logic.log(f"{'=' * 150} \ncurrent index: {self.current_index}", no_time=True)
-            logic.log(f'Image: "{self.current_file.split(os.path.sep)[-1]}"')
-            logic.log(f'Full path: "{self.current_file}" \n')
+        # ======== for the rest of the frames
+        else:
+            if self.input_type == 'single':
+                # ======== update current file
+                self.current_file = self.cases[self.current_index]  # next file path
+                # logic.log(f'Image: "{self.current_file.split(os.path.sep)[-1]}"')
+                logic.log(f'Image: "{pure_name(self.current_file)}"')
+                logic.log(f'Full path: "{self.current_file}" \n')
 
-            # ======== show them (useful e.g., if they have been hidden)
-            self.photo_panel.pack(side=TOP)
+                # ======== update the image
+                self.photo = self.read_img_and_resize_if_needed()  # resize next file
+                self.photo_panel.configure(image=self.photo)  # update the image
+                self.photo_panel.image = self.photo
+                self.photo_panel.pack(side=TOP)
 
-            if self.enable_caption:
-                self.caption_panel.pack(side=TOP)
+                # ======== update caption
+                if self.enable_caption:
+                    # self.caption_panel.configure(text=self.current_file.split(os.path.sep)[-1])  # update the caption
+                    self.caption_panel.configure(text=pure_name(self.current_file))  # update the caption
+                    self.caption_panel.pack(side=TOP)
 
-            self.fin_button.pack_forget()  # hide finalize
+            if self.input_type == 'side_by_side':
+                # ======== update left and right files
+                self.curr_left_file = self.cases[self.current_index][0]
+                self.curr_right_file = self.cases[self.current_index][1]
 
-        # ======== update stat panel
-        if self.current_index != len(self.files):
-            stat_text = f'Case {self.current_index + 1} of {len(self.files)}' + \
-                        (f'\nPrevious choice: {self.prev_result[1]}' if self.prev_result is not None else '')
+                # logic.log(f'\nLeft Image: "{self.current_left_file.split(os.path.sep)[-1]}"')
+                logic.log(f'Left Image: "{pure_name(self.curr_left_file)}"')
+                logic.log(f'Left Full path: "{self.curr_left_file}" \n')
+                # logic.log(f'Right Image: "{self.current_right_file.split(os.path.sep)[-1]}"')
+                logic.log(f'Right Image: "{pure_name(self.curr_right_file)}"')
+                logic.log(f'Right Full path: "{self.curr_right_file}" \n')
+
+                # ======== update photos
+                self.left_photo, self.right_photo = self.read_img_and_resize_if_needed()
+                self.left_photo_panel.configure(image=self.left_photo)
+                self.right_photo_panel.configure(image=self.right_photo)
+
+                self.left_photo_panel.pack(side=LEFT)
+                self.right_photo_panel.pack(side=RIGHT)
+
+                # ======== update captions
+                if self.enable_caption:
+                    # self.left_caption_panel.configure(text=self.current_left_file.split(os.path.sep)[-1])
+                    self.left_caption_panel.configure(text=pure_name(self.curr_left_file))
+                    # self.right_caption_panel.configure(text=self.current_right_file.split(os.path.sep)[-1])
+                    self.right_caption_panel.configure(text=pure_name(self.curr_right_file))
+                    self.left_caption_panel.pack(side=TOP)
+                    self.right_caption_panel.pack(side=TOP)
+
+    def update_stat(self):
+        stat_text = ''
+        if self.current_index != len(self.cases):
+            if self.input_type == 'single':
+                stat_text = f'Case {self.current_index + 1} of {len(self.cases)}' + \
+                            (f'\nPrevious rating: {self.prev_result[1]}' if self.prev_result is not None else '')
+
+            if self.input_type == 'side_by_side':
+                stat_text = f'Case {self.current_index + 1} of {len(self.cases)}' + \
+                            (f'\nPrevious rating: {self.prev_result[2]}' if self.prev_result is not None else '')
         else:  # do not show case on the final page
-            stat_text = f'\nPrevious choice: {self.prev_result[1]}'
+            if self.input_type == 'single':
+                stat_text = f'\nPrevious rating: {self.prev_result[1]}'
+
+            if self.input_type == 'side_by_side':
+                stat_text = f'\nPrevious rating: {self.prev_result[2]}'
+
         self.stat_panel.configure(text=stat_text)
 
-    def finalize_session(self, event):
-        log(f'\nIn [finalize_session]: Clicked "finalize_session"')
-        logic.save_rating(img_name=self.prev_result[0], rate=self.prev_result[1])
-        log(f'In [finalize_session]: \nSaved previous result: "{self.prev_result}"')
-        logic.log('In [finalize_session]: Session is finalized. Uploading the result and terminating...\n')
+    def update_frame(self, direction):
+        # ======== update current index
+        if direction == 'next':
+            self.current_index += 1  # index of the next file
+        else:
+            self.current_index -= 1  # index of the previous file
 
-        # upload the results
+        # ======== print the current index (except for the final page)
+        if self.current_index < len(self.cases):
+            logic.log(f"\n\n\n\n{'=' * 150} \nCurrent index: {self.current_index}\n", no_time=True)
+
+        # ======== update the prev_button
+        self.update_prev_button()
+
+        # ======== update the image and caption for finalize page - hide image(s)
+        if self.current_index == len(self.cases):
+            logic.log(f"{'=' * 150} \n\n\nON THE FINAL PAGE", no_time=True)
+            self.update_photos(frame='final')
+            self.fin_button.pack(side=BOTTOM)  # show finalize button
+
+        # ======== update the image and caption for other pages - show image(s)
+        if self.current_index != len(self.cases):
+            self.update_photos(frame='others')
+            self.fin_button.pack_forget()  # hide finalize button
+
+        # ======== update stat panel
+        self.update_stat()
+
+    def finalize_session(self, event):
+        log(f'In [finalize_session]: Clicked "finalize_session"\n')
+        logic.save_rating(self.prev_result)
+
+        log(f'In [finalize_session]: Saved previous result')
+        log(f'In [finalize_session]: Session is finalized. Uploading the result and terminating...')
+
+        # ======== upload the results
         logic.email_results()
-        # thread = Thread(target=logic.email_results)
-        # thread.start()
-        # thread.join()  # waiting for it to complete
         exit(0)
 
     def show_previous_case(self, event):
-        log(f'\nIn [show_previous_case]: Clicked "show_previous_case" ==> prev_result set to None. '
+        log(f'In [show_previous_case]: Clicked "show_previous_case" ==> prev_result set to None. '
             f'Updating frame to show the previous case...')
         self.prev_result = None  # because now we are in the previous window
         self.update_frame(direction='previous')
 
+    def keystroke_is_valid(self, pressed):
+        # ======== only take action if it is a valid number, otherwise will be ignored
+        key_stroke_is_valid = \
+            (self.input_type == 'single' and (eval(pressed) == '1' or eval(pressed) == '2' or eval(pressed) == '3')) \
+            or \
+            (self.input_type == 'side_by_side' and (eval(pressed) == '1' or eval(pressed) == '2'))
+        return key_stroke_is_valid
+
     def keyboard_press(self, event):
-        if self.current_index == len(self.files):
+        if self.current_index == len(self.cases):
             logic.log(f'In [keyboard_press]: Ignoring keyboard press for index "{self.current_index}"')
             return
 
         pressed = repr(event.char)
-        # logic.log(f'In [keyboard_press]: pressed {pressed} for image: "{self.current_file}"')
         logic.log(f'In [keyboard_press]: pressed {pressed}')
 
-        # ======== only take action if it is a valid number, otherwise will be ignored
-        if eval(pressed) == '1' or eval(pressed) == '2' or eval(pressed) == '3':
-            # ======== save the prev result if we are not in the previous window
+        # ======== take action if keystroke is valid
+        if self.keystroke_is_valid(pressed):
+            # ======== save the prev_result if we are not in the previous window (where prev_result is None)
             if self.prev_result is not None:
-                logic.save_rating(img_name=self.prev_result[0], rate=self.prev_result[1])
-                log(f'In [keyboard_press]: Saved previous result: "{self.prev_result}"')
+                log(f'In [keyboard_press]: Saving previous result...')
+                logic.save_rating(self.prev_result)
 
-            # ======== update the prev result to current decision
-            self.prev_result = (self.current_file.split(os.path.sep)[-1], eval(pressed))
-            log(f'In [keyboard_press]: set prev_result to: "{self.prev_result}"')
+            # ======== update the prev_result to current decision
+            if self.input_type == 'single':
+                self.prev_result = (pure_name(self.current_file), eval(pressed))
+
+            if self.input_type == 'side_by_side':
+                self.prev_result = (pure_name(self.curr_left_file), pure_name(self.curr_right_file), eval(pressed))
+
+            log(f'In [keyboard_press]: set prev_result to: \n{split_to_lines(self.prev_result)}\n')
 
             # ======== upload results regularly
             if self.current_index > 0 and self.current_index % globals.params['email_interval'] == 0:
@@ -181,71 +277,15 @@ class Window:
 
             self.update_frame(direction='next')
 
-    def button_click(self, event):
-        chosen = 'left_chosen' if self.position == 'left' else 'right_chosen'
-        # logic.save_click_result(chosen)
-
     def read_img_and_resize_if_needed(self):
-        # ======== read dicom file
-        dataset = pydicom.dcmread(self.current_file)
-        pixels = dataset.pixel_array
-        pixels = pixels / np.max(pixels)  # normalize to 0-1
+        if self.input_type == 'single':
+            return logic.read_dicom_image(self.current_file, self.img_size)
 
-        orientation = str(dataset.get('PatientOrientation', "(missing)"))
-        print(f'\nIn [read_img_and_resize_if_needed]: orientation: "{orientation}"')
-        if 'A' in orientation:  # anterior view, should be flipped
-            log(f'In [read_img_and_resize_if_needed]: the view is Anterior. Image is flipped when shown.')
-            pixels = np.flip(pixels, axis=1)
+        if self.input_type == 'side_by_side':
+            log(f'In [read_img_and_resize_if_needed]: reading the left file')
+            left_photo = logic.read_dicom_image(self.curr_left_file, self.img_size)
 
-        # apply color map, rescale to 0-255, convert to int
-        image = Image.fromarray(np.uint8(cm.bone(pixels) * 255))
+            log(f'In [read_img_and_resize_if_needed]: reading the right file')
+            right_photo = logic.read_dicom_image(self.curr_right_file, self.img_size)
 
-        if self.img_size is not None:
-            # img = Image.open(self.current_file)
-            resized = image.resize(self.img_size)
-            photo = ImageTk.PhotoImage(resized)
-
-        else:  # no resize
-            photo = ImageTk.PhotoImage(image)
-            # photo = PhotoImage(file=self.current_file)
-
-        return photo
-
-
-def show_window_with_button_input():
-    root = Tk()  # creates a blank window (or main window)
-    title = Label(root, text='Which image is harder to read? The left one or the right one?', bg='light blue', font='-size 20')
-    title.pack(fill=X)
-
-    # ========= left frame
-    left_frame = Window(master=root,
-                        file="../tmp/imgs/00000001_000.png",
-                        position='left',
-                        input_type='button',
-                        resize_to=(512, 512))
-
-    # ========= right frame
-    right_frame = Window(master=root,
-                         file='../tmp/imgs/00000001_001.png',
-                         position='right',
-                         input_type='button',
-                         resize_to=(512, 512))
-
-    root.mainloop()  # run the main window continuously
-
-
-def show_window_with_keyboard_input():
-    root = Tk()  # creates a blank window (or main window)
-    text = 'How hard is this image? (press the keyboard) \n Obviously easy: 1 \n Obviously hard: 3 \n Not sure: 2'
-    title = Label(root, text=text, bg='light blue', font='-size 20')
-    title.pack(fill=X)
-
-    # IMPORTANT: the image directory has only images and not any other file, otherwise code must be refactored
-    files = logic.get_files_paths(imgs_dir=globals.params['imgs_dir'])
-    frame = Window(master=root, files=files,
-                   position='top',
-                   input_type='keyboard',
-                   # logic_params=params,
-                   resize_to=globals.params['img_size'])
-
-    root.mainloop()  # run the main window continuously
+            return left_photo, right_photo

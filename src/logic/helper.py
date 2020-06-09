@@ -23,7 +23,6 @@ def make_dir_if_not_exists(directory):
 
 
 def get_files_paths(imgs_dir):
-    # files = os.listdir(imgs_dir)
     paths = []
     for base_path, _, filenames in os.walk(imgs_dir):
         for f in sorted(filenames):  # always read the files sorted by name
@@ -32,8 +31,12 @@ def get_files_paths(imgs_dir):
     return paths
 
 
+def multi_log(to_be_logged):
+    for string in to_be_logged:
+        log(string)
+
+
 def log(string, no_time=False):
-    # output_path = os.path.join('..', 'output')  # TO BE FIXED???
     output_path = globals.params['output_path']
     make_dir_if_not_exists(output_path)
     print(string)
@@ -44,15 +47,35 @@ def log(string, no_time=False):
         file.write(line)
 
 
-def save_rating(img_name, rate):
-    # output_path = os.path.join('..', 'output')  # TO BE FIXED???
+def split_to_lines(inp):
+    if len(inp) == 3:
+        string = f'({inp[0]}, \n{inp[1]}, {inp[2]})'
+    else:
+        string = f'({inp[0]}, {inp[1]})'
+    return string
+
+
+def pure_name(file_path):
+    return file_path.split(os.path.sep)[-1]
+
+
+def save_rating(result):
     output_path = globals.params['output_path']
     make_dir_if_not_exists(output_path)
 
-    rate_file = os.path.join(output_path, f'rate={rate}.txt')
-    with open(rate_file, 'a') as file:
-        file.write(f'{img_name}\n')
-    log(f'In [save_rating]: img name "{img_name}" appended to "{rate_file}"')
+    if len(result) == 2:  # first phase
+        rate = result[1]
+        result_as_str = [result[0]]
+        output_file = os.path.join(output_path, f'rate={rate}.txt')
+    else:  # comparison result
+        # DETERMINE THE OUTPUT FILE CORRECTLY
+        rate = result[2]
+        result_as_str = f'{result[0]} - {result[1]} - {rate}'
+        output_file = os.path.join(output_path, f'comparison.txt')
+
+    with open(output_file, 'a') as file:
+        file.write(f'{result_as_str}\n')
+    log(f'In [save_rating]: case \n{split_to_lines(result)} appended to "{output_file}"\n')
 
 
 def email_results():
