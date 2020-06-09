@@ -26,9 +26,9 @@ def adjust_params(args, params):
 
 
 def main():
-    args, params = read_params_and_args()
-    params = adjust_params(args, params)
-    gui.show_window_with_keyboard_input(params)
+    # args, params = read_params_and_args()
+    # params = adjust_params(args, params)
+    gui.show_window_with_keyboard_input()
 
 
 if __name__ == '__main__':

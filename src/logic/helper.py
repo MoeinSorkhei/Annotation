@@ -7,6 +7,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 
+import globals
+
 
 def read_params(params_path):
     with open(params_path, 'r') as f:  # reading params from the json file
@@ -24,14 +26,15 @@ def get_files_paths(imgs_dir):
     # files = os.listdir(imgs_dir)
     paths = []
     for base_path, _, filenames in os.walk(imgs_dir):
-        for f in sorted(filenames):
+        for f in sorted(filenames):  # always read the files sorted by name
             img_abs_path = os.path.abspath(os.path.join(base_path, f))
             paths.append(img_abs_path)
     return paths
 
 
 def log(string, no_time=False):
-    output_path = os.path.join('..', 'output')  # TO BE FIXED???
+    # output_path = os.path.join('..', 'output')  # TO BE FIXED???
+    output_path = globals.params['output_path']
     make_dir_if_not_exists(output_path)
     print(string)
     # append string to the file with date and time
@@ -42,7 +45,8 @@ def log(string, no_time=False):
 
 
 def save_rating(img_name, rate):
-    output_path = os.path.join('..', 'output')  # TO BE FIXED???
+    # output_path = os.path.join('..', 'output')  # TO BE FIXED???
+    output_path = globals.params['output_path']
     make_dir_if_not_exists(output_path)
 
     rate_file = os.path.join(output_path, f'rate={rate}.txt')
@@ -52,7 +56,8 @@ def save_rating(img_name, rate):
 
 
 def email_results():
-    output_path = os.path.join('..', 'output')  # TO BE FIXED???
+    # output_path = os.path.join('..', 'output')  # TO BE FIXED???
+    output_path = globals.params['output_path']
     fromaddr = "m.moein.sorkhei@gmail.com"
     toaddr = "m.moein.sorkhei@gmail.com"
 

@@ -1,4 +1,5 @@
 {
-  "imgs_dir": "../tmp/imgs",
-  "output_path": "../output"
+  "imgs_dir": "../tmp/dicoms",
+  "output_path": "../output",
+  "email_interval": 100
 }
