@@ -232,9 +232,12 @@ class Window:
         if self.mode == 'binary_insert':
             if direction == 'next' and self.low == 0 and self.high == len(self.sorted_list) - 1:
                 self.current_index += 1  # index of the next file
+                log('In [update_frame]: current index increased...')
 
-            # if direction == 'previous' and self.low == self.high:
-            #    self.current_index -= 1
+            if direction == 'previous' and self.low == self.high:
+                self.current_index -= 1
+                log('In [update_frame]: current index decreased...')
+
 
         else:
             # ======== update current index
@@ -245,8 +248,8 @@ class Window:
 
         # ======== print the current index (except for the final page)
         if self.current_index < len(self.cases):
-            log(f"\n\n\n\n{'=' * 150} \nCurrent index: {self.current_index}", no_time=True)
-            log(f'There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)
+            log(f"\n\n\n\n{'=' * 150} \nIn [update_frame]: Current index: {self.current_index}", no_time=True)
+            log(f'In [update_frame]: There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)
 
             # ======== change border of the chosen image
             '''if self.input_type == 'side_by_side' and pressed is not None:
@@ -295,9 +298,21 @@ class Window:
 
             # undo the las index update by binary search
             self.low, self.high = self.prev_result[0], self.prev_result[1]
+
+            # if index should be decreased
+            if self.low == self.high:
+                # only in this case we have insertion index
+                insertion_index = self.prev_result[3]
+                del self.sorted_list[insertion_index]
+                log(f'In [show_previous_case]: index should be decreased ==> '
+                    f'removed index {insertion_index} from sorted_list - '
+                    f'Now sorted_list has len: {len(self.sorted_list)}')
+                print_list(self.sorted_list)
+
+            self.prev_result = None  # because now we are in the previous window
+
             log(f'In [show_previous_case]: Clicked "show_previous_case". Reverted indices to: low = {self.low}, high = {self.high} '
                 f'==> prev_result set to None. Updating frame to show the previous case...\n')
-            self.prev_result = None  # because now we are in the previous window
 
         else:
             self.prev_result = None  # because now we are in the previous window
@@ -406,26 +421,42 @@ class Window:
             mid = self.low
             if eval(pressed) == '1':  # means that the new image is harder
                 self.sorted_list.insert(mid + 1, self.curr_left_file)  # insert to the right side if the index
+                self.prev_result = self.prev_result + (mid + 1,)
+
                 log(f'In [binary_search_step]: inserted into index {mid + 1} of sorted_list - '
                     f'Now sorted_list has len: {len(self.sorted_list)}\n')
 
+
             else:
                 self.sorted_list.insert(mid, self.curr_left_file)  # insert to the left side if the index
+                self.prev_result = self.prev_result + (mid,)
+
                 log(f'In [binary_search_step]: inserted into index {mid} of sorted_list - '
                     f'Now sorted_list has len: {len(self.sorted_list)}\n')
+
+            # log(f'In [binary_search_step]: also updated prev_result to include the insertion index: {self.prev_result}')
+            log(f'In [binary_search_step]: also updated prev_result to include the insertion index: {self.prev_result[3]}')
 
             self.low = 0  # reset indices
             self.high = len(self.sorted_list) - 1
             log(f'In [binary_search_step]: low and high are reset for the new image: low: {self.low}, high: {self.high}')
 
-            log('________________________________', no_time=True)
+            print_list(self.sorted_list)
+            '''log('________________________________', no_time=True)
             log(f'In [binary_search_step]: sorted_list:')
             for item in self.sorted_list:
                 log(item, no_time=True)
-            log('________________________________', no_time=True)
-            # return low, high
+            log('________________________________', no_time=True)'''
+
+            # also save the list into file in a thread?
 
 
+def print_list(sorted_list):
+    log('________________________________', no_time=True)
+    log(f'In [binary_search_step]: sorted_list:')
+    for item in sorted_list:
+        log(item, no_time=True)
+    log('________________________________', no_time=True)
 
 
 
