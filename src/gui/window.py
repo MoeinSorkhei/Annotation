@@ -233,8 +233,8 @@ class Window:
             if direction == 'next' and self.low == 0 and self.high == len(self.sorted_list) - 1:
                 self.current_index += 1  # index of the next file
 
-            if direction == 'previous' and self.low == self.high:
-                self.current_index -= 1
+            # if direction == 'previous' and self.low == self.high:
+            #    self.current_index -= 1
 
         else:
             # ======== update current index
@@ -288,14 +288,15 @@ class Window:
         #    f'Updating frame to show the previous case...')
 
         if self.mode == 'binary_insert':
-            prev_low, prev_high = self.prev_result[0], self.prev_result[1]
-            if prev_low == prev_high:  # firs comparison is done for the next image
-                self.sorted_list = self.backup_list
-                log('Sorted list reverted to backup list')
+            # prev_low, prev_high = self.prev_result[0], self.prev_result[1]
+            # if prev_low == prev_high:  # firs comparison is done for the next image
+            #    self.sorted_list = self.backup_list
+            #    log('Sorted list reverted to backup list')
 
+            # undo the las index update by binary search
             self.low, self.high = self.prev_result[0], self.prev_result[1]
-            log(f'In [show_previous_case]: Clicked "show_previous_case" ==> reverted indices to: low = {self.low} - high = {self.high} '
-                f'==> prev_result set to None. Updating frame to show the previous case...')
+            log(f'In [show_previous_case]: Clicked "show_previous_case". Reverted indices to: low = {self.low}, high = {self.high} '
+                f'==> prev_result set to None. Updating frame to show the previous case...\n')
             self.prev_result = None  # because now we are in the previous window
 
         else:
@@ -346,16 +347,18 @@ class Window:
                         # set backup list to None'''
 
                 # self.prev_result = (self.low, self.high, eval(pressed))
-                self.prev_result = ((self.low + self.high) // 2, '', '')
+                # ======= save current indices before updating
+                # self.prev_result = ((self.low + self.high) // 2, '', '')
+                self.prev_result = (self.low, self.high, eval(pressed))
+                log(f'In [keyboard_press]: set prev_result to: (low: {self.low}, high: {self.high}, eval: {eval(pressed)})\n')
                 # self.binary_search_step(low=prev_low, high=prev_high, pressed=eval(pressed))
                 # log(f'In [keyboard_press]: set prev_result to: (low = {self.low} - high = {self.high} - pressed = {eval(pressed)})\n')
-
                 # log(f'In [keyboard_press]: before binary_search_step done: low = {self.low}, high = {self.high}')
-
                 # self.low, self.high = self.update_binary_search_inds(self.low, self.high, pressed)
-                self.update_binary_search_inds(pressed)
-
                 # log(f'In [keyboard_press]: binary_search_step done: low = {self.low}, high = {self.high}')
+
+                # after this low and high are changed
+                self.update_binary_search_inds_and_possibly_insert(pressed)
 
             # ======== upload results regularly
             if self.current_index > 0 and self.current_index % globals.params['email_interval'] == 0:
@@ -378,7 +381,7 @@ class Window:
             return left_photo, right_photo
 
     # def update_binary_search_inds(self, low, high, pressed):
-    def update_binary_search_inds(self, pressed):
+    def update_binary_search_inds_and_possibly_insert(self, pressed):
         mid = (self.low + self.high) // 2
         # log(f'In [binary_search_step]: before changing indices: low: {self.low}, high: {self.high}')
 
@@ -392,10 +395,13 @@ class Window:
                 self.high = mid
                 log(f'In [binary_search_step]: high decreased to {self.high}')
 
+            log(f'In [binary_search_step]: Updated indices: low = {self.low}, high = {self.high}')
+
         # ====== suitable position is found (low = high), insert here
         else:  # mid = low = high
             self.backup_list = deepcopy(self.sorted_list)
-            log(f'In [binary_search_step]: backup list initialized with deep copy from sorted list')
+            # log(f'In [binary_search_step]: low and high are equal. Backup_list initialized with deep copy from sorted list')
+            log(f'In [binary_search_step]: low and high are equal. Inserting into list...')
 
             mid = self.low
             if eval(pressed) == '1':  # means that the new image is harder
@@ -412,11 +418,11 @@ class Window:
             self.high = len(self.sorted_list) - 1
             log(f'In [binary_search_step]: low and high are reset for the new image: low: {self.low}, high: {self.high}')
 
-            '''log('________________________________', no_time=True)
+            log('________________________________', no_time=True)
             log(f'In [binary_search_step]: sorted_list:')
             for item in self.sorted_list:
                 log(item, no_time=True)
-            log('________________________________', no_time=True)'''
+            log('________________________________', no_time=True)
             # return low, high
 
 
