@@ -1,2 +1,2 @@
 from .window import *
-from .handler import *
+from .manager import *

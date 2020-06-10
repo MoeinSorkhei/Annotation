@@ -28,12 +28,14 @@ def show_window_with_button_input():
 
 def show_window_with_keyboard_input():
     root = Tk()  # creates a blank window (or main window)
-    text = 'How hard is this image? (press the keyboard) \n Obviously easy: 1 \n Obviously hard: 3 \n Not sure: 2'
+    text = 'Which image is harder? (press the keyboard) \n Left: 1 - Right: 2'
     title = Label(root, text=text, bg='light blue', font='-size 20')
     title.pack(fill=X)
 
     # IMPORTANT: the image directory has only images and not any other file, otherwise code must be refactored
     single_cases = logic.get_files_paths(imgs_dir=globals.params['imgs_dir'])
+    #print(single_cases)
+    #input()
     comparison_cases = [
         ('../tmp/dicoms_limited/2F672B32523239764556705333486D7930764A674F513D3D_537153536F422F464D673533317446556E456D3763774455364A6367436A4C48_20140424_1.dcm',
          '../tmp/dicoms_limited/2F672B32523239764556705333486D7930764A674F513D3D_537153536F422F464D673533317446556E456D3763774455364A6367436A4C48_20140424_2.dcm'),
@@ -49,15 +51,27 @@ def show_window_with_keyboard_input():
 
     ]
     # mode = 'comparison'
-    mode = 'single'
+    # mode = 'single'
+    mode = 'binary_insert'
     if mode == 'single':
-        frame = Window(master=root, cases=single_cases,
+        frame = Window(master=root, mode=mode,
+                       cases=single_cases,
                        # position='top',
                        input_type='single',
                        resize_to=globals.params['img_size'])
-    else:
-        frame = Window(master=root, cases=comparison_cases,
+
+    elif mode == 'side_by_side':
+        frame = Window(master=root, mode=mode,
+                       cases=comparison_cases,
                        # position='top',
                        input_type='side_by_side',
                        resize_to=globals.params['img_size'])
+
+    else:
+        frame = Window(master=root, mode=mode,
+                       cases=single_cases,
+                       # position='top',
+                       input_type='side_by_side',
+                       resize_to=globals.params['img_size'])
+
     root.mainloop()  # run the main window continuously

@@ -8,7 +8,7 @@ params = {
     "imgs_dir": f"..{slash}tmp{slash}dicoms_limited",
     "output_path": f"..{slash}output",
 
-    "img_size": (128, 128),
+    "img_size": (256, 256),
     # "img_size": (512, 512),
     "email_interval": 100
 }

@@ -2,6 +2,7 @@ from tkinter import *
 from PIL import Image, ImageTk
 import os
 from threading import Thread
+from copy import deepcopy
 import pydicom
 import numpy as np
 from matplotlib import cm
@@ -13,82 +14,107 @@ import globals
 
 
 class Window:
-    def __init__(self, master, cases, input_type, resize_to=None):
+    def __init__(self, master, mode, cases, input_type, resize_to=None):
         # ======== attributes
         self.input_type = input_type
-        self.enable_caption = False
+        self.enable_caption = True
         self.cases = cases
-        logic.log(f"{'*' * 150} \n{'*' * 150} \nIn Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
+        self.mode = mode
 
-        self.current_index = 0
-        self.prev_result = None  # tuple (img, rate) or (left_img, right_img, rate)
+        # ======== log info
+        logic.log(f"\n\n\n\n{'*' * 150} \n{'*' * 150} \n{'*' * 150} \n{'*' * 150} \n"
+                  f"In Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
+        logic.log(f"Mode: {self.mode}\n", no_time=True)
+
+        self.prev_result = None  # tuple (img, rate) or (left_img, right_img, rate) or (low, high, rate)
         self.img_size = resize_to  # could be None if no resize is needed
 
-        # ======== log the info
-        logic.log(f"\n{'=' * 150} \nCurrent index: {self.current_index}\n", no_time=True)
+        # ======== bind keyboard press to function
+        master.bind("<Key>", self.keyboard_press)
 
         # ======== determine file(s) to show
         if input_type == 'single':
+            self.current_index = 0
             self.current_file = cases[self.current_index]  # this first file
-
             multi_log([f'Image: "{pure_name(self.current_file)}"', f'Full path: "{self.current_file}" \n'])
 
-        if input_type == 'side_by_side':
-            self.curr_left_file = cases[self.current_index][0]
-            self.curr_right_file = cases[self.current_index][1]
-
-            multi_log([f'Left Image: "{pure_name(self.curr_left_file)}"', f'Left Full path: "{self.curr_left_file}"\n',
-                       f'Right Image: "{pure_name(self.curr_right_file)}"', f'Right Full path: "{self.curr_right_file}"\n'])
-
-        # ======== frame for putting things into it
-        if input_type == 'single':
+            # ======== frame for putting things into it
             self.frame = Frame(master=master)
             self.frame.pack(side=TOP)
 
+            # ======== show image with caption, if caption enabled
+            self.photo = self.read_img_and_resize_if_needed()
+
+            # ==== load the photo in a tkinter label
+            self.photo_panel = Label(master, image=self.photo)
+            self.photo_panel.pack(side=TOP)
+
+            # ==== caption panel (image name) if enabled
+            if self.enable_caption:
+                self.caption_panel = Label(self.frame, text=pure_name(self.current_file), font='-size 10')
+                self.caption_panel.pack(side=TOP)
+
         if input_type == 'side_by_side':
+            if self.mode == 'binary_insert':
+                self.sorted_list = [self.cases[0]]
+                self.backup_list = None
+                log(f'In Window [__init__]: init sorted_list with len {len(self.sorted_list)} and set backup_list to None')
+
+                self.current_index = 1
+                self.low = 0
+                self.high = len(self.sorted_list) - 1
+                # self.comparisons = 0
+
+                self.curr_left_file = self.cases[self.current_index]  # image with current index
+                self.curr_right_file = self.sorted_list[0]  # other images to be compared against
+
+            else:
+                self.current_index = 0
+                self.curr_left_file = cases[self.current_index][0]
+                self.curr_right_file = cases[self.current_index][1]
+
+            multi_log([f'In Window [__init__]: Left Image: "{pure_name(self.curr_left_file)}"',
+                       f'In Window [__init__]: Left Full path: "{self.curr_left_file}"\n',
+                       f'In Window [__init__]: Right Image: "{pure_name(self.curr_right_file)}"',
+                       f'In Window [__init__]: Right Full path: "{self.curr_right_file}"\n'])
+
+            # ======== frame for putting things into it
             self.left_frame = Frame(master=master)
             self.left_frame.pack(side=LEFT)
 
             self.right_frame = Frame(master=master)
             self.right_frame.pack(side=RIGHT)
 
-        # ======== bind keyboard press to function
-        master.bind("<Key>", self.keyboard_press)
-
-        # ======== show image with caption, if caption enabled
-        if input_type == 'single':
-            self.photo = self.read_img_and_resize_if_needed()
-
-            # ======== load the (first) photo in a tkinter label
-            self.photo_panel = Label(master, image=self.photo)
-            self.photo_panel.pack(side=TOP)
-
-            # ======== caption panel (image name) if enabled
-            if self.enable_caption:
-                self.caption_panel = Label(self.frame, text=pure_name(self.current_file), font='-size 10')
-                self.caption_panel.pack(side=TOP)
-
-        # ======== show left and right images with caption, if caption enabled
-        if input_type == 'side_by_side':
+            # ======== show left and right images with caption, if caption enabled
             self.left_photo, self.right_photo = self.read_img_and_resize_if_needed()
-            self.left_photo_panel = Label(master, image=self.left_photo)
+            self.photos_panel = Label(master)
+            self.photos_panel.pack(side=TOP)
+            # self.left_photo_panel = Label(master, image=self.left_photo)
+            self.left_photo_panel = Label(self.photos_panel, image=self.left_photo)
             self.left_photo_panel.pack(side=LEFT)
 
-            self.right_photo_panel = Label(master, image=self.right_photo)
+            # self.right_photo_panel = Label(master, image=self.right_photo)
+            self.right_photo_panel = Label(self.photos_panel, image=self.right_photo)
             self.right_photo_panel.pack(side=RIGHT)
 
             if self.enable_caption:
-                self.left_caption_panel = Label(self.left_frame, text=pure_name(self.curr_left_file), font='-size 10')
+                self.left_caption_panel = Label(self.left_frame, text=pure_name(self.curr_left_file),
+                                                font='-size 10')
                 self.left_caption_panel.pack(side=TOP)
 
-                self.right_caption_panel = Label(self.right_frame, text=pure_name(self.curr_right_file), font='-size 10')
+                self.right_caption_panel = Label(self.right_frame, text=pure_name(self.curr_right_file),
+                                                 font='-size 10')
                 self.right_caption_panel.pack(side=TOP)
+
+        # ======== log the info
+        log(f"\n{'=' * 150} \nCurrent index: {self.current_index}", no_time=True)
+        log(f'There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)
 
         # ======== status panel
         stat_text = f'Case 1 of {len(self.cases)}' + \
                     (f'\nPrevious rating: {self.prev_result[1]}' if self.prev_result is not None else '')
         self.stat_panel = Label(master, text=stat_text, font='-size 15')
-        self.stat_panel.pack(side=BOTTOM)
+        self.stat_panel.pack(side=TOP)
 
         # ======== prev_button
         self.prev_button = Button(master, text="Show previous case")
@@ -147,15 +173,24 @@ class Window:
 
             if self.input_type == 'side_by_side':
                 # ======== update left and right files
-                self.curr_left_file = self.cases[self.current_index][0]
-                self.curr_right_file = self.cases[self.current_index][1]
+                if self.mode == 'binary_insert':
+                    mid = (self.low + self.high) // 2
+                    # log(f'In [update_photos]: mid: {mid}')
+                    self.curr_left_file = self.cases[self.current_index]  # left photo unchanged as reference
+                    self.curr_right_file = self.sorted_list[mid]  # right photo changed to be compared against
+                    # log(f'In [update_photos]: Updated right photo to show sorted_list[{mid}]')
+                    log(f'In [update_photos]: Updated right photo to index: {mid} of sorted_list')
+
+                else:
+                    self.curr_left_file = self.cases[self.current_index][0]
+                    self.curr_right_file = self.cases[self.current_index][1]
 
                 # logic.log(f'\nLeft Image: "{self.current_left_file.split(os.path.sep)[-1]}"')
-                logic.log(f'Left Image: "{pure_name(self.curr_left_file)}"')
-                logic.log(f'Left Full path: "{self.curr_left_file}" \n')
+                logic.log(f'In [update_photos]: Left Image: "{pure_name(self.curr_left_file)}"')
+                logic.log(f'In [update_photos]: Left Full path: "{self.curr_left_file}" \n')
                 # logic.log(f'Right Image: "{self.current_right_file.split(os.path.sep)[-1]}"')
-                logic.log(f'Right Image: "{pure_name(self.curr_right_file)}"')
-                logic.log(f'Right Full path: "{self.curr_right_file}" \n')
+                logic.log(f'In [update_photos]: Right Image: "{pure_name(self.curr_right_file)}"')
+                logic.log(f'In [update_photos]: Right Full path: "{self.curr_right_file}" \n')
 
                 # ======== update photos
                 self.left_photo, self.right_photo = self.read_img_and_resize_if_needed()
@@ -194,15 +229,31 @@ class Window:
         self.stat_panel.configure(text=stat_text)
 
     def update_frame(self, direction):
-        # ======== update current index
-        if direction == 'next':
-            self.current_index += 1  # index of the next file
+        if self.mode == 'binary_insert':
+            if direction == 'next' and self.low == 0 and self.high == len(self.sorted_list) - 1:
+                self.current_index += 1  # index of the next file
+
+            if direction == 'previous' and self.low == self.high:
+                self.current_index -= 1
+
         else:
-            self.current_index -= 1  # index of the previous file
+            # ======== update current index
+            if direction == 'next':
+                self.current_index += 1  # index of the next file
+            else:
+                self.current_index -= 1  # index of the previous file
 
         # ======== print the current index (except for the final page)
         if self.current_index < len(self.cases):
-            logic.log(f"\n\n\n\n{'=' * 150} \nCurrent index: {self.current_index}\n", no_time=True)
+            log(f"\n\n\n\n{'=' * 150} \nCurrent index: {self.current_index}", no_time=True)
+            log(f'There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)
+
+            # ======== change border of the chosen image
+            '''if self.input_type == 'side_by_side' and pressed is not None:
+            if self.input_type == 'side_by_side':
+                if eval(pressed) == '1':
+                    self.left_photo_panel.config(highlightbackground='blue')
+                    self.left_photo_panel.pack(side=LEFT)'''
 
         # ======== update the prev_button
         self.update_prev_button()
@@ -211,7 +262,7 @@ class Window:
         if self.current_index == len(self.cases):
             logic.log(f"{'=' * 150} \n\n\nON THE FINAL PAGE", no_time=True)
             self.update_photos(frame='final')
-            self.fin_button.pack(side=BOTTOM)  # show finalize button
+            self.fin_button.pack(side=TOP)  # show finalize button
 
         # ======== update the image and caption for other pages - show image(s)
         if self.current_index != len(self.cases):
@@ -233,9 +284,25 @@ class Window:
         exit(0)
 
     def show_previous_case(self, event):
-        log(f'In [show_previous_case]: Clicked "show_previous_case" ==> prev_result set to None. '
-            f'Updating frame to show the previous case...')
-        self.prev_result = None  # because now we are in the previous window
+        # log(f'In [show_previous_case]: Clicked "show_previous_case" ==> prev_result set to None. '
+        #    f'Updating frame to show the previous case...')
+
+        if self.mode == 'binary_insert':
+            prev_low, prev_high = self.prev_result[0], self.prev_result[1]
+            if prev_low == prev_high:  # firs comparison is done for the next image
+                self.sorted_list = self.backup_list
+                log('Sorted list reverted to backup list')
+
+            self.low, self.high = self.prev_result[0], self.prev_result[1]
+            log(f'In [show_previous_case]: Clicked "show_previous_case" ==> reverted indices to: low = {self.low} - high = {self.high} '
+                f'==> prev_result set to None. Updating frame to show the previous case...')
+            self.prev_result = None  # because now we are in the previous window
+
+        else:
+            self.prev_result = None  # because now we are in the previous window
+            log(f'In [show_previous_case]: Clicked "show_previous_case" ==> prev_result set to None. '
+                f'Updating frame to show the previous case...')
+
         self.update_frame(direction='previous')
 
     def keystroke_is_valid(self, pressed):
@@ -257,7 +324,7 @@ class Window:
         # ======== take action if keystroke is valid
         if self.keystroke_is_valid(pressed):
             # ======== save the prev_result if we are not in the previous window (where prev_result is None)
-            if self.prev_result is not None:
+            if self.prev_result is not None and self.mode != 'binary_insert':
                 log(f'In [keyboard_press]: Saving previous result...')
                 logic.save_rating(self.prev_result)
 
@@ -265,10 +332,30 @@ class Window:
             if self.input_type == 'single':
                 self.prev_result = (pure_name(self.current_file), eval(pressed))
 
-            if self.input_type == 'side_by_side':
+            if self.input_type == 'side_by_side' and self.mode != 'binary_insert':
                 self.prev_result = (pure_name(self.curr_left_file), pure_name(self.curr_right_file), eval(pressed))
+                log(f'In [keyboard_press]: set prev_result to: \n{split_to_lines(self.prev_result)}\n')
 
-            log(f'In [keyboard_press]: set prev_result to: \n{split_to_lines(self.prev_result)}\n')
+            if self.input_type == 'side_by_side' and self.mode == 'binary_insert':
+                '''if self.prev_result is not None:  # if we are not in the previous window (where prev_result is None)
+                    prev_low, prev_high = self.prev_result[0], self.prev_result[1]
+                    if prev_low == prev_high:  # first comparison is done for the next image
+                        log(f'In [keyboard_press]: Confirmed result for previous image has been made. Now saving the list.\n')
+                        # self.backup_list = None
+                        # save sorted list
+                        # set backup list to None'''
+
+                # self.prev_result = (self.low, self.high, eval(pressed))
+                self.prev_result = ((self.low + self.high) // 2, '', '')
+                # self.binary_search_step(low=prev_low, high=prev_high, pressed=eval(pressed))
+                # log(f'In [keyboard_press]: set prev_result to: (low = {self.low} - high = {self.high} - pressed = {eval(pressed)})\n')
+
+                # log(f'In [keyboard_press]: before binary_search_step done: low = {self.low}, high = {self.high}')
+
+                # self.low, self.high = self.update_binary_search_inds(self.low, self.high, pressed)
+                self.update_binary_search_inds(pressed)
+
+                # log(f'In [keyboard_press]: binary_search_step done: low = {self.low}, high = {self.high}')
 
             # ======== upload results regularly
             if self.current_index > 0 and self.current_index % globals.params['email_interval'] == 0:
@@ -289,3 +376,50 @@ class Window:
             right_photo = logic.read_dicom_image(self.curr_right_file, self.img_size)
 
             return left_photo, right_photo
+
+    # def update_binary_search_inds(self, low, high, pressed):
+    def update_binary_search_inds(self, pressed):
+        mid = (self.low + self.high) // 2
+        # log(f'In [binary_search_step]: before changing indices: low: {self.low}, high: {self.high}')
+
+        # ====== update the low and high indexes based ond the rating until suitable position is found
+        if self.high != self.low:
+            if eval(pressed) == '1':  # rated as harder, go to the right half of the list
+                self.low = mid if (self.high - self.low) > 1 else self.high
+                log(f'In [binary_search_step]: low increased to {self.low}')
+
+            else:  # rated as easier, go to the left half of the list
+                self.high = mid
+                log(f'In [binary_search_step]: high decreased to {self.high}')
+
+        # ====== suitable position is found (low = high), insert here
+        else:  # mid = low = high
+            self.backup_list = deepcopy(self.sorted_list)
+            log(f'In [binary_search_step]: backup list initialized with deep copy from sorted list')
+
+            mid = self.low
+            if eval(pressed) == '1':  # means that the new image is harder
+                self.sorted_list.insert(mid + 1, self.curr_left_file)  # insert to the right side if the index
+                log(f'In [binary_search_step]: inserted into index {mid + 1} of sorted_list - '
+                    f'Now sorted_list has len: {len(self.sorted_list)}\n')
+
+            else:
+                self.sorted_list.insert(mid, self.curr_left_file)  # insert to the left side if the index
+                log(f'In [binary_search_step]: inserted into index {mid} of sorted_list - '
+                    f'Now sorted_list has len: {len(self.sorted_list)}\n')
+
+            self.low = 0  # reset indices
+            self.high = len(self.sorted_list) - 1
+            log(f'In [binary_search_step]: low and high are reset for the new image: low: {self.low}, high: {self.high}')
+
+            '''log('________________________________', no_time=True)
+            log(f'In [binary_search_step]: sorted_list:')
+            for item in self.sorted_list:
+                log(item, no_time=True)
+            log('________________________________', no_time=True)'''
+            # return low, high
+
+
+
+
+
