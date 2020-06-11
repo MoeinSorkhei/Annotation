@@ -56,9 +56,13 @@ class Window:
                 self.caption_panel.pack(side=TOP)
 
         if input_type == 'side_by_side':
+            # ======== comparisons_list which contains, for very image, lists of images that were compared against it
+            self.comparisons = {}
+
             if self.mode == 'binary_insert':
                 self.sorted_list = [self.cases[0]]
                 self.backup_list = None
+                self.comparisons.update({self.cases[0]: [[], []]})  # add the first image (which has no comparisons)
                 log(f'In Window [__init__]: init sorted_list with len {len(self.sorted_list)} and set backup_list to None')
 
                 self.current_index = 1
@@ -313,6 +317,59 @@ class Window:
             (self.input_type == 'side_by_side' and (eval(pressed) == '1' or eval(pressed) == '2'))
         return key_stroke_is_valid
 
+    def update_comparison_lists(self, left_img, right_img, rate):
+        """
+        NOTES: Comparisons are only with respect to the reference image, ie if left image: 4.dcm is harder than right
+        image: 2.dcm, since the left image is reference, only 2.dcm is added to the easier_list for 4.dcm and 4.dcm is
+        not added to the harder_list for 2.dcm. This is because we only want to keep track of the images that were rated
+        against the reference image (the image that is to be inserted into the list).
+
+        ASSUMPTION: we pay attention to the latest choice by the radiologist if two choices are not compatible.
+        :param left_img:
+        :param right_img:
+        :param rate:
+        :return:
+        """
+        def append_item_not_exists(lst, item):
+            if item not in lst:
+                lst.append(item)
+
+        # ======== add the image as the key for the first time
+        if left_img not in self.comparisons.keys():
+            self.comparisons.update({left_img: [[], []]})
+
+        # ======== obtain the sets. easier_list: set of images that are easier than the dict key img
+        easier_list, harder_list = self.comparisons[left_img]
+
+        if rate == '1':  # new image is harder, should add right image to easier_list
+            if right_img in harder_list:  # if right image in harder set, remove it
+                harder_list.remove(right_img)
+
+            append_item_not_exists(easier_list, right_img)
+            log(f'In [update_comparison_sets]: added image: "{pure_name(right_img)}" to easier_list for image: "{pure_name(left_img)}"')
+
+        else:  # new image is easier, should add right image to harder_list
+            if right_img in easier_list:
+                easier_list.remove(right_img)
+
+            append_item_not_exists(harder_list, right_img)
+            log(f'In [update_comparison_sets]: added image: "{pure_name(right_img)}" to harder_list for image: "{pure_name(left_img)}"')
+
+        # print_comparisons_dict(self.comparisons)
+        save_comparison_lists(self.comparisons)
+        log(f'In [update_comparison_sets]: saved comparison_sets to file.\n')
+
+    def get_prev_imgs_using_prev_result(self):
+        # ======== This is used in the 'binary_insert' mode
+        if self.prev_result[0] == self.prev_result[1]:  # if low = high, so index has been increased
+            right_img = self.prev_result[4]  # mid_image before inserting to the sorted list
+            left_img = self.cases[self.current_index - 1]
+
+        else:  # index has not been increased
+            right_img = self.sorted_list[(self.prev_result[0] + self.prev_result[1]) // 2]  # finding mid index
+            left_img = self.cases[self.current_index]
+        return left_img, right_img
+
     def save_prev_rating(self):
         if self.input_type == 'single':
             imgs = [self.prev_result[0]]
@@ -320,22 +377,18 @@ class Window:
             save_rating(imgs, rate)
 
         if self.input_type == 'side_by_side' and self.mode != 'binary_insert':
-            imgs = self.prev_result[:2]
-            rate = self.prev_result[2]
-            save_rating(imgs, rate)
-
-        if self.input_type == 'side_by_side' and self.mode == 'binary_insert':
-            if self.prev_result[0] == self.prev_result[1]:  # if low = high, so index has been increased
-                right_img = self.prev_result[4]  # mid_image before inserting to the sorted list
-                left_img = self.cases[self.current_index - 1]
-
-            else:  # index has not been increased
-                right_img = self.sorted_list[(self.prev_result[0] + self.prev_result[1]) // 2]  # finding mid index
-                left_img = self.cases[self.current_index]
-
+            left_img, right_img = self.prev_result[:2]
             imgs = [left_img, right_img]
             rate = self.prev_result[2]
             save_rating(imgs, rate)
+            self.update_comparison_lists(left_img, right_img, rate)
+
+        if self.input_type == 'side_by_side' and self.mode == 'binary_insert':
+            left_img, right_img = self.get_prev_imgs_using_prev_result()
+            imgs = [left_img, right_img]
+            rate = self.prev_result[2]
+            save_rating(imgs, rate)
+            self.update_comparison_lists(left_img, right_img, rate)
 
     def keyboard_press(self, event):
         if self.current_index == len(self.cases):

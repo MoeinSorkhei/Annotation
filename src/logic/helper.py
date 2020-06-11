@@ -1,5 +1,6 @@
 import os
 import json
+import pickle
 from time import gmtime, strftime
 import smtplib
 from email.mime.text import MIMEText
@@ -71,6 +72,39 @@ def print_list(sorted_list):
     for item in sorted_list:
         log(item, no_time=True)
     log('________________________________', no_time=True)
+
+
+def print_comparisons_dict(comparisons):
+    print(f'In [print_comparisons_dict]: comparisons:')
+    for img, v in comparisons.items():
+        print(f'{img}')
+        print(v[0])
+        print(v[1])
+        print()
+
+
+def save_comparison_lists(comparisons):
+    output_path = globals.params['output_path']  # TO BE FIXED
+    make_dir_if_not_exists(output_path)
+    output_file = os.path.join(output_path, 'comparison_sets.json')
+
+    with open(output_file, 'w') as f:
+        json.dump(comparisons, f, indent=2)
+
+    # output_file = os.path.join(output_path, 'comparison_sets.pkl')
+    # with open(output_file, 'wb') as f:
+    #    pickle.dump(comparisons, file=f, protocol=0)  # protocol 0 for text
+
+
+def read_comparison_lists():
+    output_path = globals.params['output_path']
+    output_file = os.path.join(output_path, 'comparison_sets.json')
+    # output_file = os.path.join(output_path, 'comparison_sets.pkl')  # TO BE FIXED
+    # with open(output_file, 'rb') as f:
+    #    return pickle.load(f)
+    with open(output_file, 'rb') as f:
+        comparison_lists = json.load(f)
+    return comparison_lists
 
 
 def save_rating(imgs, rate):
