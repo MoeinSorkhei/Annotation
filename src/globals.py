@@ -2,10 +2,11 @@ import os
 
 
 slash = os.path.sep  # '/' for linux and '\' for Windows
+sorted_file = '../output/sorted.txt'
 
 params = {
     # "imgs_dir": f"..{slash}tmp{slash}dicoms",
-    "imgs_dir": f"..{slash}tmp{slash}dicoms_limited",
+    "imgs_dir": f"..{slash}tmp{slash}dicoms_very_limited",
     "output_path": f"..{slash}output",
 
     "img_size": (256, 256),

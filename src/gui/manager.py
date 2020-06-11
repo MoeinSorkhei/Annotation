@@ -34,8 +34,6 @@ def show_window_with_keyboard_input():
 
     # IMPORTANT: the image directory has only images and not any other file, otherwise code must be refactored
     single_cases = logic.get_files_paths(imgs_dir=globals.params['imgs_dir'])
-    #print(single_cases)
-    #input()
     comparison_cases = [
         ('../tmp/dicoms_limited/2F672B32523239764556705333486D7930764A674F513D3D_537153536F422F464D673533317446556E456D3763774455364A6367436A4C48_20140424_1.dcm',
          '../tmp/dicoms_limited/2F672B32523239764556705333486D7930764A674F513D3D_537153536F422F464D673533317446556E456D3763774455364A6367436A4C48_20140424_2.dcm'),

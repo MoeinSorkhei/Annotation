@@ -47,6 +47,12 @@ def log(string, no_time=False):
         file.write(line)
 
 
+def write_list_to_file(filename, lst):
+    with open(filename, 'w') as f:
+        for item in lst:
+            f.write(f'{item}\n')
+
+
 def split_to_lines(inp):
     if len(inp) == 3:
         string = f'({inp[0]}, \n{inp[1]}, {inp[2]})'
