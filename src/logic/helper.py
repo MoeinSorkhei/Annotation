@@ -65,23 +65,32 @@ def pure_name(file_path):
     return file_path.split(os.path.sep)[-1]
 
 
-def save_rating(result):
+def print_list(sorted_list):
+    log('________________________________', no_time=True)
+    log(f'In [binary_search_step]: sorted_list:')
+    for item in sorted_list:
+        log(item, no_time=True)
+    log('________________________________', no_time=True)
+
+
+def save_rating(imgs, rate):
     output_path = globals.params['output_path']
     make_dir_if_not_exists(output_path)
 
-    if len(result) == 2:  # first phase
-        rate = result[1]
-        result_as_str = [result[0]]
+    if len(imgs) == 1:
+        result_as_str = imgs[0]
         output_file = os.path.join(output_path, f'rate={rate}.txt')
-    else:  # comparison result
+
+    else:  # len(imgs) = 2:
         # DETERMINE THE OUTPUT FILE CORRECTLY
-        rate = result[2]
-        result_as_str = f'{result[0]} - {result[1]} - {rate}'
+        result_as_str = f'{imgs[0]} - {imgs[1]} - {rate}'
         output_file = os.path.join(output_path, f'comparison.txt')
 
     with open(output_file, 'a') as file:
         file.write(f'{result_as_str}\n')
-    log(f'In [save_rating]: case \n{split_to_lines(result)} appended to "{output_file}"\n')
+
+    log_lines = imgs + [rate]
+    log(f'In [save_rating]: case \n{split_to_lines(log_lines)} appended to "{output_file}"\n')
 
 
 def email_results():

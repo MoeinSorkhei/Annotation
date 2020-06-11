@@ -7,6 +7,7 @@ sorted_file = '../output/sorted.txt'
 params = {
     # "imgs_dir": f"..{slash}tmp{slash}dicoms",
     "imgs_dir": f"..{slash}tmp{slash}dicoms_very_limited",
+    # "imgs_dir": f"..{slash}tmp{slash}dicoms_limited_real_name",
     "output_path": f"..{slash}output",
 
     "img_size": (256, 256),

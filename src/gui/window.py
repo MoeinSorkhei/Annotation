@@ -26,7 +26,8 @@ class Window:
                   f"In Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
         logic.log(f"Mode: {self.mode}\n", no_time=True)
 
-        self.prev_result = None  # tuple (img, rate) or (left_img, right_img, rate) or (low, high, rate)
+        # tuple (img, rate) or (left_img, right_img, rate) or (left_img, right_img, rate, insertion_index, mid_img)
+        self.prev_result = None
         self.img_size = resize_to  # could be None if no resize is needed
 
         # ======== bind keyboard press to function
@@ -63,7 +64,6 @@ class Window:
                 self.current_index = 1
                 self.low = 0
                 self.high = len(self.sorted_list) - 1
-                # self.comparisons = 0
 
                 self.curr_left_file = self.cases[self.current_index]  # image with current index
                 self.curr_right_file = self.sorted_list[0]  # other images to be compared against
@@ -111,7 +111,7 @@ class Window:
         log(f'There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)
 
         # ======== status panel
-        stat_text = f'Case 1 of {len(self.cases)}' + \
+        stat_text = f'Case {self.current_index + 1} of {len(self.cases)}' + \
                     (f'\nPrevious rating: {self.prev_result[1]}' if self.prev_result is not None else '')
         self.stat_panel = Label(master, text=stat_text, font='-size 15')
         self.stat_panel.pack(side=TOP)
@@ -264,11 +264,10 @@ class Window:
         self.update_stat()
 
     def finalize_session(self, event):
-        log(f'In [finalize_session]: Clicked "finalize_session"\n')
-        if self.mode != 'binary_insert':
-            logic.save_rating(self.prev_result)
+        log(f'In [finalize_session]: Clicked "finalize_session."\n')
+        log(f'In [finalize_session]: saving previous result')
+        self.save_prev_rating()
 
-        log(f'In [finalize_session]: Saved previous result')
         log(f'In [finalize_session]: Session is finalized. Uploading the result and terminating...')
 
         # ======== upload the results
@@ -314,6 +313,30 @@ class Window:
             (self.input_type == 'side_by_side' and (eval(pressed) == '1' or eval(pressed) == '2'))
         return key_stroke_is_valid
 
+    def save_prev_rating(self):
+        if self.input_type == 'single':
+            imgs = [self.prev_result[0]]
+            rate = self.prev_result[1]
+            save_rating(imgs, rate)
+
+        if self.input_type == 'side_by_side' and self.mode != 'binary_insert':
+            imgs = self.prev_result[:2]
+            rate = self.prev_result[2]
+            save_rating(imgs, rate)
+
+        if self.input_type == 'side_by_side' and self.mode == 'binary_insert':
+            if self.prev_result[0] == self.prev_result[1]:  # if low = high, so index has been increased
+                right_img = self.prev_result[4]  # mid_image before inserting to the sorted list
+                left_img = self.cases[self.current_index - 1]
+
+            else:  # index has not been increased
+                right_img = self.sorted_list[(self.prev_result[0] + self.prev_result[1]) // 2]  # finding mid index
+                left_img = self.cases[self.current_index]
+
+            imgs = [left_img, right_img]
+            rate = self.prev_result[2]
+            save_rating(imgs, rate)
+
     def keyboard_press(self, event):
         if self.current_index == len(self.cases):
             logic.log(f'In [keyboard_press]: Ignoring keyboard press for index "{self.current_index}"')
@@ -324,10 +347,10 @@ class Window:
 
         # ======== take action if keystroke is valid
         if self.keystroke_is_valid(pressed):
-            # ======== save the prev_result if we are not in the previous window (where prev_result is None)
-            if self.prev_result is not None and self.mode != 'binary_insert':
+            # ======== save the prev_result once confirmed (ie when keyboard is pressed on current window)
+            if self.prev_result is not None:
                 log(f'In [keyboard_press]: Saving previous result...')
-                logic.save_rating(self.prev_result)
+                self.save_prev_rating()
 
             # ======== update the prev_result to current decision
             if self.input_type == 'single':
@@ -350,6 +373,7 @@ class Window:
                 thread = Thread(target=logic.email_results)  # make it non-blocking as emailing takes time
                 thread.start()
 
+            # ======== this also changes current_index if needed
             self.update_frame(direction='next')
 
     def read_img_and_resize_if_needed(self):
@@ -386,16 +410,18 @@ class Window:
             log(f'In [binary_search_step]: low and high are equal. Inserting into list...')
 
             mid = self.low
+            mid_image = self.sorted_list[mid]  # this image will be needed for saving comparisons
+
             if eval(pressed) == '1':  # means that the new image is harder
                 self.sorted_list.insert(mid + 1, self.curr_left_file)  # insert to the right side if the index
-                self.prev_result = self.prev_result + (mid + 1,)  # add insertion index in case undo is needed
+                self.prev_result = self.prev_result + (mid + 1, mid_image,)  # add insertion index in case undo is needed
 
                 log(f'In [binary_search_step]: inserted into index {mid + 1} of sorted_list - '
                     f'Now sorted_list has len: {len(self.sorted_list)}\n')
 
             else:
                 self.sorted_list.insert(mid, self.curr_left_file)  # insert to the left side if the index
-                self.prev_result = self.prev_result + (mid,)  # add insertion index in case undo is needed
+                self.prev_result = self.prev_result + (mid, mid_image,)  # add insertion index in case undo is needed
 
                 log(f'In [binary_search_step]: inserted into index {mid} of sorted_list - '
                     f'Now sorted_list has len: {len(self.sorted_list)}\n')
@@ -411,14 +437,5 @@ class Window:
             log(f'In [binary_search_step]: low and high are reset for the new image: low: {self.low}, high: {self.high}')
 
             # print_list(self.sorted_list)
-
-
-def print_list(sorted_list):
-    log('________________________________', no_time=True)
-    log(f'In [binary_search_step]: sorted_list:')
-    for item in sorted_list:
-        log(item, no_time=True)
-    log('________________________________', no_time=True)
-
 
 
