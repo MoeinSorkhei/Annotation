@@ -3,10 +3,11 @@ from matplotlib import cm
 import pydicom
 import numpy as np
 
+import globals
 from .helper import log
 
 
-def read_dicom_image(file, img_size):
+def read_dicom_and_resize(file):
     # ======== read dicom file
     dataset = pydicom.dcmread(file)
     pixels = dataset.pixel_array
@@ -22,9 +23,17 @@ def read_dicom_image(file, img_size):
     # apply color map, rescale to 0-255, convert to int
     image = Image.fromarray(np.uint8(cm.bone(pixels) * 255))
 
-    if img_size is not None:
-        resized = image.resize(img_size)
+    resize_factor = globals.params['resize_factor']
+    if resize_factor is not None:
+        resized = image.resize((pixels.shape[1] // resize_factor, pixels.shape[0] // resize_factor))
         photo = ImageTk.PhotoImage(resized)
     else:  # no resize
         photo = ImageTk.PhotoImage(image)
     return photo
+
+    '''if img_size is not None:
+        resized = image.resize(img_size)
+        photo = ImageTk.PhotoImage(resized)
+    else:  # no resize
+        photo = ImageTk.PhotoImage(image)
+    return photo'''

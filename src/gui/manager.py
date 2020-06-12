@@ -27,11 +27,6 @@ def show_window_with_button_input():
 
 
 def show_window_with_keyboard_input():
-    root = Tk()  # creates a blank window (or main window)
-    text = 'Which image is harder? (press the keyboard) \n Left: 1 - Right: 2'
-    title = Label(root, text=text, bg='light blue', font='-size 20')
-    title.pack(fill=X)
-
     # IMPORTANT: the image directory has only images and not any other file, otherwise code must be refactored
     single_cases = logic.get_files_paths(imgs_dir=globals.params['imgs_dir'])
     comparison_cases = [
@@ -51,7 +46,11 @@ def show_window_with_keyboard_input():
     # mode = 'comparison'
     # mode = 'single'
     mode = 'binary_insert'
-    if mode == 'single':
+    '''if mode == 'single':
+        text = 'Which image is harder? (press the keyboard) \n Left: 1 - Right: 2'
+        title = Label(root, text=text, bg='light blue', font='-size 20')
+        title.pack(fill=X)
+
         frame = Window(master=root, mode=mode,
                        cases=single_cases,
                        # position='top',
@@ -70,6 +69,27 @@ def show_window_with_keyboard_input():
                        cases=single_cases,
                        # position='top',
                        input_type='side_by_side',
-                       resize_to=globals.params['img_size'])
+                       resize_to=globals.params['img_size'])'''
+
+    if mode == 'single':
+        input_type = 'single'
+        text = 'How hard the image is? 1:  Easy, 2: Medium, 3: Hard'
+        cases = single_cases
+
+    else:  # only 'binary_insert'
+        input_type = 'side_by_side'
+        text = 'Which image is harder? 1: Left - 2: Right'
+        cases = single_cases
+
+    root = Tk()  # creates a blank window (or main window)
+    title = Label(root, text=text, bg='light blue', font='-size 20')
+    title.pack(fill=X)
+
+    frame = Window(master=root, mode=mode,
+                   cases=cases,
+                   # position='top',
+                   # input_type='side_by_side',
+                   input_type=input_type)
+                   # resize_to=globals.params['img_size'])
 
     root.mainloop()  # run the main window continuously

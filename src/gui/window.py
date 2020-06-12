@@ -14,10 +14,10 @@ import globals
 
 
 class Window:
-    def __init__(self, master, mode, cases, input_type, resize_to=None):
+    def __init__(self, master, mode, cases, input_type):
         # ======== attributes
         self.input_type = input_type
-        self.enable_caption = True
+        # self.enable_caption = True
         self.cases = cases
         self.mode = mode
 
@@ -28,7 +28,7 @@ class Window:
 
         # tuple (img, rate) or (left_img, right_img, rate) or (left_img, right_img, rate, insertion_index, mid_img)
         self.prev_result = None
-        self.img_size = resize_to  # could be None if no resize is needed
+        # self.img_size = resize_to  # could be None if no resize is needed
 
         # ======== bind keyboard press to function
         master.bind("<Key>", self.keyboard_press)
@@ -51,7 +51,7 @@ class Window:
             self.photo_panel.pack(side=TOP)
 
             # ==== caption panel (image name) if enabled
-            if self.enable_caption:
+            if globals.debug:
                 self.caption_panel = Label(self.frame, text=pure_name(self.current_file), font='-size 10')
                 self.caption_panel.pack(side=TOP)
 
@@ -101,7 +101,7 @@ class Window:
             self.right_photo_panel = Label(self.photos_panel, image=self.right_photo)
             self.right_photo_panel.pack(side=RIGHT)
 
-            if self.enable_caption:
+            if globals.debug:
                 self.left_caption_panel = Label(self.left_frame, text=pure_name(self.curr_left_file),
                                                 font='-size 10')
                 self.left_caption_panel.pack(side=TOP)
@@ -112,7 +112,8 @@ class Window:
 
         # ======== log the info
         log(f"\n{'=' * 150} \nCurrent index: {self.current_index}", no_time=True)
-        log(f'There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)
+        if self.mode != 'single':
+            log(f'There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)
 
         # ======== status panel
         stat_text = f'Case {self.current_index + 1} of {len(self.cases)}' + \
@@ -143,14 +144,14 @@ class Window:
         if frame == 'final':
             if self.input_type == 'single':
                 self.photo_panel.pack_forget()
-                if self.enable_caption:
+                if globals.debug:
                     self.caption_panel.pack_forget()
 
             if self.input_type == 'side_by_side':
                 self.left_photo_panel.pack_forget()
                 self.right_photo_panel.pack_forget()
 
-                if self.enable_caption:
+                if globals.debug:
                     self.left_caption_panel.pack_forget()
                     self.right_caption_panel.pack_forget()
 
@@ -170,7 +171,7 @@ class Window:
                 self.photo_panel.pack(side=TOP)
 
                 # ======== update caption
-                if self.enable_caption:
+                if globals.debug:
                     # self.caption_panel.configure(text=self.current_file.split(os.path.sep)[-1])  # update the caption
                     self.caption_panel.configure(text=pure_name(self.current_file))  # update the caption
                     self.caption_panel.pack(side=TOP)
@@ -201,7 +202,7 @@ class Window:
                 self.right_photo_panel.pack(side=RIGHT)
 
                 # ======== update captions
-                if self.enable_caption:
+                if globals.debug:
                     # self.left_caption_panel.configure(text=self.current_left_file.split(os.path.sep)[-1])
                     self.left_caption_panel.configure(text=pure_name(self.curr_left_file))
                     # self.right_caption_panel.configure(text=self.current_right_file.split(os.path.sep)[-1])
@@ -248,7 +249,8 @@ class Window:
         # ======== print the current index (except for the final page)
         if self.current_index < len(self.cases):
             log(f"\n\n\n\n{'=' * 150} \nIn [update_frame]: Current index: {self.current_index}", no_time=True)
-            log(f'In [update_frame]: There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)
+            if self.mode != 'single':
+                log(f'In [update_frame]: There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)
 
         # ======== update the prev_button
         self.update_prev_button()
@@ -431,14 +433,17 @@ class Window:
 
     def read_img_and_resize_if_needed(self):
         if self.input_type == 'single':
-            return logic.read_dicom_image(self.current_file, self.img_size)
+            # return logic.read_dicom_image(self.current_file, self.img_size)
+            return logic.read_dicom_and_resize(self.current_file)
 
         if self.input_type == 'side_by_side':
             log(f'In [read_img_and_resize_if_needed]: reading the left file')
-            left_photo = logic.read_dicom_image(self.curr_left_file, self.img_size)
+            # left_photo = logic.read_dicom_image(self.curr_left_file, self.img_size)
+            left_photo = logic.read_dicom_and_resize(self.curr_left_file)
 
             log(f'In [read_img_and_resize_if_needed]: reading the right file')
-            right_photo = logic.read_dicom_image(self.curr_right_file, self.img_size)
+            # right_photo = logic.read_dicom_image(self.curr_right_file, self.img_size)
+            right_photo = logic.read_dicom_and_resize(self.curr_right_file)
 
             return left_photo, right_photo
 
