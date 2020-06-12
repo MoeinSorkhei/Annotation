@@ -1,6 +1,5 @@
 import os
 import json
-import pickle
 from time import gmtime, strftime
 import smtplib
 from email.mime.text import MIMEText

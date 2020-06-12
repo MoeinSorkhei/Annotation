@@ -30,10 +30,3 @@ def read_dicom_and_resize(file):
     else:  # no resize
         photo = ImageTk.PhotoImage(image)
     return photo
-
-    '''if img_size is not None:
-        resized = image.resize(img_size)
-        photo = ImageTk.PhotoImage(resized)
-    else:  # no resize
-        photo = ImageTk.PhotoImage(image)
-    return photo'''

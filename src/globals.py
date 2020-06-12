@@ -1,20 +1,17 @@
 import os
 
-
+# ===== running the program in debug mode
 debug = False
 
-slash = os.path.sep  # '/' for linux and '\' for Windows
-sorted_file = '../output/sorted.txt'
-
+# ===== the mode for showing the images
+# mode = 'single'
+mode = 'side_by_side'
 
 params = {
-    # "imgs_dir": f"..{slash}tmp{slash}dicoms",
-    "imgs_dir": f"..{slash}tmp{slash}dicoms_very_limited",
-    # "imgs_dir": f"..{slash}tmp{slash}dicoms_limited_real_name",
-    "output_path": f"..{slash}output",
+    "imgs_dir": os.path.join('..', 'tmp', 'dicoms_very_limited'),
+    "output_path": os.path.join('..', 'output'),
+    "sorted_file": os.path.join('..', 'output', 'sorted_txt'),
 
-    # "img_size": (256, 256),
     "resize_factor": 7,
-    # "img_size": (512, 512),
     "email_interval": 100
 }
