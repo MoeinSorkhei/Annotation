@@ -2,6 +2,7 @@ from PIL import Image, ImageTk
 from matplotlib import cm
 import pydicom
 import numpy as np
+import os
 
 import globals
 from .helper import log

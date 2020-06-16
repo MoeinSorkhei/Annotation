@@ -67,15 +67,11 @@ def print_comparisons_lists(comparisons):
         log(f'{img}', no_time=True)
         for lst in lists:
             log(lst, no_time=True)
-        # log(v[0], no_time=True)
-        # log(v[1], no_time=True)
-        # log(v[2], no_time=True)
-        # log('', no_time=True)
     log('________________________________________________________________', no_time=True)
 
 
 # ========== functions related to operations on the bins
-def compute_file_paths_for_bin(rate=None, which_bin=None):
+def compute_file_paths_for_bin(rate=None, which_bin=None):  # THIS FUNCTION WILL NO LONGER BE NEEDED
     output_path = globals.params['output_path']
 
     # for phase 1 -- only need bin_1.txt
@@ -89,23 +85,6 @@ def compute_file_paths_for_bin(rate=None, which_bin=None):
         filename = os.path.join(output_path, f'bin_{which_bin}.txt')  # e.g., output/bin_1.txt
         sorted_filename = os.path.join(output_path, f'bin_{which_bin}_sorted.txt')  # output/bin_1_sorted.txt
         return filename, sorted_filename
-
-    # if which_bin is not None:
-    #     if 'bin_1' in which_bin:
-    #         filename = os.path.join(output_path, f'bin_1.txt')  # e.g., output/bin_1.txt
-    #         sorted_filename = os.path.join(output_path, 'bin_1_sorted.txt')  # output/bin_1_sorted.txt
-    #
-    #     elif 'bin_2' in which_bin:
-    #         filename = os.path.join(output_path, f'bin_2.txt')
-    #         sorted_filename = os.path.join(output_path, 'bin_2_sorted.txt')
-    #
-    #     elif 'bin_3' in which_bin:
-    #         filename = os.path.join(output_path, f'bin_3.txt')
-    #         sorted_filename = os.path.join(output_path, 'bin_3_sorted.txt')
-    #
-    #     else:
-    #         raise NotImplementedError
-    #     return filename, sorted_filename
 
 
 def read_img_names_from_file(which_bin):
@@ -122,20 +101,36 @@ def read_img_names_from_file(which_bin):
     return filename_as_lst, sorted_filename_as_lst
 
 
-def split_list(lst):
-    return np.array_split(lst)
+def read_sorted_imgs():
+    sorted_filename = globals.params['sorted']
+    sorted_lst = []  # empty list if the sorted file does not exists (ie the first time we want to sort)
+
+    if os.path.isfile(sorted_filename):
+        with open(sorted_filename) as f:
+            sorted_lst = f.read().splitlines()
+    return sorted_lst
+
+
+def split_sorted_list_to_bins(n_bins):
+    sorted_list = read_sorted_imgs()
+    split_arr = np.array_split(sorted_list, n_bins)
+    log(f'In [split_sorted_list_to_bins]: split the sorted list into {n_bins} bins: done')
+
+    for i in range(len(split_arr)):
+        bin_num = i + 1
+        filename = os.path.join(globals.params['output_path'], f'{bin_num}.txt')
+        write_list_to_file(split_arr[i], filename)
+
+    log(f'In [split_sorted_list_to_bins]: writing all the bins to files: done \n')
+
+
+def insert_into_bin_and_save(pos, img):
+    pass
 
 
 # ========== functions for saving/reading results
 def read_comparison_lists():
-    # output_path = globals.params['output_path']
-    # output_file = os.path.join(output_path, 'comparison_sets.json')
     output_file = globals.params['comparisons_structured']  # output/comparisons.json
-
-    # output_file = os.path.join(output_path, 'comparison_sets.pkl')  # TO BE FIXED
-    # with open(output_file, 'rb') as f:
-    #    return pickle.load(f)
-
     with open(output_file, 'rb') as f:
         comparison_lists = json.load(f)
     return comparison_lists
@@ -154,8 +149,15 @@ def save_comparisons_list(comparisons):
         json.dump(merged_dict, f, indent=2)
 
 
-def write_sorted_list_to_file(which_bin, lst):
-    _, sorted_filename = compute_file_paths_for_bin(which_bin=which_bin)
+def write_list_to_file(lst, filename):
+    with open(filename, 'w') as f:
+        for item in lst:
+            f.write(f'{item}\n')
+
+
+# def write_sorted_list_to_file(which_bin, lst):
+def write_sorted_list_to_file(lst):
+    sorted_filename = globals.params['sorted']
 
     with open(sorted_filename, 'w') as f:
         for item in lst:

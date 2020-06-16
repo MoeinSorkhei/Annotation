@@ -9,18 +9,16 @@ import globals
 
 
 class Window:
-    def __init__(self, master, cases, mode, session_name, which_bin):
+    def __init__(self, master, cases, mode, session_name):
         # ======== attributes
         self.mode = mode
         self.session_name = session_name
-        self.which_bin = which_bin
         self.cases = cases
         self.start_time = int(time.time() // 60)   # used for stat panel
         self.case_number = None
 
         # ======== log info
         logic.log(f"In Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
-        # logic.log(f"Mode: {self.mode}\n", no_time=True)
 
         # tuple (img, rate) or (left_img, right_img, rate) or (left_img, right_img, rate, insertion_index, mid_img)
         self.prev_result = None
@@ -233,7 +231,7 @@ class Window:
 
         self.stat_panel.configure(text=stat_text)
 
-    def update_frame(self, direction, previously_pressed=None):
+    def update_frame(self):
         """
         :param direction:
         :param previously_pressed: should be provided for the 'previous' direction, as it will be used to determine if
@@ -244,9 +242,6 @@ class Window:
             - ALl the logical changes e.g. changing the indexes etc. should be done before calling this function. This
               only changes the stuff related to UI.
         """
-        # ======== update index of the image if it should
-        # self.possibly_update_index(direction, previously_pressed)
-
         # ======== print the current index (except for the final page)
         if self.current_index < len(self.cases):
             self.init_or_update_case_number()
@@ -279,8 +274,6 @@ class Window:
 
         log(f'In [finalize_session]: Session is finalized. Uploading the result and terminating...')
 
-        # ======== upload the results
-        # logic.email_results(self.session_name)
         logic.email_results()
         exit(0)
 
@@ -299,26 +292,18 @@ class Window:
                 f'removed index {insertion_index} from sorted_list - '
                 f'Now sorted_list has len: {len(self.sorted_list)}')
 
-            # ======= save the updated list with index removed
-            # write_sorted_list_to_file(globals.params['sorted_file'], self.sorted_list)
             log(f'In [possibly_remove_item_from_list]: saving sorted_list with removed index...')
-            write_sorted_list_to_file(self.which_bin, self.sorted_list)
-            # log(f'In [show_previous_case]: saved sorted_list with removed index to '
-            #    f'{compute_paths(self.session_name)["sorted_file"]}')
+            write_sorted_list_to_file(self.sorted_list)
 
             if globals.debug:
                 print_list(self.sorted_list)
 
-    # def possibly_update_index(self, direction, previously_pressed=None):
     def possibly_update_index(self, direction):
         if self.mode == 'side_by_side':
-            # if direction == 'next' and self.low == 0 and self.high == len(self.sorted_list) - 1:
             if direction == 'next' and self.index_should_be_changed('next'):
                 self.current_index += 1  # index of the next file
                 log('In [possibly_update_index]: Current index increased...')
 
-            # if direction == 'previous' and self.low == self.high:
-            # if direction == 'previous' and self.index_should_be_changed('previous', previously_pressed):
             if direction == 'previous' and self.index_should_be_changed('previous'):
                 self.current_index -= 1
                 log('In [possibly_update_index]: Current index decreased...')
@@ -330,7 +315,6 @@ class Window:
             else:
                 self.current_index -= 1  # index of the previous file
 
-    # def index_should_be_changed(self, direction, previously_pressed=None):
     def index_should_be_changed(self, direction):
         """
         This function checks if the current image index should be change base on the current low and high indices.
@@ -370,10 +354,6 @@ class Window:
         changed if we wanted to go to the previous frame.
         :return:
         """
-        # ======== This is used in the 'binary_insert' mode
-        # if low = high or 9 was pressed, index has been increased
-        # if (self.prev_result[0] == self.prev_result[1]) or self.prev_result[2] == '9':
-        # determine if the image has been changed from previous to current frame,
         if self.index_should_be_changed(direction='previous'):
             right_img = self.prev_result[4]  # mid_image, the last image compared to before inserting to the sorted list
             left_img = self.cases[self.current_index - 1]  # the image that was newly inserted
@@ -407,26 +387,6 @@ class Window:
             # ======= revert low and high indices
             self.low, self.high = self.prev_result[0], self.prev_result[1]
             log(f'In [show_previous_case]: Reverted indices to: low = {self.low}, high = {self.high} 'f'==> prev_result set to None.')
-
-            # ======= if index should be decreased
-            # if self.low == self.high:
-            # if self.index_should_be_changed(direction='previous'):
-            #     # only in this case we have insertion index, otherwise it is None
-            #     insertion_index = self.prev_result[3]
-            #     del self.sorted_list[insertion_index]   # delete the wrongly inserted element from the list
-            #     log(f'In [show_previous_case]: index should be decreased ==> '
-            #         f'removed index {insertion_index} from sorted_list - '
-            #         f'Now sorted_list has len: {len(self.sorted_list)}')
-            #
-            #     # ======= save the updated list with index removed
-            #     # write_sorted_list_to_file(globals.params['sorted_file'], self.sorted_list)
-            #     log(f'In [show_previous_case]: saving sorted_list with removed index...')
-            #     write_sorted_list_to_file(self.which_bin, self.sorted_list)
-            #     # log(f'In [show_previous_case]: saved sorted_list with removed index to '
-            #     #    f'{compute_paths(self.session_name)["sorted_file"]}')
-            #
-            #     if globals.debug:
-            #         print_list(self.sorted_list)
             log(f'In [show_previous_case]: checking if index should be decreased...')
             self.possibly_update_index(direction='previous')  # uses prev_result to decide if index should be changed
 
@@ -439,7 +399,7 @@ class Window:
             log(f'In [show_previous_case]: Clicked "show_previous_case" ==> prev_result set to None. '
                 f'Updating frame to show the previous case...')
 
-        self.update_frame(direction='previous')
+        self.update_frame()
 
     def keyboard_press(self, event):
         if self.current_index == len(self.cases):
@@ -472,12 +432,11 @@ class Window:
             # ======== upload results regularly
             if self.current_index > 0 and self.current_index % globals.params['email_interval'] == 0:
                 # make it non-blocking as emailing takes time
-                # thread = Thread(target=logic.email_results, kwargs={'session_name': self.session_name})
                 thread = Thread(target=logic.email_results)
                 thread.start()
 
             self.possibly_update_index(direction='next')  # uses current low and high to decide if index should change
-            self.update_frame(direction='next')
+            self.update_frame()
 
     def update_binary_search_inds_and_possibly_insert(self, pressed):
         """
@@ -502,7 +461,6 @@ class Window:
 
         # ====== suitable position is found (low = high), insert here
         else:  # either mid = low = high or 9 is pressed: so we should insert
-            # self.backup_list = deepcopy(self.sorted_list)
             # if 9 is pressed, meaning the two images are equal, so we directly insert to the left side of the mid_img
             if eval(pressed) == '9':
                 mid_image = self.sorted_list[mid]  # this image will be needed for saving comparisons
@@ -534,7 +492,7 @@ class Window:
 
             # ====== save the updated list
             log(f'In [binary_search_step]: saving sorted_list...')
-            write_sorted_list_to_file(self.which_bin, self.sorted_list)
+            write_sorted_list_to_file(self.sorted_list)
             log(f'In [binary_search_step]: also updated prev_result to include the insertion index: {self.prev_result[3]}')
 
             # ====== reset indices because after this a new image will be inserted
@@ -596,7 +554,6 @@ class Window:
         if globals.debug:
             print_comparisons_lists(self.comparisons)
 
-        # save_comparisons_list(self.session_name, self.comparisons)
         save_comparisons_list(self.comparisons)
         log(f'In [update_comparison_sets]: saved comparison_sets to file.\n')
 
@@ -607,13 +564,10 @@ class Window:
 
         if self.mode == 'side_by_side':
             log(f'In [read_img_and_resize_if_needed]: reading the left file')
-            # left_photo = logic.read_dicom_image(self.curr_left_file, self.img_size)
             left_photo = logic.read_dicom_and_resize(self.curr_left_file)
 
             log(f'In [read_img_and_resize_if_needed]: reading the right file')
-            # right_photo = logic.read_dicom_image(self.curr_right_file, self.img_size)
             right_photo = logic.read_dicom_and_resize(self.curr_right_file)
-
             return left_photo, right_photo
 
 
