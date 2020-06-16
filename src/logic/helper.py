@@ -53,20 +53,25 @@ def pure_name(file_path):
 
 
 def print_list(sorted_list):
-    log('________________________________', no_time=True)
+    log('________________________________________________________________', no_time=True)
     log(f'In [binary_search_step]: sorted_list:')
     for item in sorted_list:
         log(item, no_time=True)
-    log('________________________________', no_time=True)
+    log('________________________________________________________________', no_time=True)
 
 
-def print_comparisons_dict(comparisons):
-    print(f'In [print_comparisons_dict]: comparisons:')
-    for img, v in comparisons.items():
-        print(f'{img}')
-        print(v[0])
-        print(v[1])
-        print()
+def print_comparisons_lists(comparisons):
+    log('________________________________________________________________', no_time=True)
+    log(f'In [print_comparisons_dict]: comparisons:', no_time=True)
+    for img, lists in comparisons.items():
+        log(f'{img}', no_time=True)
+        for lst in lists:
+            log(lst, no_time=True)
+        # log(v[0], no_time=True)
+        # log(v[1], no_time=True)
+        # log(v[2], no_time=True)
+        # log('', no_time=True)
+    log('________________________________________________________________', no_time=True)
 
 
 # ========== functions related to operations on the bins
