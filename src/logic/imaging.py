@@ -7,6 +7,15 @@ import globals
 from .helper import log
 
 
+def get_dicom_files_paths(imgs_dir):
+    paths = []
+    for base_path, _, filenames in os.walk(imgs_dir):
+        for f in sorted(filenames):  # always read the files sorted by name
+            img_abs_path = os.path.abspath(os.path.join(base_path, f))
+            paths.append(img_abs_path)
+    return paths
+
+
 def read_dicom_and_resize(file):
     # ======== read dicom file
     dataset = pydicom.dcmread(file)

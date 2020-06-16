@@ -1,6 +1,7 @@
 from tkinter import *
 from threading import Thread
 from copy import deepcopy
+import time
 
 import logic
 from logic import *
@@ -8,15 +9,18 @@ import globals
 
 
 class Window:
-    def __init__(self, master, cases, mode):
+    def __init__(self, master, cases, mode, session_name, which_bin):
         # ======== attributes
         self.mode = mode
+        self.session_name = session_name
+        self.which_bin = which_bin
         self.cases = cases
+        self.start_time = int(time.time() // 60)   # used for stat panel
+        self.case_number = None
 
         # ======== log info
-        logic.log(f"\n\n\n\n{'*' * 150} \n{'*' * 150} \n{'*' * 150} \n{'*' * 150} \n"
-                  f"In Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
-        logic.log(f"Mode: {self.mode}\n", no_time=True)
+        logic.log(f"In Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
+        # logic.log(f"Mode: {self.mode}\n", no_time=True)
 
         # tuple (img, rate) or (left_img, right_img, rate, insertion_index, mid_img)
         self.prev_result = None
@@ -27,6 +31,10 @@ class Window:
         # ======== determine file(s) to show
         if mode == 'single':
             self.current_index = 0
+            print(f'start time: {self.start_time}')
+            self.init_or_update_case_number()
+            self.log_current_index(called_from='__init__')
+
             self.current_file = cases[self.current_index]  # this first file
             multi_log([f'Image: "{pure_name(self.current_file)}"', f'Full path: "{self.current_file}" \n'])
 
@@ -56,6 +64,7 @@ class Window:
             log(f'In Window [__init__]: init sorted_list with len {len(self.sorted_list)} and set backup_list to None')
 
             self.current_index = 1
+            self.init_or_update_case_number()
             self.log_current_index(called_from='__init__')
 
             self.low = 0
@@ -115,7 +124,7 @@ class Window:
 
     def init_stat_panel_and_buttons(self, master):
         # ======== status panel
-        stat_text = f'Case {self.current_index + 1} of {len(self.cases)}' + \
+        stat_text = f'Rating for image {self.current_index + 1} of {len(self.cases)} - Case number: {self.case_number}' + \
                     (f'\nPrevious rating: {self.prev_result[1]}' if self.prev_result is not None else '')
         self.stat_panel = Label(master, text=stat_text, font='-size 15')
         self.stat_panel.pack(side=TOP)
@@ -202,15 +211,18 @@ class Window:
                     self.left_caption_panel.pack(side=TOP)
                     self.right_caption_panel.pack(side=TOP)
 
+    def init_or_update_case_number(self):
+        self.case_number = f'{self.start_time}-{self.current_index}-{int(time.time() % 1000)}'
+
     def update_stat(self):
         stat_text = ''
         if self.current_index != len(self.cases):
             if self.mode == 'single':
-                stat_text = f'Case {self.current_index + 1} of {len(self.cases)}' + \
+                stat_text = f'Rating for image {self.current_index + 1} of {len(self.cases)} - Case number: {self.case_number}' + \
                             (f'\nPrevious rating: {self.prev_result[1]}' if self.prev_result is not None else '')
 
             if self.mode == 'side_by_side':
-                stat_text = f'Case {self.current_index + 1} of {len(self.cases)}' + \
+                stat_text = f'Rating for image {self.current_index + 1} of {len(self.cases)} - Case number: {self.case_number}' + \
                             (f'\nPrevious rating: {self.prev_result[2]}' if self.prev_result is not None else '')
         else:  # do not show case on the final page
             if self.mode == 'single':
@@ -240,6 +252,7 @@ class Window:
 
         # ======== print the current index (except for the final page)
         if self.current_index < len(self.cases):
+            self.init_or_update_case_number()
             self.log_current_index(called_from='update_frame')
 
         # ======== update the prev_button
@@ -267,6 +280,7 @@ class Window:
         log(f'In [finalize_session]: Session is finalized. Uploading the result and terminating...')
 
         # ======== upload the results
+        # logic.email_results(self.session_name)
         logic.email_results()
         exit(0)
 
@@ -285,8 +299,11 @@ class Window:
                     f'Now sorted_list has len: {len(self.sorted_list)}')
 
                 # ======= save the updated list with index removed
-                write_list_to_file(globals.params['sorted_file'], self.sorted_list)
-                log(f'In [show_previous_case]: saved sorted_list with removed index to {globals.params["sorted_file"]}')
+                # write_sorted_list_to_file(globals.params['sorted_file'], self.sorted_list)
+                log(f'In [show_previous_case]: saving sorted_list with removed index...')
+                write_sorted_list_to_file(self.which_bin, self.sorted_list)
+                # log(f'In [show_previous_case]: saved sorted_list with removed index to '
+                #    f'{compute_paths(self.session_name)["sorted_file"]}')
 
                 if globals.debug:
                     print_list(self.sorted_list)
@@ -304,7 +321,8 @@ class Window:
         self.update_frame(direction='previous')
 
     def log_current_index(self, called_from):
-        log(f"\n\n\n\n{'=' * 150} \nIn [{called_from}]: Current index: {self.current_index}", no_time=True)
+        log(f"\n\n\n\n{'=' * 150} \nIn [{called_from}]: "
+            f"Current index: {self.current_index} - Case number: {self.case_number}", no_time=True)
         if self.mode != 'single':
             log(f'In [{called_from}]: There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)
 
@@ -316,7 +334,7 @@ class Window:
             (self.mode == 'side_by_side' and (eval(pressed) == '1' or eval(pressed) == '2'))
         return key_stroke_is_valid
 
-    def update_comparison_lists(self, left_img, right_img, rate):
+    def update_and_save_comparisons_list(self, left_img, right_img, rate):
         """
         NOTES: Comparisons are only with respect to the reference image, ie if left image: 4.dcm is harder than right
         image: 2.dcm, since the left image is reference, only 2.dcm is added to the easier_list for 4.dcm and 4.dcm is
@@ -357,7 +375,8 @@ class Window:
         if globals.debug:
             print_comparisons_dict(self.comparisons)
 
-        save_comparison_lists(self.comparisons)
+        # save_comparisons_list(self.session_name, self.comparisons)
+        save_comparisons_list(self.comparisons)
         log(f'In [update_comparison_sets]: saved comparison_sets to file.\n')
 
     def get_prev_imgs_using_prev_result(self):
@@ -375,14 +394,16 @@ class Window:
         if self.mode == 'single':
             imgs = [self.prev_result[0]]
             rate = self.prev_result[1]
+            # save_rating(self.session_name, imgs, rate)
             save_rating(imgs, rate)
 
         if self.mode == 'side_by_side':
             left_img, right_img = self.get_prev_imgs_using_prev_result()
             imgs = [left_img, right_img]
             rate = self.prev_result[2]
+            # save_rating(self.session_name, imgs, rate)
             save_rating(imgs, rate)
-            self.update_comparison_lists(left_img, right_img, rate)
+            self.update_and_save_comparisons_list(left_img, right_img, rate)
 
     def keyboard_press(self, event):
         if self.current_index == len(self.cases):
@@ -401,7 +422,8 @@ class Window:
 
             # ======== update the prev_result to current decision
             if self.mode == 'single':
-                self.prev_result = (pure_name(self.current_file), eval(pressed))
+                # self.prev_result = (pure_name(self.current_file), eval(pressed))
+                self.prev_result = (self.current_file, eval(pressed))
 
             if self.mode == 'side_by_side':
                 # ======= save current indices before updating
@@ -413,7 +435,9 @@ class Window:
 
             # ======== upload results regularly
             if self.current_index > 0 and self.current_index % globals.params['email_interval'] == 0:
-                thread = Thread(target=logic.email_results)  # make it non-blocking as emailing takes time
+                # make it non-blocking as emailing takes time
+                # thread = Thread(target=logic.email_results, kwargs={'session_name': self.session_name})
+                thread = Thread(target=logic.email_results)
                 thread.start()
 
             # ======== this also changes current_index if needed
@@ -473,8 +497,8 @@ class Window:
                     f'Now sorted_list has len: {len(self.sorted_list)}\n')
 
             # ====== save the updated list
-            write_list_to_file(globals.params['sorted_file'], self.sorted_list)
-            log(f'In [binary_search_step]: saved sorted_list to {globals.params["sorted_file"]}')
+            log(f'In [binary_search_step]: saving sorted_list...')
+            write_sorted_list_to_file(self.which_bin, self.sorted_list)
             log(f'In [binary_search_step]: also updated prev_result to include the insertion index: {self.prev_result[3]}')
 
             # ====== reset indices because after this a new image will be inserted
