@@ -107,10 +107,10 @@ class Window:
         self.photos_panel.pack(side=TOP)
 
         self.left_frame = Frame(master=self.photos_panel, background="forest green")
-        self.left_frame.pack(side=LEFT)
+        self.left_frame.pack(side=LEFT, padx=10, pady=10)
 
         self.right_frame = Frame(master=self.photos_panel)
-        self.right_frame.pack(side=RIGHT)
+        self.right_frame.pack(side=RIGHT, padx=10, pady=10)
 
         # ======== show left and right images with caption, if caption enabled
         self.left_photo, self.right_photo = self.read_img_and_resize_if_needed()
@@ -132,7 +132,7 @@ class Window:
 
     def init_stat_panel_and_buttons(self, master):
         # ======== status panel
-        stat_text = f'Rating for image {self.current_index + 1} of {len(self.cases)} - Case number: {self.case_number}' + \
+        stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - Case number: {self.case_number}' + \
                     (f'\nPrevious rating: {self.prev_result[1]}' if self.prev_result is not None else '')
         self.stat_panel = Label(master, text=stat_text, font='-size 15')
         self.stat_panel.pack(side=TOP)
@@ -234,7 +234,7 @@ class Window:
                             (f'\nPrevious rating: {self.prev_result[1]}' if self.prev_result is not None else '')
 
             if self.mode == 'side_by_side':
-                stat_text = f'Rating for image {self.current_index + 1} of {len(self.cases)} - Case number: {self.case_number}' + \
+                stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - Case number: {self.case_number}' + \
                             (f'\nPrevious rating: {self.prev_result[2]}' if self.prev_result is not None else '')
         else:  # do not show case on the final page
             if self.mode == 'single':
