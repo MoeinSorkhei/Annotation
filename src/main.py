@@ -11,6 +11,7 @@ def read_args_and_adjust():
     parser.add_argument('--session_name', type=str)
     parser.add_argument('--n_bins', type=int)
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--email_results', action='store_true')
 
     arguments = parser.parse_args()
 
@@ -20,7 +21,7 @@ def read_args_and_adjust():
     return arguments
 
 
-def manage_sessions(args):
+def manage_sessions_and_run(args):
     """
     :param args:
     :return:
@@ -73,7 +74,13 @@ def manage_sessions(args):
 
 def main():
     args = read_args_and_adjust()
-    manage_sessions(args)
+
+    if args.email_results:  # used only for emailing results
+        log('In [main]: emailing results...')
+        logic.email_results()
+
+    else:
+        manage_sessions_and_run(args)
 
 
 if __name__ == '__main__':

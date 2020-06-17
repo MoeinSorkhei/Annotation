@@ -435,8 +435,7 @@ class Window:
             if self.mode == 'side_by_side':
                 # ======= keep track of current indices before updating
                 self.prev_result = (self.low, self.high, eval(pressed))  # updating prev_result to current choice
-                log(
-                    f'In [keyboard_press]: set prev_result to: (low: {self.low}, high: {self.high}, eval: {eval(pressed)})\n')
+                log(f'In [keyboard_press]: set prev_result to: (low: {self.low}, high: {self.high}, eval: {eval(pressed)})\n')
 
                 # ======= after this low and high are changed
                 self.update_binary_search_inds_and_possibly_insert(pressed)
@@ -513,8 +512,7 @@ class Window:
             # ====== reset indices because after this a new image will be inserted
             self.low = 0
             self.high = len(self.sorted_list) - 1
-            log(
-                f'In [binary_search_step]: low and high are reset for the new image: low: {self.low}, high: {self.high}')
+            log(f'In [binary_search_step]: low and high are reset for the new image: low: {self.low}, high: {self.high}')
 
             if globals.debug:
                 print_list(self.sorted_list)
