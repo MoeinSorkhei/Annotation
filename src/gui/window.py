@@ -446,7 +446,7 @@ class Window:
                 self.update_binary_search_inds_and_possibly_insert(pressed)
 
             # ======== upload results regularly
-            if self.current_index > 0 and self.current_index % globals.params['email_interval'] == 0:
+            if self.current_index <= 1 or self.current_index % globals.params['email_interval'] == 0:
                 # make it non-blocking as emailing takes time
                 thread = Thread(target=logic.email_results)
                 thread.start()
