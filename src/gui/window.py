@@ -9,7 +9,7 @@ import globals
 
 
 class Window:
-    def __init__(self, master, cases, already_sorted, mode, session_name):
+    def __init__(self, master, cases, already_sorted, already_comparisons, mode, session_name):
         # ======== attributes
         self.master = master
         self.mode = mode
@@ -17,15 +17,11 @@ class Window:
         self.cases = cases
         self.start_time = int(time.time() // 60)  # used for stat panel
         self.case_number = None
-
-        # ======== log info
-        logic.log(f"{'_' * 150}\nIn Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
-
         # tuple (img, rate) or (left_img, right_img, rate) or (left_img, right_img, rate, insertion_index, mid_img)
         self.prev_result = None
 
-        # ======== bind keyboard press to function
-        master.bind("<Key>", self.keyboard_press)
+        logic.log(f"{'_' * 150}\nIn Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
+        master.bind("<Key>", self.keyboard_press)  # bind keyboard press to function
 
         # ======== determine file(s) to show
         if mode == 'single':
@@ -55,7 +51,7 @@ class Window:
 
         if mode == 'side_by_side':
             # ======== comparisons_list which contains, for very image, lists of images that were compared against it
-            self.comparisons = {}
+            self.comparisons = already_comparisons
 
             if len(already_sorted) > 0:  # the file sorted.txt already exists, so create the list based on them
                 self.sorted_list = already_sorted
@@ -541,35 +537,67 @@ class Window:
             if item not in lst:
                 lst.append(item)
 
-        # ======== add the image as the key for the first time
+        def add_to_ref_img_easier_list_and_save(ref_img, compared_to, comparisons):
+            easier_list, equal_list, harder_list = comparisons[ref_img]
+            if compared_to in harder_list:  # if right image in harder set, remove it
+                harder_list.remove(compared_to)
+
+            append_item_not_exists(easier_list, compared_to)
+            log(f'In [update_comparison_sets]: added image: "{pure_name(compared_to)}" to easier_list for image: "{pure_name(ref_img)}"')
+            return comparisons
+
+        def add_to_ref_img_harder_list_and_save(ref_img, compared_to, comparisons):
+            easier_list, equal_list, harder_list = comparisons[ref_img]
+            if compared_to in easier_list:
+                easier_list.remove(compared_to)
+
+            append_item_not_exists(harder_list, compared_to)
+            log(f'In [update_comparison_sets]: added image: "{pure_name(compared_to)}" to harder_list for image: "{pure_name(ref_img)}"')
+            return comparisons
+
+        def add_to_ref_img_equal_and_save(ref_img, compared_to, comparisons):
+            easier_list, equal_list, harder_list = comparisons[ref_img]
+            if compared_to in harder_list:
+                harder_list.remove(compared_to)
+
+            if compared_to in easier_list:
+                easier_list.remove(compared_to)
+
+            append_item_not_exists(equal_list, compared_to)
+            log(f'In [update_comparison_sets]: added image: "{pure_name(compared_to)}" to equal_list for image: "{pure_name(ref_img)}"')
+            return comparisons
+
+        # ======== add the images as the keys for the first time
         if left_img not in self.comparisons.keys():
             self.comparisons.update({left_img: [[], [], []]})
+        if right_img not in self.comparisons.keys():
+            self.comparisons.update({right_img: [[], [], []]})
 
-        # ======== obtain the sets. easier_list: set of images that are easier than the dict key img
-        easier_list, equal_list, harder_list = self.comparisons[left_img]
-
-        if rate == '1':  # new image is harder, should add right image to easier_list
-            if right_img in harder_list:  # if right image in harder set, remove it
-                harder_list.remove(right_img)
-
-            append_item_not_exists(easier_list, right_img)
-            log(f'In [update_comparison_sets]: added image: "{pure_name(right_img)}" to easier_list for image: "{pure_name(left_img)}"')
+        if rate == '1':  # ref image is harder, should add right image to easier_list
+            # add right_img to easier_list for left img
+            self.comparisons = add_to_ref_img_easier_list_and_save(ref_img=left_img,
+                                                                   compared_to=right_img,
+                                                                   comparisons=self.comparisons)
+            # add left_img to harder_list for right img
+            self.comparisons = add_to_ref_img_harder_list_and_save(ref_img=right_img,
+                                                                   compared_to=left_img,
+                                                                   comparisons=self.comparisons)
 
         elif rate == '9':
-            if right_img in harder_list:
-                harder_list.remove(right_img)
-            if right_img in easier_list:
-                easier_list.remove(right_img)
+            self.comparisons = add_to_ref_img_equal_and_save(ref_img=left_img,
+                                                             compared_to=right_img,
+                                                             comparisons=self.comparisons)
+            self.comparisons = add_to_ref_img_equal_and_save(ref_img=right_img,
+                                                             compared_to=left_img,
+                                                             comparisons=self.comparisons)
 
-            append_item_not_exists(equal_list, right_img)
-            log(f'In [update_comparison_sets]: added image: "{pure_name(right_img)}" to equal_list for image: "{pure_name(left_img)}"')
-
-        else:  # new image is easier, should add right image to harder_list
-            if right_img in easier_list:
-                easier_list.remove(right_img)
-
-            append_item_not_exists(harder_list, right_img)
-            log(f'In [update_comparison_sets]: added image: "{pure_name(right_img)}" to harder_list for image: "{pure_name(left_img)}"')
+        else:  # ref image is easier, should add right image to harder_list
+            self.comparisons = add_to_ref_img_harder_list_and_save(ref_img=left_img,
+                                                                   compared_to=right_img,
+                                                                   comparisons=self.comparisons)
+            self.comparisons = add_to_ref_img_easier_list_and_save(ref_img=right_img,
+                                                                   compared_to=left_img,
+                                                                   comparisons=self.comparisons)
 
         if globals.debug:
             print_comparisons_lists(self.comparisons)

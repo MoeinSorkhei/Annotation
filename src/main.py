@@ -57,9 +57,12 @@ def manage_sessions(args):
         # reduce the number of images for a session to a ore-defined number
         max_imgs_per_session = globals.params['max_imgs_per_session']
         not_already_sorted = not_already_sorted[:max_imgs_per_session]
-        log(f'In [manage_sessions]: not_already_sorted (possibly) reduced to have len: {len(not_already_sorted)} in this session.\n\n')
+        log(f'In [manage_sessions]: not_already_sorted (possibly) reduced to have len: {len(not_already_sorted)} in this session.')
 
-        gui.show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, session_name)  # which_bin is None for phase 1
+        already_comparisons = read_comparison_lists()
+        log(f'In [manage_sessions]: already_comparisons loaded/created of {len(already_comparisons)} keys in it. \n\n')
+
+        gui.show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons, session_name)
 
     elif session_name == 'split':
         split_sorted_list_to_bins(args.n_bins)

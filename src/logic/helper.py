@@ -131,22 +131,25 @@ def insert_into_bin_and_save(pos, img):
 # ========== functions for saving/reading results
 def read_comparison_lists():
     output_file = globals.params['comparisons_structured']  # output/comparisons.json
-    with open(output_file, 'rb') as f:
-        comparison_lists = json.load(f)
+
+    comparison_lists = {}
+    if os.path.isfile(output_file):
+        with open(output_file, 'rb') as f:
+            comparison_lists = json.load(f)
     return comparison_lists
 
 
 def save_comparisons_list(comparisons):
     output_file = globals.params['comparisons_structured']  # output/comparisons.json
 
-    merged_dict = comparisons
+    # merged_dict = comparisons
     # merge with prev comparisons if they exist. If some values are in conflict, the new dict is given priority
-    if os.path.isfile(output_file):
+    '''if os.path.isfile(output_file):
         prev_comparisons = read_comparison_lists()  # previous comparisons already in the json file
-        merged_dict = {**comparisons, **prev_comparisons}
+        merged_dict = {**comparisons, **prev_comparisons}'''
 
     with open(output_file, 'w') as f:
-        json.dump(merged_dict, f, indent=2)
+        json.dump(comparisons, f, indent=2)
 
 
 def write_list_to_file(lst, filename):
