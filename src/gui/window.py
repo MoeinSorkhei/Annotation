@@ -11,6 +11,7 @@ import globals
 class Window:
     def __init__(self, master, cases, mode, session_name):
         # ======== attributes
+        self.master = master
         self.mode = mode
         self.session_name = session_name
         self.cases = cases
@@ -94,31 +95,32 @@ class Window:
 
     def init_frames_and_photos(self, master):
         # ======== frame for putting things into it
-        self.left_frame = Frame(master=master)
+        self.photos_panel = Frame(master)
+        self.photos_panel.pack(side=TOP)
+
+        self.left_frame = Frame(master=self.photos_panel, background="forest green")
         self.left_frame.pack(side=LEFT)
 
-        self.right_frame = Frame(master=master)
+        self.right_frame = Frame(master=self.photos_panel)
         self.right_frame.pack(side=RIGHT)
 
         # ======== show left and right images with caption, if caption enabled
         self.left_photo, self.right_photo = self.read_img_and_resize_if_needed()
-        self.photos_panel = Label(master)
-        self.photos_panel.pack(side=TOP)
 
-        self.left_photo_panel = Label(self.photos_panel, image=self.left_photo)
-        self.left_photo_panel.pack(side=LEFT)
+        self.left_photo_panel = Label(self.left_frame, image=self.left_photo)  # left photo panel inside left frame
+        self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
 
-        self.right_photo_panel = Label(self.photos_panel, image=self.right_photo)
+        self.right_photo_panel = Label(self.right_frame, image=self.right_photo)
         self.right_photo_panel.pack(side=RIGHT)
 
     def init_caption_panels(self):
-        self.left_caption_panel = Label(self.left_frame, text=pure_name(self.curr_left_file),
+        self.left_caption_panel = Label(self.photos_panel, text=pure_name(self.curr_left_file),
                                         font='-size 10')
-        self.left_caption_panel.pack(side=TOP)
+        self.left_caption_panel.pack(side=LEFT)
 
-        self.right_caption_panel = Label(self.right_frame, text=pure_name(self.curr_right_file),
+        self.right_caption_panel = Label(self.photos_panel, text=pure_name(self.curr_right_file),
                                          font='-size 10')
-        self.right_caption_panel.pack(side=TOP)
+        self.right_caption_panel.pack(side=RIGHT)
 
     def init_stat_panel_and_buttons(self, master):
         # ======== status panel
@@ -154,6 +156,7 @@ class Window:
                     self.caption_panel.pack_forget()
 
             if self.mode == 'side_by_side':
+                self.left_frame.configure(background="white")  # remove background on the final page
                 self.left_photo_panel.pack_forget()
                 self.right_photo_panel.pack_forget()
 
@@ -194,12 +197,15 @@ class Window:
                 logic.log(f'In [update_photos]: Right Image: "{pure_name(self.curr_right_file)}"')
                 logic.log(f'In [update_photos]: Right Full path: "{self.curr_right_file}" \n')
 
+                # ======== make background appear on pages other than the final
+                self.left_frame.configure(background="forest green")
+
                 # ======== update photos
                 self.left_photo, self.right_photo = self.read_img_and_resize_if_needed()
                 self.left_photo_panel.configure(image=self.left_photo)
                 self.right_photo_panel.configure(image=self.right_photo)
 
-                self.left_photo_panel.pack(side=LEFT)
+                self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
                 self.right_photo_panel.pack(side=RIGHT)
 
                 # ======== update captions
@@ -233,11 +239,6 @@ class Window:
 
     def update_frame(self):
         """
-        :param direction:
-        :param previously_pressed: should be provided for the 'previous' direction, as it will be used to determine if
-        index should be decreased or not.
-        :return:
-
         Important:
             - ALl the logical changes e.g. changing the indexes etc. should be done before calling this function. This
               only changes the stuff related to UI.
