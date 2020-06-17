@@ -40,11 +40,11 @@ def manage_sessions(args):
 
     if 'sort_test' in session_name:
         img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['imgs_dir'])  # the dicom files
-        sorted_lst = read_sorted_imgs()
-        not_already_sorted = [img for img in img_lst if img not in sorted_lst]
+        already_sorted = read_sorted_imgs()
+        not_already_sorted = [img for img in img_lst if img not in already_sorted]
 
         log(f'In [manage_sessions]: read file_as_lst of len: {len(img_lst)} and sorted_as_lst '
-            f'of len: {len(sorted_lst)} - extracted {len(not_already_sorted)} images that are not already sorted\n\n')
+            f'of len: {len(already_sorted)} - extracted {len(not_already_sorted)} images that are not already sorted')
 
         if len(not_already_sorted) == 0:
             log(f'In [main]: not_already_sorted images are of len: 0 ==> Session is already complete. Terminating...')
@@ -54,7 +54,12 @@ def manage_sessions(args):
             log(f'In [main]: not_already_sorted images are of len: 1 ==> No sorting is needed. Terminating...')
             exit(0)
 
-        gui.show_window_with_keyboard_input(mode, not_already_sorted, session_name)  # which_bin is None for phase 1
+        # reduce the number of images for a session to a ore-defined number
+        max_imgs_per_session = globals.params['max_imgs_per_session']
+        not_already_sorted = not_already_sorted[:max_imgs_per_session]
+        log(f'In [manage_sessions]: not_already_sorted (possibly) reduced to have len: {len(not_already_sorted)} in this session.\n\n')
+
+        gui.show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, session_name)  # which_bin is None for phase 1
 
     elif session_name == 'split':
         split_sorted_list_to_bins(args.n_bins)

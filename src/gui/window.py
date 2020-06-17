@@ -9,17 +9,17 @@ import globals
 
 
 class Window:
-    def __init__(self, master, cases, mode, session_name):
+    def __init__(self, master, cases, already_sorted, mode, session_name):
         # ======== attributes
         self.master = master
         self.mode = mode
         self.session_name = session_name
         self.cases = cases
-        self.start_time = int(time.time() // 60)   # used for stat panel
+        self.start_time = int(time.time() // 60)  # used for stat panel
         self.case_number = None
 
         # ======== log info
-        logic.log(f"In Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
+        logic.log(f"{'_' * 150}\nIn Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
 
         # tuple (img, rate) or (left_img, right_img, rate) or (left_img, right_img, rate, insertion_index, mid_img)
         self.prev_result = None
@@ -57,20 +57,32 @@ class Window:
             # ======== comparisons_list which contains, for very image, lists of images that were compared against it
             self.comparisons = {}
 
-            self.sorted_list = [self.cases[0]]
-            # self.backup_list = None
-            self.comparisons.update({self.cases[0]: [[], [], []]})  # add the first image (which has no comparisons)
-            log(f'In Window [__init__]: init sorted_list with len {len(self.sorted_list)} and set backup_list to None')
+            if len(already_sorted) > 0:  # the file sorted.txt already exists, so create the list based on them
+                self.sorted_list = already_sorted
+                log(f'In Window [__init__]: there ARE already_sorted images ==> init sorted_list with already_sorted '
+                    f'images of len {len(self.sorted_list)}.')
+                self.current_index = 0
 
-            self.current_index = 1
+            else:  # no sorted.txt exists, construct the list from scratch
+                self.sorted_list = [self.cases[0]]
+                log(
+                    f'In Window [__init__]: there are NO already_sorted images ==> init sorted_list with the first image'
+                    f'in the cases. sorted_list has len: {len(self.sorted_list)}.')
+                self.current_index = 1  # because the first image is used to create the sorted_list
+
+            self.comparisons.update({self.cases[0]: [[], [], []]})  # add the first image (which has no comparisons)
+            log(f'In Window [__init__]: init sorted_list with len {len(self.sorted_list)}.')
+
+            # self.current_index = 1
             self.init_or_update_case_number()
             self.log_current_index(called_from='__init__')
 
             self.low = 0
             self.high = len(self.sorted_list) - 1
 
-            self.curr_left_file = self.cases[self.current_index]  # image with current index
-            self.curr_right_file = self.sorted_list[0]  # other images to be compared against
+            self.curr_left_file = self.cases[self.current_index]  # image with current index (reference image)
+            # other images to be compared against - start comparison from the middle of the list
+            self.curr_right_file = self.sorted_list[(self.low + self.high) // 2]
             multi_log([f'In Window [__init__]: Left Image: "{pure_name(self.curr_left_file)}"',
                        f'In Window [__init__]: Left Full path: "{self.curr_left_file}"\n',
                        f'In Window [__init__]: Right Image: "{pure_name(self.curr_right_file)}"',
@@ -138,13 +150,13 @@ class Window:
         self.fin_button.bind('<Button-1>', self.finalize_session)
 
     def update_prev_button(self):
-        if self.current_index == 0:  # hide the prev_button for the first frame
-            self.prev_button.pack_forget()
+        # if self.current_index == 0:  # hide the prev_button for the first frame
+        #    self.prev_button.pack_forget()
 
-        elif self.prev_result is not None:  # show if we are in the next new frame
+        if self.prev_result is not None:  # direction = 'next: show if we are in the next new frame
             self.prev_button.pack(side=BOTTOM)
 
-        else:   # hide the prev_button again if we are in the previous window
+        else:  # direction = 'previous: hide the prev_button again if we are in the previous window
             self.prev_button.pack_forget()
 
     def update_photos(self, frame):
@@ -381,13 +393,15 @@ class Window:
     def show_previous_case(self, event):
         if self.mode == 'side_by_side':
             # ======= undo the las index update by binary search
-            log(f'In [show_previous_case]: Clicked "show_previous_case". Checking if item should be removed from list...')
+            log(
+                f'In [show_previous_case]: Clicked "show_previous_case". Checking if item should be removed from list...')
             self.possibly_remove_item_from_list()
 
             # previously_pressed = self.prev_result[2]  # need to have it before setting prev_result to None
             # ======= revert low and high indices
             self.low, self.high = self.prev_result[0], self.prev_result[1]
-            log(f'In [show_previous_case]: Reverted indices to: low = {self.low}, high = {self.high} 'f'==> prev_result set to None.')
+            log(
+                f'In [show_previous_case]: Reverted indices to: low = {self.low}, high = {self.high} 'f'==> prev_result set to None.')
             log(f'In [show_previous_case]: checking if index should be decreased...')
             self.possibly_update_index(direction='previous')  # uses prev_result to decide if index should be changed
 
@@ -424,8 +438,9 @@ class Window:
 
             if self.mode == 'side_by_side':
                 # ======= keep track of current indices before updating
-                self.prev_result = (self.low, self.high, eval(pressed))   # updating prev_result to current choice
-                log(f'In [keyboard_press]: set prev_result to: (low: {self.low}, high: {self.high}, eval: {eval(pressed)})\n')
+                self.prev_result = (self.low, self.high, eval(pressed))  # updating prev_result to current choice
+                log(
+                    f'In [keyboard_press]: set prev_result to: (low: {self.low}, high: {self.high}, eval: {eval(pressed)})\n')
 
                 # ======= after this low and high are changed
                 self.update_binary_search_inds_and_possibly_insert(pressed)
@@ -479,14 +494,16 @@ class Window:
 
                 if eval(pressed) == '1':  # means that the new image is harder
                     self.sorted_list.insert(mid + 1, self.curr_left_file)  # insert to the right side if the index
-                    self.prev_result = self.prev_result + (mid + 1, mid_image,)  # add insertion index in case undo is needed
+                    self.prev_result = self.prev_result + (
+                    mid + 1, mid_image,)  # add insertion index in case undo is needed
 
                     log(f'In [binary_search_step]: inserted into index {mid + 1} of sorted_list - '
                         f'Now sorted_list has len: {len(self.sorted_list)}\n')
 
                 else:
                     self.sorted_list.insert(mid, self.curr_left_file)  # insert to the left side if the index
-                    self.prev_result = self.prev_result + (mid, mid_image,)  # add insertion index in case undo is needed
+                    self.prev_result = self.prev_result + (
+                    mid, mid_image,)  # add insertion index in case undo is needed
 
                     log(f'In [binary_search_step]: inserted into index {mid} of sorted_list - '
                         f'Now sorted_list has len: {len(self.sorted_list)}\n')
@@ -494,12 +511,14 @@ class Window:
             # ====== save the updated list
             log(f'In [binary_search_step]: saving sorted_list...')
             write_sorted_list_to_file(self.sorted_list)
-            log(f'In [binary_search_step]: also updated prev_result to include the insertion index: {self.prev_result[3]}')
+            log(
+                f'In [binary_search_step]: also updated prev_result to include the insertion index: {self.prev_result[3]}')
 
             # ====== reset indices because after this a new image will be inserted
             self.low = 0
             self.high = len(self.sorted_list) - 1
-            log(f'In [binary_search_step]: low and high are reset for the new image: low: {self.low}, high: {self.high}')
+            log(
+                f'In [binary_search_step]: low and high are reset for the new image: low: {self.low}, high: {self.high}')
 
             if globals.debug:
                 print_list(self.sorted_list)
@@ -517,6 +536,7 @@ class Window:
         :param rate:
         :return:
         """
+
         def append_item_not_exists(lst, item):
             if item not in lst:
                 lst.append(item)
@@ -527,7 +547,6 @@ class Window:
 
         # ======== obtain the sets. easier_list: set of images that are easier than the dict key img
         easier_list, equal_list, harder_list = self.comparisons[left_img]
-        print('len equal list: ', len(equal_list))
 
         if rate == '1':  # new image is harder, should add right image to easier_list
             if right_img in harder_list:  # if right image in harder set, remove it
@@ -570,5 +589,3 @@ class Window:
             log(f'In [read_img_and_resize_if_needed]: reading the right file')
             right_photo = logic.read_dicom_and_resize(self.curr_right_file)
             return left_photo, right_photo
-
-
