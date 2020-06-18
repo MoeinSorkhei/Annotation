@@ -9,22 +9,44 @@ import globals
 
 
 class Window:
-    def __init__(self, master, cases, already_sorted, already_comparisons, mode, session_name):
+    def __init__(self, master, cases, already_sorted, already_comparisons, show_mode, data_mode, train_bins=None):
+        """
+        :param master:
+        :param cases:
+        :param already_sorted:
+        :param already_comparisons:
+        :param show_mode:
+        :param data_mode:
+        :param train_bins:
+
+        Notes:
+            - Regarding prev_results:
+              it is tuple (img, rate) for 'single' show_mode (which will not be used)
+
+              or (low, high, rate, insertion_index, mid_img) for test data where insertion index refers to the index
+              we used for inserting an image into the sorted_list and mid_image is the final middle image used for comparison
+              before insertion. The last two are available only if insertion has occurred, otherwise the tuple would
+              only have (low, high, rate) values.
+
+              or (low, high, rate, bin, pos) for train where bin refers to the bin we inserted and the position for
+              insertion ONLY if insertions has occurred. Otherwise the tuple would be (low, high, rate).
+        """
         # ======== attributes
         self.master = master
-        self.mode = mode
-        self.session_name = session_name
+        self.show_mode = show_mode
+        self.data_mode = data_mode  # test or train
+        # self.session_name = session_name
         self.cases = cases
         self.start_time = int(time.time() // 60)  # used for stat panel
         self.case_number = None
-        # tuple (img, rate) or (left_img, right_img, rate) or (left_img, right_img, rate, insertion_index, mid_img)
-        self.prev_result = None
+
+        self.prev_result = None  # 'single' show_mode will not be used ==>  no longer used
 
         logic.log(f"{'_' * 150}\nIn Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
         master.bind("<Key>", self.keyboard_press)  # bind keyboard press to function
 
-        # ======== determine file(s) to show
-        if mode == 'single':
+        # init attributes
+        if show_mode == 'single':
             self.current_index = 0
             print(f'start time: {self.start_time}')
             self.init_or_update_case_number()
@@ -49,36 +71,54 @@ class Window:
                 self.caption_panel = Label(self.frame, text=pure_name(self.current_file), font='-size 10')
                 self.caption_panel.pack(side=TOP)
 
-        if mode == 'side_by_side':
+        if show_mode == 'side_by_side':
             # ======== comparisons_list which contains, for very image, lists of images that were compared against it
+            # this file only has comparisons in a structured way, nothing more
             self.comparisons = already_comparisons
 
-            if len(already_sorted) > 0:  # the file sorted.txt already exists, so create the list based on them
-                self.sorted_list = already_sorted
-                log(f'In Window [__init__]: there ARE already_sorted images ==> init sorted_list with already_sorted '
-                    f'images of len {len(self.sorted_list)}.')
+            if self.data_mode == 'test':
+                if len(already_sorted) > 0:  # the file sorted.txt already exists, so create the list based on them
+                    self.sorted_list = already_sorted
+                    log(f'In Window [__init__]: there ARE already_sorted images ==> init sorted_list with already_sorted '
+                        f'images of len {len(self.sorted_list)}.')
+                    self.current_index = 0
+
+                else:  # no sorted.txt exists, construct the list from scratch
+                    self.sorted_list = [self.cases[0]]
+                    log(f'In Window [__init__]: there are NO already_sorted images ==> init sorted_list with the first image'
+                        f'in the cases. sorted_list has len: {len(self.sorted_list)}.')
+                    self.current_index = 1  # because the first image is used to create the sorted_list
+
+                self.comparisons.update({self.cases[0]: [[], [], []]})  # add the first ref image (which has no comparisons so far)
+                log(f'In Window [__init__]: init sorted_list with len {len(self.sorted_list)}.')
+
+                self.low = 0
+                self.high = len(self.sorted_list) - 1
+                self.curr_left_file = self.cases[self.current_index]  # image with current index (reference image)
+                # other images to be compared against - start comparison from the middle of the list
+                self.curr_right_file = self.sorted_list[(self.low + self.high) // 2]
+
+            else:  # for train bins
+                self.bins_list = list(range(train_bins))
                 self.current_index = 0
+                log(f'In Window [__init__]: init bins_list with len: {len(self.bins_list)}.')  # ony used for comparing indices
 
-            else:  # no sorted.txt exists, construct the list from scratch
-                self.sorted_list = [self.cases[0]]
-                log(
-                    f'In Window [__init__]: there are NO already_sorted images ==> init sorted_list with the first image'
-                    f'in the cases. sorted_list has len: {len(self.sorted_list)}.')
-                self.current_index = 1  # because the first image is used to create the sorted_list
+                self.low = 0
+                self.high = len(self.bins_list) - 1
+                self.curr_left_file = self.cases[self.current_index]  # image with current index (reference image)
+                which_bin = self.bins_list[(self.low + self.high) // 2]  # get the bin number to show its last img
+                # read the last image (most difficult one) in the bin
+                self.curr_right_file = last_img_in_bin(which_bin)  # which_bin = 0 ==> read from bin_1 file
 
-            self.comparisons.update({self.cases[0]: [[], [], []]})  # add the first image (which has no comparisons)
-            log(f'In Window [__init__]: init sorted_list with len {len(self.sorted_list)}.')
-
-            # self.current_index = 1
             self.init_or_update_case_number()
             self.log_current_index(called_from='__init__')
 
-            self.low = 0
-            self.high = len(self.sorted_list) - 1
-
-            self.curr_left_file = self.cases[self.current_index]  # image with current index (reference image)
+            # self.curr_left_file = self.cases[self.current_index]  # image with current index (reference image)
             # other images to be compared against - start comparison from the middle of the list
-            self.curr_right_file = self.sorted_list[(self.low + self.high) // 2]
+            # self.curr_right_file = self.sorted_list[(self.low + self.high) // 2]
+            if data_mode == 'train':
+                log(f'In Window [__init__]: Starting comparison with the last image in bin: {which_bin + 1}')
+
             multi_log([f'In Window [__init__]: Left Image: "{pure_name(self.curr_left_file)}"',
                        f'In Window [__init__]: Left Full path: "{self.curr_left_file}"\n',
                        f'In Window [__init__]: Right Image: "{pure_name(self.curr_right_file)}"',
@@ -101,6 +141,7 @@ class Window:
 
         self.init_stat_panel_and_buttons(master)
 
+    # ========== UI-level functions
     def init_frames_and_photos(self, master):
         # ======== frame for putting things into it
         self.photos_panel = Frame(master)
@@ -156,14 +197,27 @@ class Window:
             self.prev_button.pack_forget()
 
     def update_photos(self, frame):
+        """
+        :param frame:
+        :return:
+
+        Notes:
+            - This function is a UI-level function, In this function, there is no need to check prev_result, all the
+              logical values e.g. indices have already been changed in the previous functions (e.g. show_previous_case
+              or keyboard_press). It only needs the current low and high indices to update the images.
+
+            - For either 'previous' or 'next' directions, this function is called once the low and high indices are updated and the
+              recent item added to the list is removed (if index has changed), so it simply used the low and high inds
+              to again show the right image.
+        """
         # ======== for the final frame
         if frame == 'final':
-            if self.mode == 'single':
+            if self.show_mode == 'single':
                 self.photo_panel.pack_forget()
                 if globals.debug:
                     self.caption_panel.pack_forget()
 
-            if self.mode == 'side_by_side':
+            if self.show_mode == 'side_by_side':
                 self.left_frame.configure(background="white")  # remove background on the final page
                 self.left_photo_panel.pack_forget()
                 self.right_photo_panel.pack_forget()
@@ -174,7 +228,7 @@ class Window:
 
         # ======== for the rest of the frames
         else:
-            if self.mode == 'single':
+            if self.show_mode == 'single':
                 # ======== update current file
                 self.current_file = self.cases[self.current_index]  # next file path
                 # logic.log(f'Image: "{self.current_file.split(os.path.sep)[-1]}"')
@@ -193,12 +247,18 @@ class Window:
                     self.caption_panel.configure(text=pure_name(self.current_file))  # update the caption
                     self.caption_panel.pack(side=TOP)
 
-            if self.mode == 'side_by_side':
+            if self.show_mode == 'side_by_side':
                 # ======== update left and right files
                 mid = (self.low + self.high) // 2
                 self.curr_left_file = self.cases[self.current_index]  # left photo unchanged as reference
-                self.curr_right_file = self.sorted_list[mid]  # right photo changed to be compared against
-                log(f'In [update_photos]: Updated right photo to index: {mid} of sorted_list')
+
+                if self.data_mode == 'test':
+                    self.curr_right_file = self.sorted_list[mid]  # right photo changed to be compared against
+                    log(f'In [update_photos]: Updated right photo to index: {mid} of sorted_list')
+
+                else:
+                    self.curr_right_file = last_img_in_bin(which_bin=mid)
+                    log(f'In [update_photos]: Updated right photo to last image of bin: {mid + 1}.\n')
 
                 logic.log(f'In [update_photos]: Left Image: "{pure_name(self.curr_left_file)}"')
                 logic.log(f'In [update_photos]: Left Full path: "{self.curr_left_file}" \n')
@@ -229,18 +289,18 @@ class Window:
     def update_stat(self):
         stat_text = ''
         if self.current_index != len(self.cases):
-            if self.mode == 'single':
+            if self.show_mode == 'single':
                 stat_text = f'Rating for image {self.current_index + 1} of {len(self.cases)} - Case number: {self.case_number}' + \
                             (f'\nPrevious rating: {self.prev_result[1]}' if self.prev_result is not None else '')
 
-            if self.mode == 'side_by_side':
+            if self.show_mode == 'side_by_side':
                 stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - Case number: {self.case_number}' + \
                             (f'\nPrevious rating: {self.prev_result[2]}' if self.prev_result is not None else '')
         else:  # do not show case on the final page
-            if self.mode == 'single':
+            if self.show_mode == 'single':
                 stat_text = f'\nPrevious rating: {self.prev_result[1]}'
 
-            if self.mode == 'side_by_side':
+            if self.show_mode == 'side_by_side':
                 stat_text = f'\nPrevious rating: {self.prev_result[2]}'
 
         self.stat_panel.configure(text=stat_text)
@@ -261,10 +321,7 @@ class Window:
 
         # ======== update the image and caption for finalize page - hide image(s)
         if self.current_index == len(self.cases):
-            logic.log(f"\n\n\n{'=' * 150}\nON THE FINAL PAGE", no_time=True)
-            # if globals.debug:
-            #     print_comparisons_lists(self.comparisons)
-
+            log(f"\n\n\n{'=' * 150}\nON THE FINAL PAGE", no_time=True)
             self.update_photos(frame='final')
             self.fin_button.pack(side=TOP)  # show finalize button
 
@@ -286,237 +343,7 @@ class Window:
         logic.email_results()
         exit(0)
 
-    def log_current_index(self, called_from):
-        log(f"\n\n\n\n{'=' * 150} \nIn [{called_from}]: "
-            f"Current index: {self.current_index} - Case number: {self.case_number}", no_time=True)
-        if self.mode != 'single':
-            log(f'In [{called_from}]: There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)
-
-    def possibly_remove_item_from_list(self):
-        if self.index_should_be_changed(direction='previous'):
-            # only in this case we have insertion index, otherwise it is None
-            insertion_index = self.prev_result[3]
-            del self.sorted_list[insertion_index]  # delete the wrongly inserted element from the list
-            log(f'In [possibly_remove_item_from_list]: index should be decreased ==> '
-                f'removed index {insertion_index} from sorted_list - '
-                f'Now sorted_list has len: {len(self.sorted_list)}')
-
-            log(f'In [possibly_remove_item_from_list]: saving sorted_list with removed index...')
-            write_sorted_list_to_file(self.sorted_list)
-
-            if globals.debug:
-                print_list(self.sorted_list)
-
-    def possibly_update_index(self, direction):
-        if self.mode == 'side_by_side':
-            if direction == 'next' and self.index_should_be_changed('next'):
-                self.current_index += 1  # index of the next file
-                log('In [possibly_update_index]: Current index increased...')
-
-            if direction == 'previous' and self.index_should_be_changed('previous'):
-                self.current_index -= 1
-                log('In [possibly_update_index]: Current index decreased...')
-
-        else:
-            # ======== update current index
-            if direction == 'next':
-                self.current_index += 1  # index of the next file
-            else:
-                self.current_index -= 1  # index of the previous file
-
-    def index_should_be_changed(self, direction):
-        """
-        This function checks if the current image index should be change base on the current low and high indices.
-        :param previously_pressed:
-        :param direction:
-        :return:
-
-        Notes:
-            - If the direction is 'next', we only check if low and high refer to the two ends of the list. They are set
-              to the two ends of the list if 1) the binary search has completed, or 2) 9 was pressed.
-
-            - If direction is 'previous', we check: 1) if 9 was previously pressed, the index has already been increased
-              and should be decreased now. Otherwise if low and high are equal, it means that we were on the last step
-              of the binary search, and the index has been increased, so it should be decreased now.
-        """
-        if direction == 'next':
-            return self.low == 0 and self.high == len(self.sorted_list) - 1
-            # return prev_low == prev_high or
-
-        else:  # direction = 'previous' - previously_pressed should be provided
-            prev_low, prev_high = self.prev_result[0], self.prev_result[1]
-            previously_pressed = self.prev_result[2]  # if 9 was pressed previously, index has been already increased
-            # return self.low == self.high or previously_pressed == '9'
-            return prev_low == prev_high or previously_pressed == '9'
-
-    def keystroke_is_valid(self, pressed):
-        # ======== only take action if it is a valid number, otherwise will be ignored
-        key_stroke_is_valid = \
-            (self.mode == 'single' and (eval(pressed) == '1' or eval(pressed) == '2' or eval(pressed) == '3')) \
-            or \
-            (self.mode == 'side_by_side' and (eval(pressed) == '1' or eval(pressed) == '2' or eval(pressed) == '9'))
-        return key_stroke_is_valid
-
-    def get_prev_imgs_from_prev_result(self):
-        """
-        The way this function checks if the index has been changed or not is that is checks if index should would
-        changed if we wanted to go to the previous frame.
-        :return:
-        """
-        if self.index_should_be_changed(direction='previous'):
-            right_img = self.prev_result[4]  # mid_image, the last image compared to before inserting to the sorted list
-            left_img = self.cases[self.current_index - 1]  # the image that was newly inserted
-
-        else:  # index has not been increased
-            right_img = self.sorted_list[(self.prev_result[0] + self.prev_result[1]) // 2]  # finding mid_img index
-            left_img = self.cases[self.current_index]
-        return left_img, right_img
-
-    def save_prev_rating(self):
-        if self.mode == 'single':
-            imgs = [self.prev_result[0]]
-            rate = self.prev_result[1]
-            # save_rating(self.session_name, imgs, rate)
-            save_rating(imgs, rate)
-
-        if self.mode == 'side_by_side':
-            left_img, right_img = self.get_prev_imgs_from_prev_result()
-            imgs = [left_img, right_img]
-            rate = self.prev_result[2]
-            save_rating(imgs, rate)
-            self.update_and_save_comparisons_list(left_img, right_img, rate)
-
-    def show_previous_case(self, event):
-        if self.mode == 'side_by_side':
-            # ======= undo the las index update by binary search
-            log(
-                f'In [show_previous_case]: Clicked "show_previous_case". Checking if item should be removed from list...')
-            self.possibly_remove_item_from_list()
-
-            # previously_pressed = self.prev_result[2]  # need to have it before setting prev_result to None
-            # ======= revert low and high indices
-            self.low, self.high = self.prev_result[0], self.prev_result[1]
-            log(
-                f'In [show_previous_case]: Reverted indices to: low = {self.low}, high = {self.high} 'f'==> prev_result set to None.')
-            log(f'In [show_previous_case]: checking if index should be decreased...')
-            self.possibly_update_index(direction='previous')  # uses prev_result to decide if index should be changed
-
-            self.prev_result = None  # because now we are in the previous window
-            log(f'In [show_previous_case]: set prev_result to None. Updating frame to show the previous case...')
-
-        else:
-            # previously_pressed = None
-            self.prev_result = None  # because now we are in the previous window
-            log(f'In [show_previous_case]: Clicked "show_previous_case" ==> prev_result set to None. '
-                f'Updating frame to show the previous case...')
-
-        self.update_frame()
-
-    def keyboard_press(self, event):
-        if self.current_index == len(self.cases):
-            logic.log(f'In [keyboard_press]: Ignoring keyboard press for index "{self.current_index}"')
-            return
-
-        pressed = repr(event.char)
-        logic.log(f'In [keyboard_press]: pressed {pressed}')
-
-        # ======== take action if keystroke is valid
-        if self.keystroke_is_valid(pressed):
-            # ======== save the prev_result once confirmed (ie when keyboard is pressed on current window)
-            if self.prev_result is not None:  # that is we are not in the prev window
-                log(f'In [keyboard_press]: Saving previous result...')
-                self.save_prev_rating()
-
-            # ======== update the prev_result to current decision
-            if self.mode == 'single':
-                # self.prev_result = (pure_name(self.current_file), eval(pressed))
-                self.prev_result = (self.current_file, eval(pressed))
-
-            if self.mode == 'side_by_side':
-                # ======= keep track of current indices before updating
-                self.prev_result = (self.low, self.high, eval(pressed))  # updating prev_result to current choice
-                log(f'In [keyboard_press]: set prev_result to: (low: {self.low}, high: {self.high}, eval: {eval(pressed)})\n')
-
-                # ======= after this low and high are changed
-                self.update_binary_search_inds_and_possibly_insert(pressed)
-
-            # ======== upload results regularly
-            if self.current_index <= 1 or self.current_index % globals.params['email_interval'] == 0:
-                # make it non-blocking as emailing takes time
-                thread = Thread(target=logic.email_results)
-                thread.start()
-
-            self.possibly_update_index(direction='next')  # uses current low and high to decide if index should change
-            self.update_frame()
-
-    def update_binary_search_inds_and_possibly_insert(self, pressed):
-        """
-        This will update the low and high indices for the binary search. In case binary search is completed or 9 is
-        pressed by the radiologist, it inserts the image in the right position and resets the low and high indices.
-        :param pressed:
-        :return:
-        """
-        mid = (self.low + self.high) // 2
-
-        # ====== update the low and high indexes based ond the rating until suitable position is found
-        if self.high != self.low and eval(pressed) != '9':
-            if eval(pressed) == '1':  # rated as harder, go to the right half of the list
-                self.low = mid if (self.high - self.low) > 1 else self.high
-                log(f'In [binary_search_step]: low increased to {self.low}')
-
-            else:  # rated as easier, go to the left half of the list
-                self.high = mid
-                log(f'In [binary_search_step]: high decreased to {self.high}')
-
-            log(f'In [binary_search_step]: Updated indices: low = {self.low}, high = {self.high}')
-
-        # ====== suitable position is found (low = high), insert here
-        else:  # either mid = low = high or 9 is pressed: so we should insert
-            # if 9 is pressed, meaning the two images are equal, so we directly insert to the left side of the mid_img
-            if eval(pressed) == '9':
-                mid_image = self.sorted_list[mid]  # this image will be needed for saving comparisons
-                self.sorted_list.insert(mid, self.curr_left_file)  # insert to the left
-                self.prev_result = self.prev_result + (mid, mid_image,)
-
-                log(f'In [binary_search_step]: the two images are equal, inserted into index {mid} of sorted_list - '
-                    f'Now sorted_list has len: {len(self.sorted_list)}\n')
-
-            # otherwise, it means the binary search is in its last step, ie, low = high
-            else:
-                mid = self.low
-                mid_image = self.sorted_list[mid]  # this image will be needed for saving comparisons
-                log(f'In [binary_search_step]: low and high are equal. Inserting into list...')
-
-                if eval(pressed) == '1':  # means that the new image is harder
-                    self.sorted_list.insert(mid + 1, self.curr_left_file)  # insert to the right side if the index
-                    self.prev_result = self.prev_result + (
-                    mid + 1, mid_image,)  # add insertion index in case undo is needed
-
-                    log(f'In [binary_search_step]: inserted into index {mid + 1} of sorted_list - '
-                        f'Now sorted_list has len: {len(self.sorted_list)}\n')
-
-                else:
-                    self.sorted_list.insert(mid, self.curr_left_file)  # insert to the left side if the index
-                    self.prev_result = self.prev_result + (
-                    mid, mid_image,)  # add insertion index in case undo is needed
-
-                    log(f'In [binary_search_step]: inserted into index {mid} of sorted_list - '
-                        f'Now sorted_list has len: {len(self.sorted_list)}\n')
-
-            # ====== save the updated list
-            log(f'In [binary_search_step]: saving sorted_list...')
-            write_sorted_list_to_file(self.sorted_list)
-            log(
-                f'In [binary_search_step]: also updated prev_result to include the insertion index: {self.prev_result[3]}')
-
-            # ====== reset indices because after this a new image will be inserted
-            self.low = 0
-            self.high = len(self.sorted_list) - 1
-            log(f'In [binary_search_step]: low and high are reset for the new image: low: {self.low}, high: {self.high}')
-
-            if globals.debug:
-                print_list(self.sorted_list)
-
+    # ========== functions for saving previous state
     def update_and_save_comparisons_list(self, left_img, right_img, rate):
         """
         NOTES: Comparisons are only with respect to the reference image, ie if left image: 4.dcm is harder than right
@@ -603,15 +430,344 @@ class Window:
         save_comparisons_list(self.comparisons)
         log(f'In [update_comparison_sets]: saved comparison_sets to file.\n')
 
+    def get_prev_imgs_from_prev_result(self):
+        """
+        The way this function checks if the index has been changed or not is that is checks if index should would
+        changed if we wanted to go to the previous frame.
+        :return:
+
+        Notes:
+            - This function is called for saving the previous result once it is confirmed. Since the current indices
+              are changed based on the keyboard button pressed on the current window, it needs the prev_result to retrieve
+              the previous low and high indices and the rate. And since the sorted_list or the bin might have been updated
+              if the index was increased, it needs to do some calculation to get the previous indices.
+        """
+        if self.data_mode == 'test':
+            if self.index_should_be_changed(direction='previous'):
+                right_img = self.prev_result[4]  # mid_image, the last image compared to before inserting to the sorted list
+                left_img = self.cases[self.current_index - 1]  # the image that was newly inserted
+
+            else:
+                prev_mid = (self.prev_result[0] + self.prev_result[1]) // 2
+                right_img = self.sorted_list[prev_mid]  # finding mid_img index, sorted_list has not changed
+                left_img = self.cases[self.current_index]
+
+        else:
+            # prev_bin could always be specified by the mid index, no matter an image has been inserted or not
+            prev_bin = (self.prev_result[0] + self.prev_result[1]) // 2
+
+            if self.index_should_be_changed(direction='previous'):
+                left_img = self.cases[self.current_index - 1]
+                prev_bin_imgs, insert_pos = read_imgs_from_bin(prev_bin), self.prev_result[4]
+                # in case item has been inserted: get the correct last item if a new item has been inserted into the bin
+                right_img = prev_bin_imgs[-1] if insert_pos == 'before_last' else prev_bin_imgs[-2]
+
+            else:  # index has not changed
+                left_img = self.cases[self.current_index]
+                right_img = last_img_in_bin(prev_bin)
+
+        return left_img, right_img
+
+    def save_prev_rating(self):
+        if self.show_mode == 'single':
+            imgs = [self.prev_result[0]]
+            rate = self.prev_result[1]
+            # save_rating(self.session_name, imgs, rate)
+            save_rating(imgs, rate)
+
+        if self.show_mode == 'side_by_side':
+            left_img, right_img = self.get_prev_imgs_from_prev_result()
+            imgs = [left_img, right_img]
+            rate = self.prev_result[2]
+            save_rating(imgs, rate)
+            self.update_and_save_comparisons_list(left_img, right_img, rate)
+
+    # ========== functions for checking things
+    def index_should_be_changed(self, direction):
+        """
+        This function checks if the current image index should be change base on the current low and high indices.
+        :param direction:
+        :return:
+
+        Notes:
+            - If the direction is 'next', we only check if low and high refer to the two ends of the list. They are set
+              to the two ends of the list if 1) the binary search has completed, or 2) 9 was pressed.
+
+            - If direction is 'previous', we check: 1) if 9 was previously pressed, the index has already been increased
+              and should be decreased now. Otherwise if low and high are equal, it means that we were on the last step
+              of the binary search, and the index has been increased, so it should be decreased now.
+        """
+        if direction == 'next':
+            if self.data_mode == 'test':
+                return self.low == 0 and self.high == len(self.sorted_list) - 1
+            else:
+                return self.low == 0 and self.high == len(self.bins_list) - 1
+
+        else:  # direction = 'previous' - previously_pressed should be provided
+            prev_low, prev_high = self.prev_result[0], self.prev_result[1]
+            previously_pressed = self.prev_result[2]  # if 9 was pressed previously, index has been already increased
+            return prev_low == prev_high or previously_pressed == '9'
+
+    def keystroke_is_valid(self, pressed):
+        # ======== only take action if it is a valid number, otherwise will be ignored
+        key_stroke_is_valid = \
+            (self.show_mode == 'single' and (eval(pressed) == '1' or eval(pressed) == '2' or eval(pressed) == '3')) \
+            or \
+            (self.show_mode == 'side_by_side' and (
+                    eval(pressed) == '1' or eval(pressed) == '2' or eval(pressed) == '9'))
+        return key_stroke_is_valid
+
+    # ========== functions for updating indices and the list
+    def possibly_remove_item_from_list(self):
+        if self.index_should_be_changed(direction='previous'):
+            if self.data_mode == 'test':
+                insertion_index = self.prev_result[3]  # only in this case we have insertion index, otherwise it is None
+                del self.sorted_list[insertion_index]  # delete the wrongly inserted element from the list
+                log(f'In [possibly_remove_item_from_list]: index should be decreased ==> '
+                    f'removed index {insertion_index} from sorted_list - '
+                    f'Now sorted_list has len: {len(self.sorted_list)}')
+
+                log(f'In [possibly_remove_item_from_list]: saving sorted_list with removed index...')
+                write_sorted_list_to_file(self.sorted_list)
+
+                if globals.debug:
+                    print_list(self.sorted_list)
+
+            else:  # e.g. prev_result: (left_img, right_img, rate, bin, 'last')
+                which_bin, insert_pos = self.prev_result[3], self.prev_result[4]
+                log(f'In [possibly_remove_item_from_list]: removing the "{insert_pos}" element from bin {which_bin + 1}')
+                del_from_bin_and_save(which_bin, insert_pos)
+
+    def possibly_update_index(self, direction):
+        if self.show_mode == 'side_by_side':
+            if direction == 'next' and self.index_should_be_changed('next'):
+                self.current_index += 1  # index of the next file
+                log('In [possibly_update_index]: Current index increased...')
+
+            if direction == 'previous' and self.index_should_be_changed('previous'):
+                self.current_index -= 1
+                log('In [possibly_update_index]: Current index decreased...')
+
+        else:
+            # ======== update current index
+            if direction == 'next':
+                self.current_index += 1  # index of the next file
+            else:
+                self.current_index -= 1  # index of the previous file
+
+    # ========== functions for showing the next/previous case
+    def show_previous_case(self, event):
+        """
+        :param event:
+        :return:
+        Notes:
+            - ALL the logical steps (updating indices and the list) happen in this function before updating the frame
+              to show the previous case.
+
+        Procedure: We undo all the steps that have been done in the keyboard_press function.
+            1. If an item has been added to the list, we remove it.
+            2. We revert the low and high indices to the previous state.
+            3. We decrement the index of the reference image (left image) if the index was increased the previous step.
+            4. Once all the indices and the list have been reverted, we update the frame.
+        """
+        if self.show_mode == 'side_by_side':
+            # ======= undo the las index update by binary search
+            log(f'In [show_previous_case]: Clicked "show_previous_case". Checking if item should be removed from list...')
+            self.possibly_remove_item_from_list()
+
+            # ======= revert low and high indices
+            self.low, self.high = self.prev_result[0], self.prev_result[1]
+            log(f'In [show_previous_case]: Reverted indices to: low = {self.low}, high = {self.high} 'f'==> prev_result set to None.')
+            log(f'In [show_previous_case]: checking if index should be decreased...')
+            self.possibly_update_index(direction='previous')  # uses prev_result to decide if index should be changed
+
+            self.prev_result = None  # because now we are in the previous window
+            log(f'In [show_previous_case]: set prev_result to None. Updating frame to show the previous case...')
+
+        else:
+            # previously_pressed = None
+            self.prev_result = None  # because now we are in the previous window
+            log(f'In [show_previous_case]: Clicked "show_previous_case" ==> prev_result set to None. '
+                f'Updating frame to show the previous case...')
+
+        self.update_frame()
+
+    def keyboard_press(self, event):
+        """
+        :param event:
+        :return:
+
+        Notes:
+            - ALL the logical steps (saving previous result, keeping track of current indices, updating indices and list etc.)
+              happen in this function before updating the frame to show the next case.
+
+        Procedure:
+            1. If a button is pressed, it means that the previous result is confirmed, ie, the radiologist does not want
+               to go to the previous window. So the prev_result will be saved.
+            2. Once the previous result is saved, current indices (along with the rate) will replace the previous result.
+            3. Once we take note of current indices and keep them in prev_result, we update the indices using binary search.
+            4. The binary search function updates the indices and if the search has completed (or 9 is pressed), it inserts
+               the new image to the list, and adds the insertion index and the previous mid_img to prev_result so we could
+               use them again if the radiologist wants to get back in the next window.
+            5. If insertion has occurred, the index of the current left image will be incremented to show the next image.
+            6. Now that the indices are updated, update_frame function updates the window in a UI-level based on the
+               updated low and high indices.
+        """
+        if self.current_index == len(self.cases):
+            logic.log(f'In [keyboard_press]: Ignoring keyboard press for index "{self.current_index}"')
+            return
+
+        pressed = repr(event.char)
+        logic.log(f'In [keyboard_press]: pressed {pressed}')
+
+        # ======== take action if keystroke is valid
+        if self.keystroke_is_valid(pressed):
+            # ======== save the prev_result once confirmed (ie when keyboard is pressed on current window)
+            if self.prev_result is not None:  # that is we are not in the prev window
+                log(f'In [keyboard_press]: Saving previous result...')
+                self.save_prev_rating()
+
+            # ======== update the prev_result to current decision
+            if self.show_mode == 'single':
+                # self.prev_result = (pure_name(self.current_file), eval(pressed))
+                self.prev_result = (self.current_file, eval(pressed))
+
+            if self.show_mode == 'side_by_side':
+                self.prev_result = (self.low, self.high, eval(pressed))  # updating prev_result to current choice
+                log(f'In [keyboard_press]: set prev_result to: (low: {self.low}, high: {self.high}, eval: {eval(pressed)})\n')
+
+                # now that we keep indices in prev_result, we can update them
+                self.update_binary_search_inds_and_possibly_insert(pressed)
+
+            # ======== upload results regularly
+            if self.current_index <= 1 or self.current_index % globals.params['email_interval'] == 0:
+                thread = Thread(target=logic.email_results)  # make it non-blocking as emailing takes time
+                thread.start()
+
+            self.possibly_update_index(direction='next')  # uses current low and high to decide if index should change
+            self.update_frame()  # update the frame and photos based in the new low and high indices
+
+    # ========== very logical functions
+    def update_binary_search_inds_and_possibly_insert(self, pressed):
+        """
+        This will update the low and high indices for the binary search. In case binary search is completed or 9 is
+        pressed by the radiologist, it inserts the image in the right position and resets the low and high indices.
+        :param pressed:
+        :return:
+        """
+        mid = (self.low + self.high) // 2  # for train data, this represents bin number
+        # ====== update the low and high indexes based ond the rating until suitable position is found
+        if self.high != self.low and eval(pressed) != '9':
+
+            if eval(pressed) == '1':  # rated as harder, go to the right half of the list
+                self.low = mid if (self.high - self.low) > 1 else self.high
+                log(f'In [binary_search_step]: low increased to {self.low}')
+
+            else:  # rated as easier, go to the left half of the list
+                self.high = mid
+                log(f'In [binary_search_step]: high decreased to {self.high}')
+
+            log(f'In [binary_search_step]: Updated indices: low = {self.low}, high = {self.high}')
+
+        # ====== suitable position is found (low = high), insert here
+        else:
+            # for test data
+            if self.data_mode == 'test':
+                mid_image = self.sorted_list[mid]
+                # if both images are equal
+                if eval(pressed) == '9':  # 9 is pressed, so we insert directly
+                    self.sorted_list.insert(mid, self.curr_left_file)  # insert to the left
+                    self.prev_result = self.prev_result + (mid, mid_image,)
+                    log(f'In [binary_search_step]: the two images are equal, inserted into index {mid} of sorted_list - '
+                        f'Now sorted_list has len: {len(self.sorted_list)}\n')
+
+                # if ref image is harder (and binary search is completed)
+                if eval(pressed) == '1':
+                    log(f'In [binary_search_step]: low and high are equal. '
+                        f'Inserting into list...')
+                    self.sorted_list.insert(mid + 1, self.curr_left_file)  # insert to the right side if the index
+                    self.prev_result = self.prev_result + (mid + 1, mid_image,)  # add insertion index in case undo is needed
+                    log(f'In [binary_search_step]: inserted into index {mid + 1} of sorted_list - '
+                        f'Now sorted_list has len: {len(self.sorted_list)}\n')
+
+                # if ref image is easier (and binary search is completed)
+                if eval(pressed) == '2':
+                    log(f'In [binary_search_step]: low and high are equal. '
+                        f'Inserting into list...')
+                    self.sorted_list.insert(mid, self.curr_left_file)  # insert to the left side if the index
+                    self.prev_result = self.prev_result + (mid, mid_image,)  # add insertion index in case undo is needed
+                    log(f'In [binary_search_step]: inserted into index {mid} of sorted_list - '
+                        f'Now sorted_list has len: {len(self.sorted_list)}\n')
+
+                # save the modified list
+                log(f'In [binary_search_step]: saving '
+                    f'sorted_list...')
+                write_sorted_list_to_file(self.sorted_list)
+                log(f'In [binary_search_step]: also updated prev_result to include the '
+                    f'insertion index: {self.prev_result[3]}')
+
+                # reset the indices for the next round of binary search
+                log(f'In [binary_search_step]: also updated prev_result to have '
+                    f'mid index and img_img.')
+                self.low = 0
+                self.high = len(self.sorted_list) - 1
+                log(f'In [binary_search_step]: low and high are reset for the new image: '
+                    f'low: {self.low}, high: {self.high}\n')
+
+                if globals.debug:
+                    print_list(self.sorted_list)
+
+            # for train data
+            else:
+                # if both images are equal
+                if eval(pressed) == '9':
+                    insert_into_bin_and_save(which_bin=mid, pos='before_last', img=self.curr_left_file)
+                    self.prev_result = self.prev_result + (mid, 'before_last',)  # mid represent the bin here
+                    log(f'In [binary_search_step]: the two images are equal, inserted into pos '
+                        f'"before_last" of bin {mid + 1}')
+                    log(f'In [binary_search_step]: also updated prev_result to have bin number '
+                        f'and insertion pos.\n')
+
+                # if ref image is harder (and binary search is completed)
+                if eval(pressed) == '1':
+                    log(f'In [binary_search_step]: low and high are equal. '
+                        f'Inserting into bin...')
+                    insert_into_bin_and_save(which_bin=mid, pos='last', img=self.curr_left_file)
+                    self.prev_result = self.prev_result + (mid, 'last',)  # bin and the insertion position
+                    log(f'In [binary_search_step]: inserted into pos "last" of '
+                        f'bin {mid + 1} and saved bin.')
+
+                # if ref image is easier (and binary search is completed)
+                if eval(pressed) == '2':
+                    log(f'In [binary_search_step]: low and high are equal. '
+                        f'Inserting into bin...')
+                    insert_into_bin_and_save(which_bin=mid, pos='before_last', img=self.curr_left_file)
+                    self.prev_result = self.prev_result + (mid, 'before_last',)  # bin and the insertion position
+                    log(f'In [binary_search_step]: inserted into pos '
+                        f'"before_last" of bin {mid + 1} and saved bin.')
+
+                log(f'In [binary_search_step]: also updated prev_result to have bin number '
+                    f'and insertion pos.')
+                self.low = 0
+                self.high = len(self.bins_list) - 1
+                log(f'In [binary_search_step]: low and high are reset for the new image: '
+                    f'low: {self.low}, high: {self.high}\n')
+
     def read_img_and_resize_if_needed(self):
-        if self.mode == 'single':
+        if self.show_mode == 'single':
             # return logic.read_dicom_image(self.current_file, self.img_size)
             return logic.read_dicom_and_resize(self.current_file)
 
-        if self.mode == 'side_by_side':
+        if self.show_mode == 'side_by_side':
             log(f'In [read_img_and_resize_if_needed]: reading the left file')
             left_photo = logic.read_dicom_and_resize(self.curr_left_file)
 
             log(f'In [read_img_and_resize_if_needed]: reading the right file')
             right_photo = logic.read_dicom_and_resize(self.curr_right_file)
             return left_photo, right_photo
+
+    def log_current_index(self, called_from):
+        log(f"\n\n\n\n{'=' * 150} \nIn [{called_from}]: "
+            f"Current index: {self.current_index} - Case number: {self.case_number}", no_time=True)
+        if self.show_mode != 'single' and self.data_mode != 'train':
+            log(f'In [{called_from}]: There are {len(self.sorted_list)} images in the sorted_list\n', no_time=True)

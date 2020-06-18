@@ -8,7 +8,9 @@ debug = False
 # mode = 'side_by_side'
 
 params = {
-    "imgs_dir": os.path.join('..', 'tmp', 'dicoms_very_limited'),
+    "main_imgs_dir": os.path.join('..', 'tmp', 'dicoms_very_limited'),  # for test data
+    "other_imgs_dir": os.path.join('..', 'tmp', 'dicoms_limited'),  # for train data
+
     "output_path": os.path.join('..', 'output'),
     "sorted": os.path.join('..', 'output', 'sorted.txt'),
 

@@ -1,7 +1,8 @@
 from .window import *
 
 
-def show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons, session_name):
+def show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons,
+                                    data_mode, train_bins=None):
     if mode == 'single':
         text = 'How hard the image is? 1:  Easy, 2: Medium, 3: Hard'
 
@@ -17,6 +18,7 @@ def show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, al
                    cases=not_already_sorted,
                    already_sorted=already_sorted,
                    already_comparisons=already_comparisons,
-                   mode=mode,
-                   session_name=session_name)
+                   show_mode=mode,
+                   data_mode=data_mode,
+                   train_bins=train_bins)
     root.mainloop()  # run the main window continuously
