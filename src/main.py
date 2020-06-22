@@ -97,3 +97,12 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# SCRIPTS:
+# /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug
+# /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug
+# /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode train --debug
+# /Users/user/.conda/envs/ADL/bin/python main.py --session_name split --n_bins 2 --debug
+
+

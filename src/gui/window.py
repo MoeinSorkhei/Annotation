@@ -147,7 +147,7 @@ class Window:
         self.photos_panel = Frame(master)
         self.photos_panel.pack(side=TOP)
 
-        self.left_frame = Frame(master=self.photos_panel, background="forest green")
+        self.left_frame = Frame(master=self.photos_panel, background="red")
         self.left_frame.pack(side=LEFT, padx=10, pady=10)
 
         self.right_frame = Frame(master=self.photos_panel)
@@ -266,7 +266,7 @@ class Window:
                 logic.log(f'In [update_photos]: Right Full path: "{self.curr_right_file}" \n')
 
                 # ======== make background appear on pages other than the final
-                self.left_frame.configure(background="forest green")
+                self.left_frame.configure(background="red")
 
                 # ======== update photos
                 self.left_photo, self.right_photo = self.read_img_and_resize_if_needed()
