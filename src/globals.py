@@ -10,6 +10,7 @@ debug = False
 params = {
     "main_imgs_dir": os.path.join('..', 'tmp', 'dicoms_very_limited'),  # for test data
     "other_imgs_dir": os.path.join('..', 'tmp', 'dicoms_limited'),  # for train data
+    "csv_file": os.path.join('..', 'tmp', 'density_combined.csv'),
 
     "output_path": os.path.join('..', 'output'),
     "sorted": os.path.join('..', 'output', 'sorted.txt'),

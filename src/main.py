@@ -100,6 +100,7 @@ if __name__ == '__main__':
 
 
 # SCRIPTS:
+# =========  On my mac:
 # /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug
 # /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug
 # /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode train --debug
