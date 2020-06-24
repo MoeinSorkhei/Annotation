@@ -83,7 +83,7 @@ def reset_indices(window):
 
 # ========== list-related functions
 def possibly_remove_item_from_list(window):
-    if window.prev_result['aborted']:  # no remove if we have aborted
+    if window.search_type == 'robust' and window.prev_result['aborted']:  # no remove if we have aborted
         return
 
     if index_should_be_changed(window, direction='previous'):

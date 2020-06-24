@@ -643,10 +643,9 @@ class Window:
         self.current_index += 1
         log(f'In [abort_current_case]: aborted the current case, '
             f'increased current index to: {self.current_index}')
-        # self.reset_indices()
         reset_indices(self)
 
-    def check_consistency_and_abort_if_not_consistent(self, pressed, with_respect_to):
+    def abort_if_not_consistent(self, pressed, with_respect_to):
         if with_respect_to == 'low':
             if eval(pressed) == '1' or eval(pressed) == '9':
                 self.low_consistency = True
@@ -720,10 +719,10 @@ class Window:
             if self.show_mode == 'side_by_side':
                 if self.search_type == 'robust':
                     if self.low_consistency == 'unspecified':  # getting rate for the low image
-                        self.check_consistency_and_abort_if_not_consistent(pressed, with_respect_to='low')
+                        self.abort_if_not_consistent(pressed, with_respect_to='low')
 
                     elif self.high_consistency == 'unspecified':  # getting rate for the high image
-                        self.check_consistency_and_abort_if_not_consistent(pressed, with_respect_to='high')
+                        self.abort_if_not_consistent(pressed, with_respect_to='high')
 
                     else:  # both of them True, otherwise we had already aborted in the previous case
                         self.prev_result['low_consistency'] = True
