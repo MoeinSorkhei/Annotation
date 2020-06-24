@@ -2,6 +2,7 @@ import numpy as np
 import os
 
 import globals
+from .helper import *
 
 
 # ========== functions related to operations on the bins

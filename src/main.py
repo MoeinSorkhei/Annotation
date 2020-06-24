@@ -42,6 +42,7 @@ def manage_sessions_and_run(args):
     session_name = args.session_name
     data_mode = args.data_mode
     mode = 'side_by_side'
+    search_type = globals.params['search_type']
 
     log(f"\n\n\n\n{'*' * 150} \n{'*' * 150} \n{'*' * 150} \n{'*' * 150}", no_time=True)
     log(f'In [manage_sessions]: session_name: "{session_name}" - data_mode: {data_mode}')
@@ -75,7 +76,8 @@ def manage_sessions_and_run(args):
         already_comparisons = read_comparison_lists()
         log(f'In [manage_sessions]: already_comparisons loaded/created of {len(already_comparisons)} keys in it. \n\n')
 
-        gui.show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons, data_mode, n_bins)
+        gui.show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons,
+                                            data_mode, search_type, n_bins)
 
     elif session_name == 'split':
         split_sorted_list_to_bins(args.n_bins)
