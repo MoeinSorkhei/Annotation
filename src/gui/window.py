@@ -1,11 +1,7 @@
 from tkinter import *
 from threading import Thread
-from copy import deepcopy
 import time
 
-import logic
-from logic import *
-import globals
 from .logical import *
 
 
@@ -53,7 +49,6 @@ class Window:
             self.current_index = 0
             print(f'start time: {self.start_time}')
             self.init_or_update_case_number()
-            # self.log_current_index(called_from='__init__')
             log_current_index(self, called_from='__init__')
 
             self.current_file = cases[self.current_index]  # this first file
@@ -64,7 +59,6 @@ class Window:
             self.frame.pack(side=TOP)
 
             # ======== show image with caption, if caption enabled
-            # self.photo = self.read_img_and_resize_if_needed()
             self.photo = read_img_and_resize_if_needed(self)
 
             # ==== load the photo in a tkinter label
@@ -104,17 +98,17 @@ class Window:
                     self.low_consistency = 'unspecified'
                     self.high_consistency = 'unspecified'
 
+                self.init_or_update_case_number()
                 log_current_index(self, called_from='__init__')
-                self.update_files(direction='next')  # left and right files to be shown
-
-                # self.curr_left_file = self.cases[self.current_index]  # image with current index (reference image)
-                # # other images to be compared against - start comparison from the middle of the list
-                # self.curr_right_file = self.sorted_list[(self.low + self.high) // 2]
+                self.update_files()  # left and right files to be shown
 
             else:  # for train bins
                 self.bins_list = list(range(train_bins))
                 self.current_index = 0
                 log(f'In Window [__init__]: init bins_list with len: {len(self.bins_list)}.')  # ony used for comparing indices
+
+                self.init_or_update_case_number()
+                log_current_index(self, called_from='__init__')
 
                 self.low = 0
                 self.high = len(self.bins_list) - 1
@@ -123,16 +117,8 @@ class Window:
                 # read the last image (most difficult one) in the bin
                 self.curr_right_file = last_img_in_bin(which_bin)  # which_bin = 0 ==> read from bin_1 file
 
-            self.init_or_update_case_number()
-            # log_current_index(self, called_from='__init__')
-
             if data_mode == 'train':
                 log(f'In Window [__init__]: Starting comparison with the last image in bin: {which_bin + 1}')
-
-            # multi_log([f'In Window [__init__]: Left Image: "{pure_name(self.curr_left_file)}"',
-            #            f'In Window [__init__]: Left Full path: "{self.curr_left_file}"\n',
-            #            f'In Window [__init__]: Right Image: "{pure_name(self.curr_right_file)}"',
-            #            f'In Window [__init__]: Right Full path: "{self.curr_right_file}"\n'])
 
             # ======= define attributes and set to None. They will be initialized in different functions.
             self.left_frame, self.right_frame = None, None
@@ -227,30 +213,32 @@ class Window:
 
         self.stat_panel.configure(text=stat_text)
 
-    def update_files(self, direction):
+    def update_files(self):
         # ======== update left and right files
         mid = (self.low + self.high) // 2
         self.curr_left_file = self.cases[self.current_index]  # left photo unchanged as reference
 
         if self.data_mode == 'test':
-            if self.search_type == 'robust':
-                if to_be_checked_for_consistency(self, direction) == 'low':
+            if do_robust_checking(self):
+                log(f'In [update_files]: SHOULD DO ROBUST CHECKING...')
+                if to_be_checked_for_consistency(self) == 'low':
                     self.curr_right_file = self.sorted_list[self.low]
                     log(f'In [update_files]: Checking with "low" ==> Updated right photo to index '
                         f'low: {self.low} of sorted_list\n')
 
-                elif to_be_checked_for_consistency(self, direction) == 'high':
+                elif to_be_checked_for_consistency(self) == 'high':
                     self.curr_right_file = self.sorted_list[self.high]
                     log(f'In [update_files]: Checking with "high" ==> Updated right photo to index '
                         f'high: {self.high} of sorted_list\n')
 
-                elif to_be_checked_for_consistency(self, direction) == 'middle':
+                elif to_be_checked_for_consistency(self) == 'middle':
                     self.curr_right_file = self.sorted_list[mid]  # right photo changed to be compared against
                     log(f'In [update_files]: Checking with "middle" ==> Updated right photo to index '
                         f'mid: {mid} of sorted_list\n')
 
             # normal mode
             else:
+                log(f'In [update_files]: NO ROBUST CHECKING NEEDED... \n')
                 self.curr_right_file = self.sorted_list[mid]  # right photo changed to be compared against
                 log(f'In [update_files]: Updated right photo to index: {mid} of sorted_list')
 
@@ -264,9 +252,8 @@ class Window:
         logic.log(f'In [update_files]: Right file: "{pure_name(self.curr_right_file)}"')
         logic.log(f'In [update_files]: Right Full path: "{self.curr_right_file}" \n')
 
-    def update_photos(self, frame, direction):
+    def update_photos(self, frame):
         """
-        :param direction:
         :param frame:
         :return:
 
@@ -306,12 +293,10 @@ class Window:
             if self.show_mode == 'single':
                 # ======== update current file
                 self.current_file = self.cases[self.current_index]  # next file path
-                # logic.log(f'Image: "{self.current_file.split(os.path.sep)[-1]}"')
                 logic.log(f'Image: "{pure_name(self.current_file)}"')
                 logic.log(f'Full path: "{self.current_file}" \n')
 
                 # ======== update the image
-                # self.photo = self.read_img_and_resize_if_needed()  # resize next file
                 self.photo = read_img_and_resize_if_needed(self)  # resize next file
                 self.photo_panel.configure(image=self.photo)  # update the image
                 self.photo_panel.image = self.photo
@@ -319,12 +304,11 @@ class Window:
 
                 # ======== update caption
                 if globals.debug:
-                    # self.caption_panel.configure(text=self.current_file.split(os.path.sep)[-1])  # update the caption
                     self.caption_panel.configure(text=pure_name(self.current_file))  # update the caption
                     self.caption_panel.pack(side=TOP)
 
             if self.show_mode == 'side_by_side':
-                self.update_files(direction=direction)
+                self.update_files()
 
                 # ======== make background appear on pages other than the final
                 self.left_frame.configure(background="red")
@@ -343,7 +327,7 @@ class Window:
                     self.left_caption_panel.pack(side=TOP)
                     self.right_caption_panel.pack(side=TOP)
 
-    def update_frame(self, direction):
+    def update_frame(self):
         """
         Important:
             - ALl the logical changes e.g. changing the indexes etc. should be done before calling this function. This
@@ -360,12 +344,12 @@ class Window:
         # ======== update the image and caption for finalize page - hide image(s)
         if self.current_index == len(self.cases):
             log(f"\n\n\n{'=' * 150}\nON THE FINAL PAGE", no_time=True)
-            self.update_photos(frame='final', direction=direction)
+            self.update_photos(frame='final')
             self.fin_button.pack(side=TOP)  # show finalize button
 
         # ======== update the image and caption for other pages - show image(s)
         if self.current_index != len(self.cases):
-            self.update_photos(frame='others', direction=direction)
+            self.update_photos(frame='others')
             self.fin_button.pack_forget()  # hide finalize button
 
         # ======== update stat panel
@@ -415,12 +399,10 @@ class Window:
             log(f'In [show_previous_case]: Clicked "show_previous_case" ==> prev_result set to None. '
                 f'Updating frame to show the previous case...')
 
-        self.update_frame(direction='previous')
+        self.update_frame()
 
     def abort_if_not_consistent(self):
         if self.low_consistency is False or self.high_consistency is False:
-            # self.prev_result['low_consistency'] = self.low_consistency  # needed to recover from abort
-            # self.prev_result['high_consistency'] = self.high_consistency  # needed to recover from abort
             log(f'In [abort_current_case]: increasing current index, '
                 f'resetting indices/indicators, setting prev_result["aborted"] to True...')
 
@@ -429,66 +411,55 @@ class Window:
             reset_indices_and_possibly_consistency_indicators(self)
 
             log(f'In [abort_current_case]: aborting: done.\n')
-            # log(
-            #    f'In [abort_current_case]: aborted the current case ==> increased current index to: {self.current_index}, '
-            #    f'reset the low and high indices and indicators.\n')
-            # log(
-            #     f'In [abort_current_case]: aborted the current case ==> increased current index to: {self.current_index}, \n'
-            #     f'reset the low and high indices, low_consistency: "{self.low_consistency}", high: "{self.high_consistency}"')
 
     def check_for_consistency(self, pressed, with_respect_to):
         if with_respect_to == 'low':
             if is_consistent(pressed, with_respect_to='low'):
                 self.low_consistency = True
                 log(f'In [check_consistency_and_abort_if_not_consistent]: case IS consistent '
-                    f'with respect to "low"')
+                    f'with respect to "low \n"')
 
             else:
                 self.low_consistency = False
                 log(f'In [check_consistency_and_abort_if_not_consistent]: case IS NOT consistent '
-                    f'with respect to "low"')
-                # self.abort_current_case()
+                    f'with respect to "low \n"')
 
         if with_respect_to == 'high':
             if is_consistent(pressed, with_respect_to='high'):
                 self.high_consistency = True
                 log(f'In [check_consistency_and_abort_if_not_consistent]: case IS consistent '
-                    f'with respect to "high"')
+                    f'with respect to "high" \n')
 
             else:
                 self.high_consistency = False
                 log(f'In [check_consistency_and_abort_if_not_consistent]: case IS NOT consistent '
-                    f'with respect to "high"')
+                    f'with respect to "high" \n')
 
-            log(f'In [check_for_consistency]: low and high indicators changed to: \n'
+            log(f'In [check_for_consistency]: low and high indicators changed to: '
                 f'low_consistency: {self.low_consistency} and high_consistency: {self.high_consistency} \n')
 
     def init_or_update_prev_result(self, pressed):
-        if self.search_type == 'robust':
-            # in the 'previous' direction or for the very first case (for which prev_result is None)
+        if do_robust_checking(self):
             if self.prev_result is None:
-                # self.prev_result = {'low': self.low, 'high': self.high, 'low_consistency': self.low_consistency, 'high_consistency': self.high_consistency}
                 self.prev_result = {}
                 log(f'In [init_or_update_prev_result]: prev_result is None ==> initialized prev_result with: '
                     f'an empty dictionary')
-
-            # in the 'next' direction: update the low and high indices to current case (if not already updated)
-            # elif self.prev_result['low'] != self.low or self.prev_result['high'] != self.high:
 
             self.prev_result['low'] = self.low
             self.prev_result['high'] = self.high
             self.prev_result['low_consistency'] = self.low_consistency
             self.prev_result['high_consistency'] = self.high_consistency
-            self.prev_result['aborted'] = False  # default, will set to True in the abort function
-            log(f'In [init_or_update_prev_result]: updated prev_result to have current "low" and "high" indices '
-                f'and consistency indicators.')
-
-            # adding rate
             self.prev_result['rate'] = eval(pressed)
-            log(f'In [init_or_update_prev_result]: added rate: '
-                f'{eval(pressed)} to prev_result.')
+            self.prev_result['aborted'] = False  # default, will set to True in the abort function
+
+            log(f'In [init_or_update_prev_result]: updated prev_result to indices/indicators and rate.')
             log(f'In [init_or_update_prev_result]: now prev_result is: \n'
                 f'{self.prev_result} \n')
+
+        # normal mode
+        else:
+            self.prev_result = {'low': self.low, 'high': self.high, 'rate': eval(pressed)}  # updating to current choice
+            log(f'In [init_or_update_prev_result]: set prev_result to: {self.prev_result}\n')
 
     def keyboard_press(self, event):
         """
@@ -516,7 +487,7 @@ class Window:
             return
 
         pressed = repr(event.char)
-        logic.log(f'In [keyboard_press]: pressed {pressed}\n')
+        logic.log(f'In [keyboard_press]: pressed {pressed}')
 
         # ======== take action if keystroke is valid
         if keystroke_is_valid(self, pressed):
@@ -531,63 +502,33 @@ class Window:
                 self.prev_result = (self.current_file, eval(pressed))
 
             if self.show_mode == 'side_by_side':
-                if self.search_type == 'robust':
-                    # log(f'in [init_or_update_prev_result]: checking if prev_result should be initialized or updated...')
-                    # self.init_or_update_prev_result(pressed)
-                    # in the 'previous' direction: init prev_result if coming back from the next case
-                    # if self.prev_result is None:
-                    #     self.prev_result = {'low': self.low, 'high': self.high}
-                    #     log(f'In [keyboard_press]: prev_result is None ==> initialized prev_result to: \n'
-                    #         f'{self.prev_result}"')
-                    #
-                    # # in the 'next' direction: update the low and high indices to current case (if not already updated)
-                    # elif self.prev_result['low'] != self.low or self.prev_result['high'] != self.high:
-                    #     self.prev_result['low'] = self.low
-                    #     self.prev_result['high'] = self.high
-                    #     log(f'In [keyboard_press]: update prev_result to have current "low" and "high" indices')
+                if do_robust_checking(self):
+                    log(f'In [keyboard_press]: '
+                        f'SHOULD DO ROBUST CHECKING... \n')
 
-                    # sets current indices/indicators to prev_result before applying any changes
+                    # first store current attributes in prev_result before changing them for the next window
                     self.init_or_update_prev_result(pressed)
 
-                    if to_be_checked_for_consistency(self, direction='next') == 'low':
-                        # self.prev_result = {'low': self.low, 'high': self.high, 'rate': eval(pressed)}  # init prev_result
-                        # log(f'In [keyboard_press]: init prev_result for the first time in "low" check:'
-                        #    f'{self.prev_result}"')
-
-                        # self.init_or_update_prev_result(pressed)  # sets current indices/indicators to prev_result
+                    if to_be_checked_for_consistency(self) == 'low':
                         self.check_for_consistency(pressed, with_respect_to='low')  # updates the consistency indicators
                         self.abort_if_not_consistent()
 
-                    elif to_be_checked_for_consistency(self, direction='next') == 'high':
-                        # self.init_or_update_prev_result(pressed)  # sets current indices/indicators to prev_result
+                    elif to_be_checked_for_consistency(self) == 'high':
                         self.check_for_consistency(pressed, with_respect_to='high')  # updates the consistency indicators
                         self.abort_if_not_consistent()
 
-                    elif to_be_checked_for_consistency(self, direction='next') == 'middle':
-                        # if self.prev_result is None:  # if previous button is pushed and we get back to the middle check again
-                        #     self.prev_result = {'low': self.low, 'high': self.high}
-                        #     log(f'In [keyboard_press]: init prev_result again in "middle" check:'
-                        #         f'{self.prev_result}"')
-
-                        # self.prev_result['rate'] = eval(pressed)
-                        # self.prev_result['low_consistency'] = True
-                        # self.prev_result['high_consistency'] = True
-                        # both low_consistency and high_consistency are True
-                        # self.init_or_update_prev_result(pressed)  # sets current indices/indicators to prev_result
-                        # self.abort_if_not_consistent()
-                        # log(f'In [keystroke_is_valid]: in "middle" check: added low_consistency = True, '
-                        #     f'high_consistency = True to prev_result before updating indices')
-
+                    elif to_be_checked_for_consistency(self) == 'middle':
                         update_binary_search_inds_and_possibly_insert(self, pressed)
                         possibly_update_index(self, direction='next')  # uses current low and high to decide if index should change
 
                 # normal mode
                 else:
-                    self.prev_result = {'low': self.low, 'high': self.high, 'rate': eval(pressed)}  # updating to current choice
-                    log(f'In [keyboard_press]: set prev_result to: {self.prev_result}\n')
+                    log(f'In [keyboard_press]: NO ROBUST '
+                        f'CHECKING NEEDED...')
 
+                    # first store current attributes in prev_result before changing them for the next window
+                    self.init_or_update_prev_result(pressed)
                     # now that we keep indices in prev_result, we can update them
-                    # self.update_binary_search_inds_and_possibly_insert(pressed)
                     update_binary_search_inds_and_possibly_insert(self, pressed)
                     possibly_update_index(self, direction='next')  # uses current low and high to decide if index should change
 
@@ -597,5 +538,5 @@ class Window:
                 thread.start()
 
             # possibly_update_index(self, direction='next')  # uses current low and high to decide if index should change
-            self.update_frame(direction='next')  # update the frame and photos based in the new low and high indices
+            self.update_frame()  # update the frame and photos based in the new low and high indices
 

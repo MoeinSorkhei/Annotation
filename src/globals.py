@@ -19,6 +19,8 @@ params = {
     "comparisons_structured": os.path.join('..', 'output', 'comparisons.json'),
 
     "search_type": 'robust',  # or 'normal'
+    "robust_levels": 2,
+
     "max_imgs_per_session": 3,  # to be changed to 100 in real use
     "resize_factor": 7,
     "email_interval": 10

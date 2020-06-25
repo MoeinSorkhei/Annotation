@@ -1,8 +1,6 @@
 import argparse
-import os
 
-import gui
-import logic
+from gui import *
 from logic import *
 
 
@@ -25,6 +23,30 @@ def read_args_and_adjust():
         globals.params['resize_factor'] = arguments.resize_factor
 
     return arguments
+
+
+def show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons,
+                                    data_mode, search_type, train_bins=None):
+    if mode == 'single':
+        text = 'How hard the image is? 1:  Easy, 2: Medium, 3: Hard'
+
+    else:  # only 'binary_insert'
+        text = 'Which image is harder? 1: Left - 2: Right - 9: No difference ' \
+               '(Note: Even the slightest difference is important).'
+
+    root = Tk()  # creates a blank window (or main window)
+    title = Label(root, text=text, bg='light blue', font='-size 20')
+    title.pack(fill=X)
+
+    frame = Window(master=root,
+                   cases=not_already_sorted,
+                   already_sorted=already_sorted,
+                   already_comparisons=already_comparisons,
+                   show_mode=mode,
+                   data_mode=data_mode,
+                   search_type=search_type,
+                   train_bins=train_bins)
+    root.mainloop()  # run the main window continuously
 
 
 def manage_sessions_and_run(args):
@@ -76,8 +98,8 @@ def manage_sessions_and_run(args):
         already_comparisons = read_comparison_lists()
         log(f'In [manage_sessions]: already_comparisons loaded/created of {len(already_comparisons)} keys in it. \n\n')
 
-        gui.show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons,
-                                            data_mode, search_type, n_bins)
+        show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons,
+                                        data_mode, search_type, n_bins)
 
     elif session_name == 'split':
         split_sorted_list_to_bins(args.n_bins)
