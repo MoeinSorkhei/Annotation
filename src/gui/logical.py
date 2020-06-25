@@ -13,6 +13,59 @@ def keystroke_is_valid(window, pressed):
     return key_stroke_is_valid
 
 
+def to_be_checked_for_consistency(window, direction):  # checks with the current indices/indicators of the window
+    # for the 'next' direction
+    # log(f'In [to_be_checked_for_consistency]: checking consistency for direction "{direction}" and prev_result: \n'
+    #     f'{window.prev_result}"')
+
+    # if direction == 'next':
+    if window.low_consistency == 'unspecified' and window.high_consistency == 'unspecified':
+        return 'low'
+
+    elif window.low_consistency is True and window.high_consistency == 'unspecified':  # low already consistent
+        return 'high'
+
+    elif window.low_consistency is True and window.high_consistency is True:  # low and right consistent
+        return 'middle'
+
+    else:
+        raise NotImplementedError('The configuration is not implemented')
+
+    # for the 'previous' direction
+    # if direction == 'previous':
+    #     if window.low_consistency is False and window.high_consistency == 'unspecified':  # get back to correct low consistency
+    #         return 'low'
+    #
+    #     elif window.low_consistency is True and window.high_consistency is False:  # get beck to correct high consistency
+    #         return 'high'
+    #
+    #     elif window.low_consistency is True and window.high_consistency is True:  # get beck to change rate for middle
+    #         return 'middle'
+    #
+    #     else:
+    #         raise NotImplementedError('The configuration is not implemented')
+
+
+def is_consistent(pressed, with_respect_to):
+    if with_respect_to == 'low' and (eval(pressed) == '1' or eval(pressed) == '9'):
+        return True
+    if with_respect_to == 'high' and (eval(pressed) == '2' or eval(pressed) == '9'):
+        return True
+    return False
+
+
+def prev_case_was_aborted(prev_result):
+    """
+    Previous case has been aborted either in consistency checking for the low image or in the checking with the high image.
+    In the first case low_consistency would be False and in the second case high_consistency would be False.
+    :param prev_result:
+    :return:
+    """
+    if prev_result['low_consistency'] is False or prev_result['high_consistency'] is False:
+        return True
+    return False
+
+
 def index_should_be_changed(window, direction):
     """
     This function checks if the current image index should be change base on the current low and high indices.
@@ -27,6 +80,7 @@ def index_should_be_changed(window, direction):
         - If direction is 'previous', we check: 1) if 9 was previously pressed, the index has already been increased
           and should be decreased now. Otherwise if low and high are equal, it means that we were on the last step
           of the binary search, and the index has been increased, so it should be decreased now.
+        - In the case of abortion, the index is directly increased without checking this function.
     """
     if direction == 'next':
         if window.data_mode == 'test':
@@ -38,23 +92,35 @@ def index_should_be_changed(window, direction):
         prev_low, prev_high = window.prev_result['low'], window.prev_result['high']
         previously_pressed = window.prev_result['rate']  # if 9 was pressed previously, index has been already increased
 
-        if window.search_type == 'robust' and window.prev_result['aborted']:  # checking if aborted
+        # if previous case was aborted the index should be decrease
+        # if window.search_type == 'robust' and prev_case_was_aborted(window.prev_result):
+        if window.search_type == 'robust' and window.prev_result['aborted'] is True:
+            log(f'In [index_should_be_changed]: prev case was aborted ==> index should be decreased')
             return True
             # aborted = self.prev_result['low_consistency'] is False or self.prev_result['high_consistency'] is False
             # if aborted:
             #     return True
+        # usual condition
         return prev_low == prev_high or previously_pressed == '9'
 
 
-def possibly_update_index(window, direction):
+def possibly_update_index(window, direction):  # no difference whether search_mode is 'normal' or 'robust'
+    # if window.search_type == 'robust' and \
+    #         (to_be_checked_for_consistency(window) == 'low' or to_be_checked_for_consistency(window) == 'high'):
+    #     return False  # no index update if we are checking for consistency
+
+    # log(f'In possibly update index, to_be_checked_for_consistency(window): {to_be_checked_for_consistency(window)}')
     if window.show_mode == 'side_by_side':
         if direction == 'next' and index_should_be_changed(window, 'next'):
             window.current_index += 1  # index of the next file
             log('In [possibly_update_index]: Current index increased...')
 
-        if direction == 'previous' and index_should_be_changed(window, 'previous'):
+        elif direction == 'previous' and index_should_be_changed(window, 'previous'):
             window.current_index -= 1
             log('In [possibly_update_index]: Current index decreased...')
+
+        else:
+            log('In [possibly_update_index]: No need to increase/decrease index...')
 
     else:
         # ======== update current index
@@ -64,32 +130,55 @@ def possibly_update_index(window, direction):
             window.current_index -= 1  # index of the previous file
 
 
-def reset_indices(window):
+def reset_consistency_indicators(window):
+    window.low_consistency = 'unspecified'
+    window.high_consistency = 'unspecified'
+
+
+def revert_indices_and_possibly_consistency_indicators(window):
+    window.low, window.high = window.prev_result['low'], window.prev_result['high']
+    log(f'In [revert_indices_and_possibly_consistency_indicators]: Reverted indices to: '
+        f'low = {window.low}, high = {window.high}')
+
+    if window.search_type == 'robust':
+        window.low_consistency = window.prev_result['low_consistency']
+        window.high_consistency = window.prev_result['high_consistency']
+        log(f'In [revert_indices_and_possibly_consistency_indicators]: also reverted consistency indicators to: \n'
+            f'low_consistency: "{window.low_consistency}" and high_consistency: "{window.high_consistency}"\n')
+
+
+def reset_indices_and_possibly_consistency_indicators(window):
     if window.data_mode == 'test':
         window.low = 0
         window.high = len(window.sorted_list) - 1
         log(f'In [reset_indices]: low and high are reset for the new image: '
             f'low: {window.low}, high: {window.high}')
+
     else:
-        pass
+        raise NotImplementedError
+        window.low = 0    # READ THIS PART ONCE BEFORE RUNNING
+        window.high = len(window.bins_list) - 1
+        log(f'In [binary_search_step]: low and high are reset for the new image: '
+            f'low: {window.low}, high: {window.high}\n')
 
+    # also reset low_consistency and high_consistency for the 'robust' checking mode
     if window.search_type == 'robust':
-        window.low_consistency = 'unspecified'
-        window.high_consistency = 'unspecified'
-
-        log(f'In [reset_indices]: also low_consistency and low_consistency are reset for the new image to: '
-            f'low_consistency: {window.low_consistency}, high: {window.high_consistency}\n')
+        reset_consistency_indicators(window)
+        log(f'In [reset_indices]: also low_consistency and low_consistency are reset.')
+        # to: \n'f'low_consistency: "{window.low_consistency}", high: "{window.high_consistency}"\n')
 
 
 # ========== list-related functions
 def possibly_remove_item_from_list(window):
-    if window.search_type == 'robust' and window.prev_result['aborted']:  # no remove if we have aborted
+    # if window.search_type == 'robust' and prev_case_was_aborted(window.prev_result):  # no remove if we have aborted
+    if window.search_type == 'robust' and window.prev_result['aborted'] is True:  # no remove if we have aborted
+        log(f'In [possibly_remove_item_from_list]: no remove '
+            f'since the previous case had been aborted\n')
         return
 
     if index_should_be_changed(window, direction='previous'):
         if window.data_mode == 'test':
-            insertion_index = window.prev_result[
-                'mid_index']  # only in this case we have insertion index, otherwise it is None
+            insertion_index = window.prev_result['mid_index']  # only in this case we have insertion index, otherwise it is None
             del window.sorted_list[insertion_index]  # delete the wrongly inserted element from the list
             log(f'In [possibly_remove_item_from_list]: index should be decreased ==> '
                 f'removed index {insertion_index} from sorted_list - '
@@ -108,6 +197,9 @@ def possibly_remove_item_from_list(window):
                 f'In [possibly_remove_item_from_list]: removing the "{insert_pos}" element from bin {which_bin + 1}')
             del_from_bin_and_save(which_bin, insert_pos)
 
+    else:
+        log(f'In [possibly_remove_item_from_list]: index has not changed ==> No need to remove item from list...\n')
+
 
 def update_binary_search_inds_and_possibly_insert(window, pressed):
     """
@@ -120,7 +212,6 @@ def update_binary_search_inds_and_possibly_insert(window, pressed):
     mid = (window.low + window.high) // 2  # for train data, this represents bin number
     # ====== update the low and high indexes based ond the rating until suitable position is found
     if window.high != window.low and eval(pressed) != '9':
-
         if eval(pressed) == '1':  # rated as harder, go to the right half of the list
             window.low = mid if (window.high - window.low) > 1 else window.high
             log(f'In [binary_search_step]: low increased to {window.low}')
@@ -130,6 +221,11 @@ def update_binary_search_inds_and_possibly_insert(window, pressed):
             log(f'In [binary_search_step]: high decreased to {window.high}')
 
         log(f'In [binary_search_step]: Updated indices: low = {window.low}, high = {window.high}')
+
+        if window.search_type == 'robust':  # indicators should be reset when changing the indices
+            reset_consistency_indicators(window)
+            log(f'In [update_binary_search_inds_and_possibly_insert]: also low_consistency and low_consistency are reset \n')
+            # \n'f'to: low_consistency: "{window.low_consistency}", high: "{window.high_consistency}"\n')
 
     # ====== suitable position is found (low = high), insert here
     else:
@@ -166,22 +262,29 @@ def update_binary_search_inds_and_possibly_insert(window, pressed):
                 f'sorted_list...')
             write_sorted_list_to_file(window.sorted_list)
             log(f'In [binary_search_step]: also updated prev_result to include the '
-                f'insertion index: {window.prev_result["mid_index"]}')
-
-            # reset the indices for the next round of binary search
+                f'insertion index: {window.prev_result["mid_index"]}\n')
             log(f'In [binary_search_step]: also updated prev_result to have '
                 f'mid index and img_img.')
-            window.low = 0
-            window.high = len(window.sorted_list) - 1
-            log(f'In [binary_search_step]: low and high are reset for the new image: '
-                f'low: {window.low}, high: {window.high}')
 
-            if window.search_type == 'robust':
-                window.low_consistency = 'unspecified'
-                window.high_consistency = 'unspecified'
+            # reset the indices for the next round of binary search
+            reset_indices_and_possibly_consistency_indicators(window)
 
-                log(f'In [binary_search_step]: also low_consistency and low_consistency are reset for the new image to: '
-                    f'low_consistency: {window.low_consistency}, high: {window.high_consistency}\n')
+            # also reset consistency indicators since the indices have changed
+            # if window.search_type == 'robust':
+            #     reset_consistency_indicators(window)
+            #     log(f'In [update_binary_search_inds_and_possibly_insert]: also low_consistency and low_consistency are '
+            #         f'reset for the new image to: low_consistency: {window.low_consistency}, high: {window.high_consistency}\n')
+            # window.low = 0
+            # window.high = len(window.sorted_list) - 1
+            # log(f'In [binary_search_step]: low and high are reset for the new image: '
+            #     f'low: {window.low}, high: {window.high}')
+            #
+            # if window.search_type == 'robust':
+            #     window.low_consistency = 'unspecified'
+            #     window.high_consistency = 'unspecified'
+            #
+            #     log(f'In [binary_search_step]: also low_consistency and low_consistency are reset for the new image to: '
+            #         f'low_consistency: {window.low_consistency}, high: {window.high_consistency}\n')
 
             if globals.debug:
                 print_list(window.sorted_list)
@@ -217,10 +320,9 @@ def update_binary_search_inds_and_possibly_insert(window, pressed):
 
             log(f'In [binary_search_step]: also updated prev_result to have bin number '
                 f'and insertion pos.')
-            window.low = 0
-            window.high = len(window.bins_list) - 1
-            log(f'In [binary_search_step]: low and high are reset for the new image: '
-                f'low: {window.low}, high: {window.high}\n')
+
+            # reset indices
+            reset_indices_and_possibly_consistency_indicators(window)
 
 
 # ========== very logical functions
