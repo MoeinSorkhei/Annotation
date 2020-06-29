@@ -398,8 +398,10 @@ class Window:
     # ====================================================================================================
     def finalize_session(self, event):
         log(f'In [finalize_session]: Clicked "finalize_session."\n')
-        log(f'In [finalize_session]: saving previous result')
+        # log(f'In [finalize_session]: saving previous result...')
         # save_prev_rating(self)
+        log(f'In [finalize_session]: saving aborted cases...')
+        save_aborted_cases(self)
 
         log(f'In [finalize_session]: Session is finalized. Uploading the result and terminating...')
 
@@ -527,14 +529,14 @@ class Window:
             return
 
         pressed = repr(event.char)
-        logic.log(f'In [keyboard_press]: pressed {pressed}')
+        logic.log(f'In [keyboard_press]: pressed {pressed}\n')
 
         # ======== take action if keystroke is valid (ie, prev_result is confirmed)
         if keystroke_is_valid(self, pressed):
             # ======== save the prev_result once confirmed (ie when keyboard is pressed on current window)
             # if self.prev_result is not None:  # that is we are not in the prev window
             #     log(f'In [keyboard_press]: Saving previous result...')
-            #     self.save_prev_rating()
+            #     save_prev_rating(self)
 
             # ======== update the prev_result to current decision
             if self.show_mode == 'single':

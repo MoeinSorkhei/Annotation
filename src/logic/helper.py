@@ -111,9 +111,10 @@ def write_sorted_list_to_file(lst):
 def save_rating(imgs, rate):
     # ======= for phase 1: where rate specifies the output file
     if len(imgs) == 1:
+        raise NotImplementedError
         # filename = os.path.join(globals.params['output_path'], f'bin_{rate}')  # e.g., output/bin_1.txt
-        filename, _ = compute_file_paths_for_bin(rate=rate)  # WILL NO LONGER BE USED
-        result_as_str = imgs[0]
+        # filename, _ = compute_file_paths_for_bin(rate=rate)  # WILL NO LONGER BE USED
+        # result_as_str = imgs[0]
 
     # ======= for phase 2: where all the comparisons will be written to the same raw file (.txt)
     else:
@@ -125,6 +126,13 @@ def save_rating(imgs, rate):
 
     log_lines = imgs + [rate]
     log(f'In [save_rating]: case \n{split_to_lines(log_lines)} appended to "{filename}"\n')
+
+
+def save_to_aborted_list(case):
+    filename = globals.params['aborted']
+    with open(filename, 'a') as file:
+        file.write(f'{case}\n')
+    log(f'In [save_to_aborted_list]: saved case "{case}" to aborted list.')
 
 
 def email_results():

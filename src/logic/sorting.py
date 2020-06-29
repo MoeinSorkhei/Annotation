@@ -55,6 +55,20 @@ def read_sorted_imgs():
     return sorted_lst
 
 
+def read_aborted_cases():
+    aborted_file = globals.params['aborted']
+    aborted_list = read_file_if_exists(aborted_file)
+    return aborted_list
+
+
+def read_file_if_exists(filename):
+    lines = []
+    if os.path.isfile(filename):
+        with open(filename) as f:
+            lines = f.read().splitlines()
+    return lines
+
+
 def split_sorted_list_to_bins(n_bins):
     sorted_list = read_sorted_imgs()
     split_arr = np.array_split(sorted_list, n_bins)

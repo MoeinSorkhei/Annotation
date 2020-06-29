@@ -49,6 +49,30 @@ def show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, al
     root.mainloop()  # run the main window continuously
 
 
+def retrieve_not_already_sorted_files(data_mode):
+    # create lists of images for test data
+    if data_mode == 'test':
+        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['main_imgs_dir'])  # the dicom files
+        already_sorted = read_sorted_imgs()
+        n_bins = None
+
+    # create lists of images for train data
+    else:
+        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['other_imgs_dir'])
+        n_bins, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
+
+    aborted_cases = read_aborted_cases()
+    not_already_sorted = [img for img in img_lst if (img not in already_sorted and img not in aborted_cases)]
+
+    log(f'In [retrieve_not_already_sorted_files]: \n'
+        f'read img_list of len: {len(img_lst)} \n'
+        f'already_sorted (or entered into bins) images are of len: {len(already_sorted)} \n'
+        f'aborted cases are of len: {len(aborted_cases)} \n'
+        f'there are {len(not_already_sorted)} images that are not already sorted and not aborted \n')
+
+    return not_already_sorted, already_sorted, n_bins
+
+
 def manage_sessions_and_run(args):
     """
     :param args:
@@ -71,21 +95,23 @@ def manage_sessions_and_run(args):
 
     if 'sort' in session_name:
         # create lists of images for test data
-        if data_mode == 'test':
-            img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['main_imgs_dir'])  # the dicom files
-            already_sorted = read_sorted_imgs()
-            n_bins = None
-
-        # create lists of images for train data
-        else:
-            img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['other_imgs_dir'])
-            n_bins, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
-
-        not_already_sorted = [img for img in img_lst if img not in already_sorted]
-        log(f'In [manage_sessions]: read img_list of len: {len(img_lst)}, already_sorted (or entered into bins) images are '
-            f'of len: {len(already_sorted)} - there are {len(not_already_sorted)} images that are not already sorted')
+        # if data_mode == 'test':
+        #     img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['main_imgs_dir'])  # the dicom files
+        #     already_sorted = read_sorted_imgs()
+        #     n_bins = None
+        #
+        # # create lists of images for train data
+        # else:
+        #     img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['other_imgs_dir'])
+        #     n_bins, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
+        #
+        # not_already_sorted = [img for img in img_lst if img not in already_sorted]
+        # log(f'In [manage_sessions]: read img_list of len: {len(img_lst)}, already_sorted (or entered into bins) images are '
+        #     f'of len: {len(already_sorted)} - there are {len(not_already_sorted)} images that are not already sorted')
 
         # return if all the images are already sorted
+
+        not_already_sorted, already_sorted, n_bins = retrieve_not_already_sorted_files(data_mode)
         if len(not_already_sorted) == 0:
             log(f'In [main]: not_already_sorted images are of len: 0 ==> Session is already complete. Terminating...')
             exit(0)

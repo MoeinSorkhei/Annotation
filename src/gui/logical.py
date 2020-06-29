@@ -81,7 +81,6 @@ def index_should_be_changed(window, direction):
         previously_pressed = window.prev_result['rate']  # if 9 was pressed previously, index has been already increased
 
         # index should be decreased if we have aborted
-        # if 'aborted' in window.prev_result.keys() and window.prev_result['aborted'] is True:
         if prev_case_aborted(window):
             log(f'In [index_should_be_changed]: prev case was aborted ==> index should be decreased')
             return True
@@ -388,7 +387,24 @@ def save_prev_rating(window):
         imgs = [left_img, right_img]
         rate = window.prev_result["rate"]
         save_rating(imgs, rate)
-        update_and_save_comparisons_list(window, left_img, right_img, rate)
+        # update_and_save_comparisons_list(window, left_img, right_img, rate)
+
+        # keep track of the aborted cases
+        if prev_case_aborted(window):
+            save_to_aborted_list(left_img)
+
+
+def save_aborted_cases(window):
+    if window.data_mode == 'test':
+        successful_cases = read_sorted_imgs()
+    else:
+        _, successful_cases = all_imgs_in_all_bins()
+
+    aborted_cases = [case for case in window.cases if case not in successful_cases]
+
+    for aborted in aborted_cases:
+        save_to_aborted_list(aborted)
+    log(f'In [save_aborted_cases]: saved {len(aborted_cases)} aborted cases...\n')
 
 
 def update_and_save_comparisons_list(window, left_img, right_img, rate):

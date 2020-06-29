@@ -14,6 +14,7 @@ params = {
 
     "output_path": os.path.join('..', 'output'),
     "sorted": os.path.join('..', 'output', 'sorted.txt'),
+    "aborted": os.path.join('..', 'output', 'aborted.txt'),
 
     "comparisons": os.path.join('..', 'output', 'comparisons.txt'),
     "comparisons_structured": os.path.join('..', 'output', 'comparisons.json'),
