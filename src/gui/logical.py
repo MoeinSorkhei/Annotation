@@ -36,14 +36,20 @@ def is_consistent(pressed, with_respect_to):
     return False
 
 
-def prev_case_was_aborted(prev_result):
-    """
-    Previous case has been aborted either in consistency checking for the low image or in the checking with the high image.
-    In the first case low_consistency would be False and in the second case high_consistency would be False.
-    :param prev_result:
-    :return:
-    """
-    if prev_result['low_consistency'] is False or prev_result['high_consistency'] is False:
+# def prev_case_was_aborted(prev_result):
+#     """
+#     Previous case has been aborted either in consistency checking for the low image or in the checking with the high image.
+#     In the first case low_consistency would be False and in the second case high_consistency would be False.
+#     :param prev_result:
+#     :return:
+#     """
+#     if prev_result['low_consistency'] is False or prev_result['high_consistency'] is False:
+#         return True
+#     return False
+
+
+def prev_case_aborted(window):
+    if 'aborted' in window.prev_result.keys() and window.prev_result['aborted'] is True:
         return True
     return False
 
@@ -74,7 +80,9 @@ def index_should_be_changed(window, direction):
         prev_low, prev_high = window.prev_result['low'], window.prev_result['high']
         previously_pressed = window.prev_result['rate']  # if 9 was pressed previously, index has been already increased
 
-        if 'aborted' in window.prev_result.keys() and window.prev_result['aborted'] is True:  # no remove if we have aborted
+        # index should be decreased if we have aborted
+        # if 'aborted' in window.prev_result.keys() and window.prev_result['aborted'] is True:
+        if prev_case_aborted(window):
             log(f'In [index_should_be_changed]: prev case was aborted ==> index should be decreased')
             return True
 
@@ -108,13 +116,14 @@ def do_robust_checking(window):
     length_match = True if (window.high - window.low) >= 2 else False  # there is at least one item in between
 
     levels = globals.params['robust_levels']
-    level_match = True if (window.high - window.low + 1) / len(window.sorted_list) >= (1 / (2 ** (levels - 1))) else False
+    total_length = len(window.sorted_list) if window.data_mode == 'test' else len(window.bins_list)
+    level_match = True if (window.high - window.low + 1) / total_length >= (1 / (2 ** (levels - 1))) else False
 
     return search_type_match and length_match and level_match
 
 
 def indicators_exist(window):
-    return 'low_consistency' in window.prev_result.keys()
+    return 'low_consistency' in window.prev_result.keys()  # if 'low_consistency' is among the keys
 
 
 # ========== functions for resetting/reverting
@@ -136,27 +145,39 @@ def revert_indices_and_possibly_consistency_indicators(window):
 
 
 def reset_indices_and_possibly_consistency_indicators(window):
+    """
+    The behavior of this function depends on whether we are dealing with test or train data.
+
+    :param window:
+    :return:
+    """
     if window.data_mode == 'test':
         window.low = 0
         window.high = len(window.sorted_list) - 1
 
     else:
-        raise NotImplementedError
-        window.low = 0    # READ THIS PART ONCE BEFORE RUNNING
+        window.low = 0
         window.high = len(window.bins_list) - 1
-        log(f'In [binary_search_step]: low and high are reset for the new image: '
-            f'low: {window.low}, high: {window.high}\n')
+        # log(f'In [binary_search_step]: low and high are reset for the new image: '
+        #     f'low: {window.low}, high: {window.high}\n')
 
     # also reset low_consistency and high_consistency for the 'robust' checking mode
     if indicators_exist(window):
         reset_consistency_indicators(window)
-    log(f'In [reset_indices]: low and high indices '
+    log(f'In [reset_indices_and_possibly_consistency_indicators]: low and high indices '
         f'(and possibly indicators) are reset for the new image.')
 
 
 # ========== list-related functions
 def possibly_remove_item_from_list(window):
-    if 'aborted' in window.prev_result.keys() and window.prev_result['aborted'] is True:  # no remove if we have aborted
+    """
+    The behavior of this function depends on whether we are dealing with test or train data.
+
+    :param window:
+    :return:
+    """
+    # if 'aborted' in window.prev_result.keys() and window.prev_result['aborted'] is True:  # no remove if we have aborted
+    if prev_case_aborted(window):  # no remove if we have aborted
         log(f'In [possibly_remove_item_from_list]: no remove '
             f'since the previous case had been aborted\n')
         return
@@ -177,8 +198,7 @@ def possibly_remove_item_from_list(window):
 
         else:  # e.g. prev_result: (left_img, right_img, rate, bin, 'last')
             which_bin, insert_pos = window.prev_result['mid_index'], window.prev_result['insert_pos']
-            log(
-                f'In [possibly_remove_item_from_list]: removing the "{insert_pos}" element from bin {which_bin + 1}')
+            log(f'In [possibly_remove_item_from_list]: removing the "{insert_pos}" element from bin {which_bin + 1}')
             del_from_bin_and_save(which_bin, insert_pos)
 
     else:
@@ -189,6 +209,8 @@ def update_binary_search_inds_and_possibly_insert(window, pressed):
     """
     This will update the low and high indices for the binary search. In case binary search is completed or 9 is
     pressed by the radiologist, it inserts the image in the right position and resets the low and high indices.
+    The behavior of this function depends on whether we are dealing with test or train data.
+
     :param window:
     :param pressed:
     :return:
@@ -310,7 +332,7 @@ def read_img_and_resize_if_needed(window):
 
 def log_current_index(window, called_from):
     log(f"\n\n\n\n{'=' * 150} \nIn [{called_from}]: "
-        f"Current index: {window.current_index} - Case number: {window.case_number}", no_time=True)
+        f"Current index: {window.current_index} - Case number: {window.case_number}\n", no_time=True)
     if window.show_mode != 'single' and window.data_mode != 'train':
         log(f'In [{called_from}]: There are {len(window.sorted_list)} images in the sorted_list\n', no_time=True)
 
