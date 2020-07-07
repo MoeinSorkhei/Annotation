@@ -62,12 +62,16 @@ def retrieve_not_already_sorted_files(data_mode):
         n_bins, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
 
     aborted_cases = read_aborted_cases()
-    not_already_sorted = [img for img in img_lst if (img not in already_sorted and img not in aborted_cases)]
+    discarded_cases = read_discarded_cases()
+
+    not_already_sorted = [img for img in img_lst if
+                          (img not in already_sorted and img not in aborted_cases and img not in discarded_cases)]
 
     log(f'In [retrieve_not_already_sorted_files]: \n'
         f'read img_list of len: {len(img_lst)} \n'
         f'already_sorted (or entered into bins) images are of len: {len(already_sorted)} \n'
         f'aborted cases are of len: {len(aborted_cases)} \n'
+        f'discarded cases are of len: {len(discarded_cases)} \n'
         f'there are {len(not_already_sorted)} images that are not already sorted and not aborted \n')
 
     return not_already_sorted, already_sorted, n_bins

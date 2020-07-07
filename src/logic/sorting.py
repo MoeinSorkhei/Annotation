@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import random
 
 import globals
 from .helper import *
@@ -39,6 +40,11 @@ def bin_paths():
 
 
 def read_imgs_from_bin(which_bin):
+    """
+    Returns image names of a bin in a list.
+    :param which_bin:
+    :return:
+    """
     bin_file = get_bin_path(which_bin)
     with open(bin_file) as f:
         imgs_in_bin = f.read().splitlines()
@@ -53,20 +59,6 @@ def read_sorted_imgs():
         with open(sorted_filename) as f:
             sorted_lst = f.read().splitlines()
     return sorted_lst
-
-
-def read_aborted_cases():
-    aborted_file = globals.params['aborted']
-    aborted_list = read_file_if_exists(aborted_file)
-    return aborted_list
-
-
-def read_file_if_exists(filename):
-    lines = []
-    if os.path.isfile(filename):
-        with open(filename) as f:
-            lines = f.read().splitlines()
-    return lines
 
 
 def split_sorted_list_to_bins(n_bins):
@@ -106,8 +98,24 @@ def save_bin(which_bin, bin_imgs):
     log(f'In [save_bin]: saving bin to "{filename}": done \n')
 
 
+def bin_representative(which_bin):
+    bin_rep_type = globals.params['bin_rep_type']
+    if bin_rep_type == 'last':
+        representative = last_img_in_bin(which_bin)
+    else:
+        representative = rand_element_from_bin(which_bin)
+
+    log(f'In [bin_representative]: returning "{bin_rep_type}" image of bin {which_bin + 1}')
+    return representative
+
+
 def last_img_in_bin(which_bin):
     return read_imgs_from_bin(which_bin)[-1]
+
+
+def rand_element_from_bin(which_bin):
+    images = read_imgs_from_bin(which_bin)
+    return random.choice(images)  # random images from bin
 
 
 def all_imgs_in_all_bins():

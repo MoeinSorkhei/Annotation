@@ -114,6 +114,7 @@ class Window:
 
                 self.low = 0
                 self.high = len(self.bins_list) - 1
+                self.curr_bin_representative = None
 
                 # if search_type == 'robust':
                 #     self.low_consistency = 'unspecified'
@@ -220,7 +221,8 @@ class Window:
                             (f'\nPrevious rating: {self.prev_result[1]}' if self.prev_result is not None else '')
 
             if self.show_mode == 'side_by_side':
-                stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - Case number: {self.case_number}' + \
+                stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - ' \
+                            f'Case number: {self.case_number}' + \
                             (f'\nPrevious rating: {self.prev_result["rate"]}' if self.prev_result is not None else '')
 
         else:  # do not show case on the final page
@@ -271,29 +273,60 @@ class Window:
 
         # train data
         else:
-            if do_robust_checking(self):
-                log(f'In [update_files]: SHOULD DO ROBUST CHECKING...')
+            bin_rep_type = globals.params['bin_rep_type']  # 'random' or 'last'
+
+            if self.curr_bin_representative is not None:  # showing previous case (bin representative already sampled)
+                # self.curr_right_file = self.curr_bin_representative
+                log(f'In [update_files]: curr_bin_representative is not None, no need to choose bin representative.')
+                pass
+
+            elif do_robust_checking(self):  # robust checking (possibly with sampling representative)
+                # if do_robust_checking(self):
+                log(f'In [update_files]: curr_bin_representative is None, '
+                    f'need to choose bin representative with ROBUST CHECKING...')
 
                 if to_be_checked_for_consistency(self) == 'low':
-                    self.curr_right_file = last_img_in_bin(which_bin=self.low)
-                    log(f'In [update_files]: Checking with "low" ==> Updated right photo to last image of bin '
+                    # self.curr_right_file = last_img_in_bin(which_bin=self.low)
+                    # self.curr_right_file = bin_representative(which_bin=self.low)
+                    self.curr_bin_representative = bin_representative(which_bin=self.low)
+                    log(f'In [update_files]: Checking with "low" ==> Set curr_bin_representative to "{bin_rep_type}" image of bin '
                         f'low: {self.low + 1}\n')
 
                 elif to_be_checked_for_consistency(self) == 'high':
-                    self.curr_right_file = last_img_in_bin(which_bin=self.high)
-                    log(f'In [update_files]: Checking with "high" ==> Updated right photo to last image of bin '
+                    # self.curr_right_file = last_img_in_bin(which_bin=self.high)
+                    # self.curr_right_file = bin_representative(which_bin=self.high)
+                    self.curr_bin_representative = bin_representative(which_bin=self.high)
+                    log(f'In [update_files]: Checking with "high" ==> Set curr_bin_representative to "{bin_rep_type}" image of bin '
                         f'high: {self.high + 1}\n')
 
                 elif to_be_checked_for_consistency(self) == 'middle':
-                    self.curr_right_file = last_img_in_bin(which_bin=mid)
-                    log(f'In [update_files]: Checking with "middle" ==> Updated right photo to last image of bin '
+                    # self.curr_right_file = last_img_in_bin(which_bin=mid)
+                    # self.curr_right_file = bin_representative(which_bin=mid)
+                    self.curr_bin_representative = bin_representative(which_bin=mid)
+                    log(f'In [update_files]: Checking with "middle" ==> Set curr_bin_representative to "{bin_rep_type}" image of bin '
                         f'middle: {mid + 1}\n')
 
-            else:
-                log(f'In [update_files]: NO ROBUST CHECKING NEEDED... \n')
-                self.curr_right_file = last_img_in_bin(which_bin=mid)
-                log(f'In [update_files]: Updated right photo to '
-                    f'last image of bin middle: {mid + 1}.\n')  # +1 is for printing bin 0 as bin 1
+                # updating the right file to the representative
+                # self.curr_right_file = self.curr_bin_representative
+                # log(f'In [update_files]: Updated the right file to show '
+                #     f'curr_bin_representative: "{self.curr_bin_representative}" \n')
+
+            else:  # normal case
+                log(f'In [update_files]: curr_bin_representative is None, '
+                    f'need to choose bin representative with NO ROBUST CHECKING... \n')
+                # self.curr_right_file = last_img_in_bin(which_bin=mid)
+                # self.curr_right_file = bin_representative(which_bin=mid)
+                self.curr_bin_representative = bin_representative(which_bin=mid)
+                log(f'In [update_files]: Set curr_bin_representative to "{bin_rep_type}" image of bin middle: {mid + 1}')
+
+                # self.curr_right_file = self.curr_bin_representative
+                # log(f'In [update_files]: Updated right file to show '
+                #     f'curr_bin_representative: "{self.curr_bin_representative}".\n')  # +1 is for printing bin 0 as bin 1
+
+            # update the current file according to the bin representative
+            self.curr_right_file = self.curr_bin_representative
+            log(f'In [update_files]: Updated right file to show '
+                f'curr_bin_representative: "{pure_name(self.curr_bin_representative)}".\n')  # +1 is for printing bin 0 as bin 1
 
         logic.log(f'In [update_files]: Left file: "{pure_name(self.curr_left_file)}"')
         logic.log(f'In [update_files]: Left Full path: "{self.curr_left_file}" \n')
@@ -411,6 +444,7 @@ class Window:
         log(f'In [finalize_session]: Clicked "finalize_session."\n')
         # log(f'In [finalize_session]: saving previous result...')
         # save_prev_rating(self)
+
         log(f'In [finalize_session]: saving aborted cases...')
         save_aborted_cases(self)
 
@@ -436,11 +470,12 @@ class Window:
         if self.show_mode == 'side_by_side':
             # undo the las index update by binary search
             log(f'In [show_previous_case]: Clicked "show_previous_case". Checking if item should be removed from list...')
-            possibly_remove_item_from_list(self)
-            revert_indices_and_possibly_consistency_indicators(self)
+
+            possibly_remove_item_from_list(self)  # remove the inserted item from list, if needed
+            revert_search_indices_and_possibly_consistency_indicators(self)  # revert the search indices
 
             log(f'In [show_previous_case]: checking if index should be decreased...')
-            possibly_update_index(self, direction='previous')  # uses prev_result to decide if index should be changed
+            possibly_update_current_index(self, direction='previous')  # uses prev_result to decide if current_index should be changed
 
             self.prev_result = None  # because now we are in the previous window
             log(f'In [show_previous_case]: set prev_result to None. Updating frame to show the previous case...')
@@ -454,8 +489,11 @@ class Window:
         self.update_frame()
 
     def discard_case(self, event):
+        save_to_discarded_list(self.curr_left_file)  # save current left file to discarded.txt
+
         self.current_index += 1
         reset_indices_and_possibly_consistency_indicators(self)
+
         self.prev_result = None
         self.update_frame()
         log('In [discard_case]: current_index increased, indices reset, and prev_result set to None. Frame updated...\n')
@@ -497,13 +535,16 @@ class Window:
             log(f'In [check_for_consistency]: low and high indicators changed to: '
                 f'"low_consistency": {self.low_consistency}, "high_consistency": {self.high_consistency} \n')
 
-    def init_or_update_prev_result(self, pressed):
-        if do_robust_checking(self):
-            if self.prev_result is None:
-                self.prev_result = {}
-                log(f'In [init_or_update_prev_result]: prev_result is None ==> initialized prev_result with: '
-                    f'an empty dictionary')
+    def keep_current_state_in_prev_result(self, pressed):
+        if self.prev_result is None:  # init
+            self.prev_result = {}
+            log(f'In [init_or_update_prev_result]: prev_result is None ==> initialized prev_result with: '
+                f'an empty dictionary')
 
+        if self.data_mode == 'train':  # used when showing previous case in train mode
+            self.prev_result['curr_bin_representative'] = self.curr_bin_representative
+
+        if do_robust_checking(self):
             self.prev_result['low'] = self.low
             self.prev_result['high'] = self.high
             self.prev_result['low_consistency'] = self.low_consistency
@@ -518,7 +559,7 @@ class Window:
 
         # normal mode
         else:
-            self.prev_result = {'low': self.low, 'high': self.high, 'rate': eval(pressed)}  # updating to current choice
+            self.prev_result.update({'low': self.low, 'high': self.high, 'rate': eval(pressed)})  # adding the indices
             log(f'In [init_or_update_prev_result]: set prev_result to: {self.prev_result}\n')
 
     def keyboard_press(self, event):
@@ -542,6 +583,7 @@ class Window:
             6. Now that the indices are updated, update_frame function updates the window in a UI-level based on the
                updated low and high indices.
         """
+        # ignore keyboard press for the final page
         if self.current_index == len(self.cases):
             logic.log(f'In [keyboard_press]: Ignoring keyboard press for index "{self.current_index}"')
             return
@@ -562,12 +604,15 @@ class Window:
                 self.prev_result = (self.current_file, eval(pressed))
 
             if self.show_mode == 'side_by_side':
+                # first store current attributes in prev_result before changing them for the next window
+                self.keep_current_state_in_prev_result(pressed)
+
                 if do_robust_checking(self):
                     # log(f'In [keyboard_press]: '
                     #     f'SHOULD DO ROBUST CHECKING... \n')
 
                     # first store current attributes in prev_result before changing them for the next window
-                    self.init_or_update_prev_result(pressed)
+                    # self.init_or_update_prev_result(pressed)
 
                     if to_be_checked_for_consistency(self) == 'low':
                         self.check_for_consistency(pressed, with_respect_to='low')  # updates the consistency indicators
@@ -579,18 +624,13 @@ class Window:
 
                     elif to_be_checked_for_consistency(self) == 'middle':
                         update_binary_search_inds_and_possibly_insert(self, pressed)
-                        possibly_update_index(self, direction='next')  # uses current low and high to decide if index should change
+                        possibly_update_current_index(self, direction='next')  # uses current low and high to decide if index should change
 
                 # normal mode
                 else:
-                    # log(f'In [keyboard_press]: NO ROBUST '
-                    #     f'CHECKING NEEDED...')
-
-                    # first store current attributes in prev_result before changing them for the next window
-                    self.init_or_update_prev_result(pressed)
                     # now that we keep indices in prev_result, we can update them
                     update_binary_search_inds_and_possibly_insert(self, pressed)
-                    possibly_update_index(self, direction='next')  # uses current low and high to decide if index should change
+                    possibly_update_current_index(self, direction='next')  # uses current low and high to decide if index should change
 
             # ======== upload results regularly
             if self.current_index <= 1 or self.current_index % globals.params['email_interval'] == 0:

@@ -69,6 +69,31 @@ def print_comparisons_lists(comparisons):
     log('________________________________________________________________', no_time=True)
 
 
+# def read_file_to_list(file):
+#     with open(file) as f:
+#         lines = f.read().splitlines()
+#     return lines
+
+
+def read_file_to_list_if_exists(filename):
+    lines = []
+    if os.path.isfile(filename):
+        with open(filename) as f:
+            lines = f.read().splitlines()
+    return lines
+
+
+def write_list_to_file(lst, filename):
+    with open(filename, 'w') as f:
+        for item in lst:
+            f.write(f'{item}\n')
+
+
+def append_to_file(filename, item):
+    with open(filename, 'a') as file:
+        file.write(f'{item}\n')
+
+
 # ========== functions for saving/reading results
 def read_comparison_lists():
     output_file = globals.params['comparisons_structured']  # output/comparisons.json
@@ -91,12 +116,6 @@ def save_comparisons_list(comparisons):
 
     with open(output_file, 'w') as f:
         json.dump(comparisons, f, indent=2)
-
-
-def write_list_to_file(lst, filename):
-    with open(filename, 'w') as f:
-        for item in lst:
-            f.write(f'{item}\n')
 
 
 def write_sorted_list_to_file(lst):
@@ -126,13 +145,6 @@ def save_rating(imgs, rate):
 
     log_lines = imgs + [rate]
     log(f'In [save_rating]: case \n{split_to_lines(log_lines)} appended to "{filename}"\n')
-
-
-def save_to_aborted_list(case):
-    filename = globals.params['aborted']
-    with open(filename, 'a') as file:
-        file.write(f'{case}\n')
-    log(f'In [save_to_aborted_list]: saved case "{case}" to aborted list.')
 
 
 def email_results():

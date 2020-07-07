@@ -22,6 +22,8 @@ params = {
 
     "output_path": os.path.join('..', 'output'),
     "sorted": os.path.join('..', 'output', 'sorted.txt'),
+
+    "discarded": os.path.join('..', 'output', 'discarded.txt'),
     "aborted": os.path.join('..', 'output', 'aborted.txt'),
 
     "comparisons": os.path.join('..', 'output', 'comparisons.txt'),
@@ -29,6 +31,8 @@ params = {
 
     "search_type": 'robust',  # or 'normal'
     "robust_levels": 2,
+
+    "bin_rep_type": 'random',  # or 'last': specifies how the bin representative should be chosen
 
     "max_imgs_per_session": 3,  # to be changed to 100 in real use
     "resize_factor": 7,

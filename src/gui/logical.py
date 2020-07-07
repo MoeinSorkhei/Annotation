@@ -36,18 +36,6 @@ def is_consistent(pressed, with_respect_to):
     return False
 
 
-# def prev_case_was_aborted(prev_result):
-#     """
-#     Previous case has been aborted either in consistency checking for the low image or in the checking with the high image.
-#     In the first case low_consistency would be False and in the second case high_consistency would be False.
-#     :param prev_result:
-#     :return:
-#     """
-#     if prev_result['low_consistency'] is False or prev_result['high_consistency'] is False:
-#         return True
-#     return False
-
-
 def prev_case_aborted(window):
     if 'aborted' in window.prev_result.keys() and window.prev_result['aborted'] is True:
         return True
@@ -89,7 +77,7 @@ def index_should_be_changed(window, direction):
         return prev_low == prev_high or previously_pressed == '9'
 
 
-def possibly_update_index(window, direction):  # no difference whether search_mode is 'normal' or 'robust'
+def possibly_update_current_index(window, direction):  # no difference whether search_mode is 'normal' or 'robust'
     if window.show_mode == 'side_by_side':
         if direction == 'next' and index_should_be_changed(window, 'next'):
             window.current_index += 1  # index of the next file
@@ -100,7 +88,7 @@ def possibly_update_index(window, direction):  # no difference whether search_mo
             log('In [possibly_update_index]: Current index decreased...')
 
         else:
-            log('In [possibly_update_index]: No need to increase/decrease index...')
+            log('In [possibly_update_index]: No need to increase/decrease current_index...')
 
     else:
         # ======== update current index
@@ -133,10 +121,15 @@ def reset_consistency_indicators(window):
     window.high_consistency = 'unspecified'
 
 
-def revert_indices_and_possibly_consistency_indicators(window):
+def revert_search_indices_and_possibly_consistency_indicators(window):
     window.low, window.high = window.prev_result['low'], window.prev_result['high']
     log(f'In [revert_indices_and_possibly_consistency_indicators]: Reverted indices to: '
         f'low = {window.low}, high = {window.high}')
+
+    if window.data_mode == 'train':
+        window.curr_bin_representative = window.prev_result['curr_bin_representative']
+        log(f'In [revert_indices_and_possibly_consistency_indicators]: Also reverted '
+            f'curr_bin_representative to: {window.curr_bin_representative}')
 
     if indicators_exist(window):  # revert them if they are available
         window.low_consistency = window.prev_result['low_consistency']
@@ -315,6 +308,11 @@ def update_binary_search_inds_and_possibly_insert(window, pressed):
             # reset indices
             reset_indices_and_possibly_consistency_indicators(window)
 
+    # with the change of indices, we set curr_bin_representative to None sine the bin will be changed
+    if window.data_mode == 'train':
+        window.curr_bin_representative = None
+        log(f'In [binary_search_step]: Updated indices: also set curr_bin_representative to None. \n')
+
 
 # ========== very generic functions
 def read_img_and_resize_if_needed(window):
@@ -372,7 +370,8 @@ def get_prev_imgs_from_prev_result(window):
 
         else:  # index has not changed
             left_img = window.cases[window.current_index]
-            right_img = last_img_in_bin(prev_bin)
+            # right_img = last_img_in_bin(prev_bin)
+            right_img = bin_representative(prev_bin)   # ABOSLUTELY WRONG; SHOULD READ IT FROM PREV_RESULT
 
     return left_img, right_img
 
@@ -385,6 +384,23 @@ def save_prev_rating(window):
         save_rating(imgs, rate)
 
     if window.show_mode == 'side_by_side':
+        prev_stat = window.prev_result['status']
+        prev_left_index = window.prev_result['left_index']  # index of the left image (previous current_index)
+        prev_right_index = window.prev_result['right_index']  # could be index of image or bin
+
+        prev_left_img = window.cases[prev_left_index]
+        prev_right_img = None
+
+        if prev_stat == 'OK':
+            pass
+
+        elif prev_stat == 'aborted':
+            pass
+        elif prev_stat == 'discarded':
+            pass
+        else:
+            raise NotImplementedError
+
         left_img, right_img = get_prev_imgs_from_prev_result(window)
         imgs = [left_img, right_img]
         rate = window.prev_result["rate"]
@@ -396,17 +412,57 @@ def save_prev_rating(window):
             save_to_aborted_list(left_img)
 
 
+def read_discarded_cases():
+    discarded_file = globals.params['discarded']
+    discarded_list = read_file_to_list_if_exists(discarded_file)
+    return discarded_list
+
+
+def read_aborted_cases():
+    aborted_file = globals.params['aborted']
+    aborted_list = read_file_to_list_if_exists(aborted_file)
+    return aborted_list
+
+
 def save_aborted_cases(window):
     if window.data_mode == 'test':
         successful_cases = read_sorted_imgs()
     else:
         _, successful_cases = all_imgs_in_all_bins()
 
-    aborted_cases = [case for case in window.cases if case not in successful_cases]
+    discarded_cases = read_discarded_cases()
+    aborted_cases = [case for case in window.cases if (case not in successful_cases and case not in discarded_cases)]
 
     for aborted in aborted_cases:
         save_to_aborted_list(aborted)
     log(f'In [save_aborted_cases]: saved {len(aborted_cases)} aborted cases...\n')
+
+
+def save_to_discarded_list(case):
+    filename = globals.params['discarded']
+    append_to_file(filename, case)
+    log(f'In [save_to_discarded_list]: saved case "{case}" to discarded list.')
+
+
+def save_to_aborted_list(case):
+    filename = globals.params['aborted']
+    with open(filename, 'a') as file:
+        file.write(f'{case}\n')
+    log(f'In [save_to_aborted_list]: saved case "{case}" to aborted list.')
+
+
+def remove_last_record(from_file):
+    if from_file == 'comparisons':
+        file = globals.params['comparisons']
+    elif from_file == 'aborted':
+        file = globals.params['aborted']
+    else:
+        raise NotImplementedError
+
+    records = read_file_to_list_if_exists(file)
+    records = records[:-1]
+    write_list_to_file(records, file)
+    log(f'In [remove_last_record]: removed the last record from "{from_file}" and saved it. \n')
 
 
 def update_and_save_comparisons_list(window, left_img, right_img, rate):
