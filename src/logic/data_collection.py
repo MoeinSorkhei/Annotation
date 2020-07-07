@@ -1,24 +1,85 @@
 import csv
 import matplotlib.pyplot as plt
-
+import sqlite3
+import os
+import pandas as pd
 import globals
 
 
+# CSV files attributes - the nonKS data does not have basename
+attributes = [
+        'FileAnalyzed',  # 0
+        'Manufacturer',  # 1
+        'Laterality',  # 2
+        'ViewPosition',  # 3
+        'BreastArea_sqcm_',  # 4
+        'DenseArea_sqcm_',  # 5
+        'BreastDensity___',  # 6
+        'basename'  # 7
+]
+
+
 def read_csv_file(filename):
-    # lines = []
+    delimiter = ';' if 'density_combined.csv' in filename else ','
+
     with open(filename) as f:
-        reader = csv.reader(f, delimiter=';')
+        reader = csv.reader(f, delimiter=delimiter)
         lines = [row for row in reader]
     return lines
 
 
-def density_hist(densities, view):
+def combine_csv_files(verbose=False, also_return_separately=False):
+    ks_file, non_ks_file = globals.params['ks_csv_file'], globals.params['nonKS_csv_file']
+    ks_rows = read_csv_file(ks_file)[1:]
+    non_ks_rows = read_csv_file(non_ks_file)[1:]
+
+    if verbose:
+        print(f'ks_file has len: {len(ks_rows):,} - nonKS file has len: {len(non_ks_rows):,}')
+
+    if also_return_separately:
+        return ks_rows + non_ks_rows, ks_rows, non_ks_rows
+    return ks_rows + non_ks_rows
+
+
+def draw_hist_from_csv(csv_file, features, main_att, sep, plot_labels, save_path=None):
+    df = pd.read_csv(csv_file, sep=sep, engine='python')  # data frame
+
+    # now supports only two attributes
+    if len(features.keys()) == 2:
+        keys = list(features.keys())
+        vals = list(features.values())
+        df = df.loc[(df[keys[0]] == vals[0]) & (df[keys[1]] == vals[1])]
+
+    else:
+        raise NotImplementedError
+
+    df = df[main_att]
+    print(f'df extracted with len: {df.size}')
+    draw_hist(df.to_numpy(), plot_labels, save_path)
+
+
+def draw_hist(values, labels, save_path, count_or_prob='count', logscale=False):
+    plt.clf()
+
+    vertical_is_prob = count_or_prob == 'prob'
+    plt.hist(values, density=vertical_is_prob, bins=100)  # `density=False` would make counts
+
+    if logscale:
+        plt.xscale('log')
+
+    # x label and y label and save to
+    plt.xlabel(labels['x_label'])
+    plt.ylabel(labels['y_label'])
+
+    if save_path:
+        plt.savefig(save_path)
+    else:
+        plt.show()
+
+
+def density_hist(densities, view, filename):
     plt.clf()
     count_or_prob = 'Count'
-    # view = 'MLO' if 'MLO' in save_to else 'CC'
-
-    # print(f'denisty min: {min(densities)} - max: {max(densities)}')
-    # input()
     logscale = True
 
     plt.hist(densities, density=count_or_prob == 'Probability', bins=100)  # `density=False` would make counts
@@ -29,53 +90,121 @@ def density_hist(densities, view):
     plt.xlabel(f'{view} Log Density percent' if logscale else f'{view} Density percent')
     plt.ylabel(count_or_prob)
 
-    # if save_to:
-    save_to = f'../tmp/figs/{view} {"log" if logscale else "linear"}.jpg'
+    save_to = f'../tmp/figs/{filename} - {view} - {"log scale" if logscale else "linear"}.jpg'
     plt.savefig(save_to)
-
-    # if not no_show:
-    #    plt.show()
 
 
 def read_attribute_from_csv(attribute):
-    filename = globals.params['csv_file']
-    rows = read_csv_file(filename)
-
-    attributes = [
-        'FileAnalyzed',  # 0
-        'Manufacturer',  # 1
-        'Laterality',  # 2
-        'ViewPosition',  # 3
-        'BreastArea_sqcm_',  # 4
-        'DenseArea_sqcm_',  # 5
-        'BreastDensity___',  # 6
-        'basename'  # 7
-    ]
+    rows = combine_csv_files(verbose=True)
     index = attributes.index(attribute)
-    values = [row[index] for row in rows[1:]]
-    return values
+    values = [row[index] for row in rows]
+    return values, rows
 
 
 def read_breast_densities(view=None, limit_to=None, plot=True):
-    filename = globals.params['csv_file']
-    rows = read_csv_file(filename)
-    # save_to = None  # do not save the histogram fig by default
-    # print('len:', len(rows))  # len: 329,450 (the first line being attributes)
-    # for i, item in enumerate(rows[0]):
-    #     print(f'{i}: {item}\n')
+    ks_file, non_ks_file = globals.params['ks_csv_file'], globals.params['nonKS_csv_file']
+
+    ks_rows = read_csv_file(ks_file)
+    non_ks_rows = read_csv_file(non_ks_file)
 
     if view:  # consider only images with this view
-        rows = [row for row in rows if row[3] == view]
-        # save_to = f'../tmp/figs/{view}.jpg'
         print(f'only considering rows with view: {view}')
+        ks_rows = [row for row in ks_rows if row[3] == view]
+        non_ks_rows = [row for row in non_ks_rows if row[3] == view]
 
-    print(f'len rows: {len(rows):,}')
-    densities = [float(row[6]) for row in rows[1:]]  # exclude the first rwo which is the attributes
-    # print(f'len densities: {len(densities):,}')
+    print(f'len ks_rows: {len(ks_rows):,}')
+    print(f'len non_ks_rows: {len(non_ks_rows):,}')
+
+    ks_densities = [float(row[6]) for row in ks_rows[1:]]  # exclude the first rwo which is the attributes
+    non_ks_densities = [float(row[6]) for row in non_ks_rows[1:]]  # exclude the first rwo which is the attributes
 
     if limit_to:
-        densities = densities[:limit_to]
+        ks_densities = ks_densities[:limit_to]
+        non_ks_densities = non_ks_densities[:limit_to]
 
     if plot:
-        density_hist(densities, view)
+        density_hist(ks_densities, view, filename='KS')
+        density_hist(non_ks_densities, view, filename='nonKS')
+
+
+def extract_stats():
+    filenames, all_rows = read_attribute_from_csv('FileAnalyzed')
+    basenames = [filename.split('_')[0] for filename in filenames]
+    patient_ids = list(set(basenames))  # uniques
+
+    print(f'len basenames: {len(basenames):,}')
+    print(f'len patient_ids: {len(patient_ids):,}')
+    print(f'average num of images per patient: {int(len(basenames) / len(patient_ids))}')
+
+    # for i in range(len(basenames)):
+    for i in range(100):
+        patient_id = patient_ids[i]
+        print(f'patient_id: {patient_id}')
+
+        for j in range(len(basenames)):
+            if basenames[j] == patient_id:
+                print(f'found for j: {j}')
+                print(all_rows[j])
+                print('')
+        input()
+
+
+def csv_to_db(data_source):
+    if data_source == 'KS':
+        csv_file = globals.params['ks_csv_file']
+        columns = ['patient', 'x_case', 'x_diadate', 'split']
+
+        db_string = 'CREATE TABLE "KS" ("patient" varchar, "x_case" integer, "x_diadate" varchar, "split" varchar);'
+        db_path = globals.params['ks_db_path']
+
+    else:
+        csv_file = globals.params['nonKS_csv_file']
+        columns = None
+
+    df = pd.read_csv(csv_file, sep=';', engine='python', usecols=columns)  # data frame
+    # print(df)
+
+    df_as_list = df.values.tolist()
+    # print(len(df_as_list))
+
+    con = sqlite3.Connection(db_path)
+    cur = con.cursor()
+    cur.execute(db_string)
+    # insert command
+
+
+def create_db():
+    db_path = globals.params['db_path']
+
+    # delete db file if exists
+    if os.path.exists(db_path):
+        os.remove(db_path)
+        print('Previous database destoryed')
+
+    con = sqlite3.Connection(db_path)
+    cur = con.cursor()
+    cur.execute('CREATE TABLE "patients" '
+                '("FileAnalyzed" varchar, "Manufacturer" varchar, "Laterality" varchar, "ViewPosition" varchar, '
+                '"BreastArea_sqcm_" float, "DenseArea_sqcm_" float, "BreastDensity___" float, "basename" varchar, '
+                '"source" varchar);')
+    print('Database created successfully')
+
+    combined, ks_rows, non_ks_rows = combine_csv_files(also_return_separately=True)
+    # for row in data:
+    #     if len(row) == 7:
+    #         row.append('')  # append empty string for the rows that do nat have the basename attribute
+
+    for row in ks_rows:
+        row.extend(['KS'])  # append data source
+
+    for row in non_ks_rows:
+        row.extend(['', 'nonKS'])  # append data source and empty string (they do not have basename)
+
+    for data in [ks_rows, non_ks_rows]:
+        cur.executemany('INSERT INTO patients VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', data)
+    print('Inserted into database successfully')
+
+    cur.close()
+    con.commit()
+    con.close()
 

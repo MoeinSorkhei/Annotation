@@ -2,6 +2,8 @@ src/test.py
 commit_msg.txt
 tmp/
 output/
+data/
+figs/
 
 *.idea
 __pycache__*

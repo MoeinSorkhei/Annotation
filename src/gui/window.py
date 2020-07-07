@@ -140,6 +140,7 @@ class Window:
 
             self.stat_panel = None
             self.prev_button, self.fin_button = None, None
+            self.discard_button = None
 
             self.init_frames_and_photos(master)
 
@@ -182,7 +183,8 @@ class Window:
 
     def init_stat_panel_and_buttons(self, master):
         # ======== status panel
-        stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - Case number: {self.case_number}' + \
+        stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - ' \
+                    f'Case number: {self.case_number}' + \
                     (f'\nPrevious rating: {self.prev_result["rate"]}' if self.prev_result is not None else '')
         self.stat_panel = Label(master, text=stat_text, font='-size 15')
         self.stat_panel.pack(side=TOP)
@@ -190,6 +192,11 @@ class Window:
         # ======== prev_button
         self.prev_button = Button(master, text="Show previous case")
         self.prev_button.bind('<Button-1>', self.show_previous_case)
+
+        # ======== discard button
+        self.discard_button = Button(master, text='Discard this case')
+        self.discard_button.bind('<Button-1>', self.discard_case)
+        self.discard_button.pack(side=BOTTOM)  # show it in the first page
 
         # ======== finalize button
         self.fin_button = Button(master, text="Finalize this session \n(Takes a few seconds once clicked)")
@@ -215,12 +222,14 @@ class Window:
             if self.show_mode == 'side_by_side':
                 stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - Case number: {self.case_number}' + \
                             (f'\nPrevious rating: {self.prev_result["rate"]}' if self.prev_result is not None else '')
+
         else:  # do not show case on the final page
             if self.show_mode == 'single':
                 stat_text = f'\nPrevious rating: {self.prev_result["rate"]}'
 
             if self.show_mode == 'side_by_side':
-                stat_text = f'\nPrevious rating: {self.prev_result["rate"]}'
+                # if prev_result is None: previous case was discarded
+                stat_text = f'\nPrevious rating: {self.prev_result["rate"]}' if self.prev_result is not None else ''
 
         self.stat_panel.configure(text=stat_text)
 
@@ -385,11 +394,13 @@ class Window:
             log(f"\n\n\n{'=' * 150}\nON THE FINAL PAGE", no_time=True)
             self.update_photos(frame='final')
             self.fin_button.pack(side=TOP)  # show finalize button
+            self.discard_button.pack_forget()
 
         # ======== update the image and caption for other pages - show image(s)
         if self.current_index != len(self.cases):
             self.update_photos(frame='others')
             self.fin_button.pack_forget()  # hide finalize button
+            self.discard_button.pack(side=BOTTOM)
 
         # ======== update stat panel
         self.update_stat()
@@ -441,6 +452,13 @@ class Window:
                 f'Updating frame to show the previous case...')
 
         self.update_frame()
+
+    def discard_case(self, event):
+        self.current_index += 1
+        reset_indices_and_possibly_consistency_indicators(self)
+        self.prev_result = None
+        self.update_frame()
+        log('In [discard_case]: current_index increased, indices reset, and prev_result set to None. Frame updated...\n')
 
     def abort_if_not_consistent(self):  # no difference whether to be used for test or train data
         if self.low_consistency is False or self.high_consistency is False:

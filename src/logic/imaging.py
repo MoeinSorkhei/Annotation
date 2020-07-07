@@ -17,7 +17,7 @@ def get_dicom_files_paths(imgs_dir):
     return paths
 
 
-def read_dicom_and_resize(file):
+def read_dicom_and_resize(file, only_save_to=None):
     # ======== read dicom file
     dataset = pydicom.dcmread(file)
     pixels = dataset.pixel_array
@@ -33,10 +33,17 @@ def read_dicom_and_resize(file):
     # apply color map, rescale to 0-255, convert to int
     image = Image.fromarray(np.uint8(cm.bone(pixels) * 255))
 
+    # resize image
     resize_factor = globals.params['resize_factor']
     if resize_factor is not None:
-        resized = image.resize((pixels.shape[1] // resize_factor, pixels.shape[0] // resize_factor))
-        photo = ImageTk.PhotoImage(resized)
-    else:  # no resize
-        photo = ImageTk.PhotoImage(image)
+        image = image.resize((pixels.shape[1] // resize_factor, pixels.shape[0] // resize_factor))
+        # photo = ImageTk.PhotoImage(image)
+    # else:  # no resize
+    #    photo = ImageTk.PhotoImage(image)
+
+    if only_save_to:
+        image.save(only_save_to)
+        return
+
+    photo = ImageTk.PhotoImage(image)
     return photo

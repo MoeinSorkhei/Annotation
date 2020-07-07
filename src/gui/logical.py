@@ -122,6 +122,8 @@ def do_robust_checking(window):
 
 
 def indicators_exist(window):
+    if window.prev_result is None:  # if discard button pressed
+        return False
     return 'low_consistency' in window.prev_result.keys()  # if 'low_consistency' is among the keys
 
 
