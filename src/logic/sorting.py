@@ -78,7 +78,7 @@ def insert_into_bin_and_save(which_bin, pos, img):
     bin_images = read_imgs_from_bin(which_bin)
     insertion_index = len(bin_images) if pos == 'last' else len(bin_images) - 1
     bin_images.insert(insertion_index, img)
-    log(f'In [insert_into_bin_and_save]: inserting image to the "{pos}" of the bin {which_bin + 1}: done')
+    log(f'In [insert_into_bin_and_save]: inserting image to the "{pos}" of the bin_{which_bin + 1}.txt: done')
     save_bin(which_bin, bin_images)
 
 
@@ -86,7 +86,7 @@ def del_from_bin_and_save(which_bin, pos):
     bin_imgs = read_imgs_from_bin(which_bin)
     del_index = len(bin_imgs) - 1 if pos == 'last' else len(bin_imgs) - 2
     del bin_imgs[del_index]
-    log(f'In [del_from_bin_and_save]: deleting image from the "{pos}" of the bin {which_bin + 1}: done')
+    log(f'In [del_from_bin_and_save]: deleting image from the "{pos}" of the bin_{which_bin + 1}.txt: done')
     save_bin(which_bin, bin_imgs)
 
 
@@ -105,7 +105,7 @@ def bin_representative(which_bin):
     else:
         representative = rand_element_from_bin(which_bin)
 
-    log(f'In [bin_representative]: returning "{bin_rep_type}" image of bin {which_bin + 1}')
+    log(f'In [bin_representative]: returning "{bin_rep_type}" image of bin_{which_bin + 1}.txt')
     return representative
 
 

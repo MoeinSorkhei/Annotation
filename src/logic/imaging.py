@@ -24,9 +24,9 @@ def read_dicom_and_resize(file, only_save_to=None):
     pixels = pixels / np.max(pixels)  # normalize to 0-1
 
     orientation = str(dataset.get('PatientOrientation', "(missing)"))
-    log(f'In [read_dicom_image]: orientation: "{orientation}"')
+    # log(f'In [read_dicom_image]: orientation: "{orientation}"')
     if 'A' in orientation:  # anterior view, should be flipped
-        log(f'In [read_dicom_image]: the view is Anterior. Image is flipped when shown.')
+        # log(f'In [read_dicom_image]: the view is Anterior. Image is flipped when shown.')
         pixels = np.flip(pixels, axis=1)
     log('', no_time=True)  # extra print in log file for more readability
 

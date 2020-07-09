@@ -48,6 +48,8 @@ def split_to_lines(inp):
 
 
 def pure_name(file_path):
+    if file_path is None:
+        return None
     return file_path.split(os.path.sep)[-1]
 
 
@@ -57,6 +59,12 @@ def print_list(sorted_list):
     for item in sorted_list:
         log(item, no_time=True)
     log('________________________________________________________________', no_time=True)
+
+
+# def dict_to_lines(dictionary):
+#     string = ''
+#     for item in dictionary.items():
+#
 
 
 def print_comparisons_lists(comparisons):
@@ -94,6 +102,11 @@ def append_to_file(filename, item):
         file.write(f'{item}\n')
 
 
+def insert_to_list(lst, pos, item):
+    lst.insert(pos, item)
+    write_sorted_list_to_file(lst)
+
+
 # ========== functions for saving/reading results
 def read_comparison_lists():
     output_file = globals.params['comparisons_structured']  # output/comparisons.json
@@ -126,8 +139,11 @@ def write_sorted_list_to_file(lst):
             f.write(f'{item}\n')
     log(f'In [write_sorted_list_to_file]: wrote sorted list to {sorted_filename}: done \n')
 
+    if globals.debug:
+        print_list(lst)
 
-def save_rating(imgs, rate):
+
+def save_rating1(imgs, rate):
     # ======= for phase 1: where rate specifies the output file
     if len(imgs) == 1:
         raise NotImplementedError
@@ -145,6 +161,22 @@ def save_rating(imgs, rate):
 
     log_lines = imgs + [rate]
     log(f'In [save_rating]: case \n{split_to_lines(log_lines)} appended to "{filename}"\n')
+
+
+def save_rating(left_img, right_img, rate):
+    rate_file = globals.params['ratings']
+    with open(rate_file, 'a') as f:
+        string = f'{left_img} - {right_img} - {rate}'
+        f.write(f'{string}\n')
+    # log(f'In [save_rating]: saved the rate \n')
+
+
+def remove_last_rating():
+    rate_file = globals.params['ratings']
+    lines = read_file_to_list_if_exists(rate_file)
+    lines = lines[:-1]
+    write_list_to_file(lines, rate_file)
+    # log(f'In [remove_last_rating]: removed tha last rate\n')
 
 
 def email_results():
@@ -187,7 +219,7 @@ def email_results():
     s.sendmail(fromaddr, toaddr, text)
     # terminating the session
     s.quit()
-    log(f'In [email_results]: emailed all the results')
+    log(f'In [email_results]: emailed all the results\n')
 
 
 

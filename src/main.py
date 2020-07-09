@@ -161,4 +161,3 @@ if __name__ == '__main__':
 # /Users/user/.conda/envs/ADL/bin/python main.py --session_name split --n_bins 2 --debug
 
 # /Users/user/.conda/envs/ADL/bin/python test.py
-

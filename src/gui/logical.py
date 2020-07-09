@@ -1,3 +1,6 @@
+from pprint import pformat
+from threading import Thread
+
 from logic import *
 import logic
 import globals
@@ -36,10 +39,18 @@ def is_consistent(pressed, with_respect_to):
     return False
 
 
-def prev_case_aborted(window):
+def prev_case_aborted(window):  # 'aborted' attribute exists only when getting rate for m2 is done
     if 'aborted' in window.prev_result.keys() and window.prev_result['aborted'] is True:
+    # if 'status' in window.prev_result.keys() and window.prev_result['status'] == 'aborted':
         return True
     return False
+
+
+def indices_are_reset(window):
+    if window.data_mode == 'test':
+        return window.low == 0 and window.high == len(window.sorted_list) - 1
+    else:
+        return window.low == 0 and window.high == len(window.bins_list) - 1
 
 
 def index_should_be_changed(window, direction):
@@ -65,19 +76,30 @@ def index_should_be_changed(window, direction):
             return window.low == 0 and window.high == len(window.bins_list) - 1
 
     else:  # direction = 'previous' - previously_pressed should be provided
-        prev_low, prev_high = window.prev_result['low'], window.prev_result['high']
-        previously_pressed = window.prev_result['rate']  # if 9 was pressed previously, index has been already increased
-
         # index should be decreased if we have aborted
         if prev_case_aborted(window):
-            log(f'In [index_should_be_changed]: prev case was aborted ==> index should be decreased')
-            return True
+        # if ternary_m1_m2_rates_exist_in_prev_result(window):
+        #    if showing_window_for(window) == 'm1' and prev_case_aborted(window):
+                log(f'In [index_should_be_changed]: prev case was aborted ==> index should be decreased')
+                return True
 
+        prev_low, prev_high = window.prev_result['low'], window.prev_result['high']
+        previously_pressed = window.prev_result['rate']  # if 9 was pressed previously, index has been already increased
         # usual condition
         return prev_low == prev_high or previously_pressed == '9'
 
 
-def possibly_update_current_index(window, direction):  # no difference whether search_mode is 'normal' or 'robust'
+def current_index_has_changed(window):
+    return window.current_index != window.prev_result['current_index']
+
+
+def update_current_index_if_needed(window, direction):  # no difference whether search_mode is 'normal' or 'robust'
+    """
+    Increase in the index is always understood from whether the indices have been reset or not.
+    :param window:
+    :param direction:
+    :return:
+    """
     if window.show_mode == 'side_by_side':
         if direction == 'next' and index_should_be_changed(window, 'next'):
             window.current_index += 1  # index of the next file
@@ -98,15 +120,29 @@ def possibly_update_current_index(window, direction):  # no difference whether s
             window.current_index -= 1  # index of the previous file
 
 
-def do_robust_checking(window):
-    search_type_match = True if window.search_type == 'robust' else False
-    length_match = True if (window.high - window.low) >= 2 else False  # there is at least one item in between
-
+def robust_checking_needed(window, print_details=False):
     levels = globals.params['robust_levels']
-    total_length = len(window.sorted_list) if window.data_mode == 'test' else len(window.bins_list)
-    level_match = True if (window.high - window.low + 1) / total_length >= (1 / (2 ** (levels - 1))) else False
+    min_length = globals.params['robust_min_length']
 
-    return search_type_match and length_match and level_match
+    if window.search_type == 'ternary':
+        total_length = len(window.sorted_list) if window.data_mode == 'test' else len(window.bins_list)
+        current_length = window.high - window.low + 1
+        frac = (2 / 3) ** (levels - 1)
+
+        length_match = True if current_length >= min_length else False
+        level_match = True if current_length / total_length >= frac else False
+
+    else:
+        raise NotImplementedError
+        length_match = True if (window.high - window.low) >= min_length else False  # there is at least one item in between
+        total_length = len(window.sorted_list) if window.data_mode == 'test' else len(window.bins_list)
+
+        level_match = True if (window.high - window.low + 1) / total_length >= (1 / (2 ** (levels - 1))) else False
+
+    # return search_type_match and length_match and level_match
+    if print_details:
+        log(f'In [robust_checking_needed]: length_match: {length_match}, level_match: {level_match}\n')
+    return length_match and level_match
 
 
 def indicators_exist(window):
@@ -115,91 +151,229 @@ def indicators_exist(window):
     return 'low_consistency' in window.prev_result.keys()  # if 'low_consistency' is among the keys
 
 
-# ========== functions for resetting/reverting
+def ternary_m1_m2_rates_exist_in_prev_result(window):
+    if window.prev_result is None:
+        return False
+    return 'm1_rate' in window.prev_result.keys()
+
+
+def showing_window_for(window):  # could possibly add input_type which says if it is window or m1_rate, m2_rate direclty
+    if window.m1_rate is None and window.m2_rate is None:  # getting rate for m1
+        return 'm1'
+
+    elif window.m1_rate is not None and window.m2_rate is None:  # m1 already rated, getting rate for m2
+        return 'm2'
+
+    else:
+        log(f'm1_rate: {window.m1_rate}, '
+            f'm2_rate: {window.m2_rate}')
+        raise NotImplementedError('Unexpected m1_rate '
+                                  'm2_rate condition')
+
+
+# ========== functions for changing window attributes
 def reset_consistency_indicators(window):
     window.low_consistency = 'unspecified'
     window.high_consistency = 'unspecified'
 
 
-def revert_search_indices_and_possibly_consistency_indicators(window):
-    window.low, window.high = window.prev_result['low'], window.prev_result['high']
-    log(f'In [revert_indices_and_possibly_consistency_indicators]: Reverted indices to: '
-        f'low = {window.low}, high = {window.high}')
+def init_or_use_rep(window, mid):
+    rep = window.rep
+    if rep is None:
+        rep = bin_representative(which_bin=mid)
+        window.rep = rep
+        log(f'In [init_or_use_rep]: rep is None. '
+            f'Calculated rep and set attribute to: {window.rep}')
+    else:
+        log(f'In [init_or_use_rep]: rep is already '
+            f'set to: {window.rep}. Using the rep...')
+    return rep
 
+
+def init_or_use_anchor_and_rep(window):
+    _curr_anchor = None
+    _curr_rep = None  # only initialized and set in train mode
+
+    # specifying the name of the anchor and representative to be used
+    window_for = showing_window_for(window)  # 'm1' or 'm2'
+    if window_for == 'm1':
+        _curr_anchor_name = 'm1_anchor'
+        _curr_rep_name = 'm1_rep'
+    else:  # m2
+        _curr_anchor_name = 'm2_anchor'
+        _curr_rep_name = 'm2_rep'
+
+    _curr_anchor = getattr(window, _curr_anchor_name)  # index in sorted list or index of the bin
+
+    # init or use the anchor
+    if _curr_anchor is None:
+        _curr_anchor = calc_ternary_anchors(window)[window_for]
+        setattr(window, _curr_anchor_name, _curr_anchor)
+        log(f'In [init_or_use_anchor_and_rep]: {_curr_anchor_name} is None. '
+            f'Calculated anchor and set attribute to: {_curr_anchor}')
+    else:
+        log(f'In [init_or_use_anchor_and_rep]: {_curr_anchor_name} already set to: {_curr_anchor}. '
+            f'Using the anchor...')
+
+    # init or use rep
     if window.data_mode == 'train':
-        window.curr_bin_representative = window.prev_result['curr_bin_representative']
-        log(f'In [revert_indices_and_possibly_consistency_indicators]: Also reverted '
-            f'curr_bin_representative to: {window.curr_bin_representative}')
+        _curr_rep = getattr(window, _curr_rep_name)
 
-    if indicators_exist(window):  # revert them if they are available
-        window.low_consistency = window.prev_result['low_consistency']
-        window.high_consistency = window.prev_result['high_consistency']
-        log(f'In [revert_indices_and_possibly_consistency_indicators]: also reverted consistency indicators to: \n'
-            f'low_consistency: "{window.low_consistency}" and high_consistency: "{window.high_consistency}"\n')
+        if _curr_rep is None:
+            _curr_rep = bin_representative(which_bin=_curr_anchor)
+            setattr(window, _curr_rep_name, _curr_rep)
+            log(f'In [init_or_use_anchor_and_rep]: {_curr_rep_name} is None. '
+                f'Calculated representative and set attribute to: {pure_name(_curr_rep)}')
+        else:
+            log(f'In [init_or_use_anchor_and_rep]: {_curr_rep_name} already set to: {_curr_rep}. '
+                f'Using the representative...')
+
+    return _curr_anchor, _curr_rep
 
 
-def reset_indices_and_possibly_consistency_indicators(window):
+def revert_attributes(window):
+    # revert low, high indices
+    window.low, window.high = window.prev_result['low'], window.prev_result['high']
+    window.current_index = window.prev_result['current_index']
+
+    # for print purposes
+    attrs_as_dict = {
+        'low': window.low,
+        'high': window.high,
+        'current_index': window.current_index,
+
+    }
+
+    # revert m1 and m2 rates
+    if 'm1_rate' in window.prev_result.keys():
+        window.m1_rate = window.prev_result['m1_rate']
+        window.m2_rate = window.prev_result['m2_rate']
+
+        attrs_as_dict['m1_rate'] = window.m1_rate
+        attrs_as_dict['m2_rate'] = window.m2_rate
+
+    # reset anchors
+    if 'm1_anchor' in window.prev_result.keys():
+        window.m1_anchor = window.prev_result['m1_anchor']
+        window.m2_anchor = window.prev_result['m2_anchor']
+
+        attrs_as_dict['m1_anchor'] = window.m1_anchor
+        attrs_as_dict['m2_anchor'] = window.m2_anchor
+
+    # revert bin representatives for train mode
+    if 'm1_rep' in window.prev_result.keys():
+        window.m1_rep = window.prev_result['m1_rep']
+        window.m2_rep = window.prev_result['m2_rep']
+
+        attrs_as_dict['m1_rep'] = window.m1_rep
+        attrs_as_dict['m2_rep'] = window.m2_rep
+
+    if 'rep' in window.prev_result.keys():
+        window.rep = window.prev_result['rep']
+        attrs_as_dict['rep'] = window.rep
+
+    log(f'In [revert_attributes]: Reverted all attributes.')
+    # log(f'In [revert_attributes]: Reverted all attributes. Now attributes are: \n{attrs_as_dict}')
+
+
+def reset_attributes(window, exclude_inds=False):
     """
     The behavior of this function depends on whether we are dealing with test or train data.
 
+    :param exclude_inds:
     :param window:
     :return:
     """
-    if window.data_mode == 'test':
-        window.low = 0
-        window.high = len(window.sorted_list) - 1
+    if not exclude_inds:
+        if window.data_mode == 'test':
+            window.low = 0
+            window.high = len(window.sorted_list) - 1
 
-    else:
-        window.low = 0
-        window.high = len(window.bins_list) - 1
-        # log(f'In [binary_search_step]: low and high are reset for the new image: '
-        #     f'low: {window.low}, high: {window.high}\n')
+        else:
+            window.low = 0
+            window.high = len(window.bins_list) - 1
+            # log(f'In [binary_search_step]: low and high are reset for the new image: '
+            #     f'low: {window.low}, high: {window.high}\n')
 
     # also reset low_consistency and high_consistency for the 'robust' checking mode
-    if indicators_exist(window):
-        reset_consistency_indicators(window)
-    log(f'In [reset_indices_and_possibly_consistency_indicators]: low and high indices '
-        f'(and possibly indicators) are reset for the new image.')
+    # if indicators_exist(window):   # NOT SURE IF IT IS RIGHT: it checks based on prev_result, change code like below
+    #     reset_consistency_indicators(window)
+
+    # rest m1 and m2 rates
+    if hasattr(window, 'm1_rate'):
+        window.m1_rate = None
+
+    if hasattr(window, 'm2_rate'):
+        window.m2_rate = None
+
+    if hasattr(window, 'm1_anchor'):
+        window.m1_anchor = None
+
+    if hasattr(window, 'm2_anchor'):
+        window.m2_anchor = None
+
+    if hasattr(window, 'm1_rep'):
+        window.m1_rep = None
+
+    if hasattr(window, 'm2_rep'):
+        window.m2_rep = None
+
+    if hasattr(window, 'rep'):
+        window.rep = None
+
+    log(f'In [reset_attributes]: attributes are reset for the new image.')
 
 
-# ========== list-related functions
-def possibly_remove_item_from_list(window):
-    """
-    The behavior of this function depends on whether we are dealing with test or train data.
+# def update_m1_m2_rates(window, pressed):
+#     if showing_window_for(window) == 'm1':
+#         window.m1_rate = eval(pressed)
+#     else:  # for m2
+#         window.m2_rate = eval(pressed)
 
-    :param window:
-    :return:
-    """
-    # if 'aborted' in window.prev_result.keys() and window.prev_result['aborted'] is True:  # no remove if we have aborted
-    if prev_case_aborted(window):  # no remove if we have aborted
-        log(f'In [possibly_remove_item_from_list]: no remove '
-            f'since the previous case had been aborted\n')
-        return
 
-    if index_should_be_changed(window, direction='previous'):
-        if window.data_mode == 'test':
-            insertion_index = window.prev_result['mid_index']  # only in this case we have insertion index, otherwise it is None
-            del window.sorted_list[insertion_index]  # delete the wrongly inserted element from the list
-            log(f'In [possibly_remove_item_from_list]: index should be decreased ==> '
-                f'removed index {insertion_index} from sorted_list - '
-                f'Now sorted_list has len: {len(window.sorted_list)}')
+def calc_ternary_anchors(window):
+    low, high = window.low, window.high
+    length = high - low
 
-            log(f'In [possibly_remove_item_from_list]: saving sorted_list with removed index...')
-            write_sorted_list_to_file(window.sorted_list)
+    m1 = low + int(length * (1/3))
+    m2 = low + int(length * (2/3))
 
-            if globals.debug:
-                print_list(window.sorted_list)
+    anchors = {'m1': m1, 'm2': m2}
+    # log(f'In [calc_ternary_anchors]: '
+    #     f'computed anchors for low: {low}, high: {high} are: {anchors}\n')
+    return anchors
 
-        else:  # e.g. prev_result: (left_img, right_img, rate, bin, 'last')
-            which_bin, insert_pos = window.prev_result['mid_index'], window.prev_result['insert_pos']
-            log(f'In [possibly_remove_item_from_list]: removing the "{insert_pos}" element from bin {which_bin + 1}')
-            del_from_bin_and_save(which_bin, insert_pos)
+
+def update_ternary_indices(window, pressed):
+    m1_anchor = window.m1_anchor
+    m2_anchor = window.m2_anchor
+    m1_rate = window.m1_rate
+    m2_rate = eval(pressed)
+
+    if m1_rate == '1' and m2_rate == '1':
+        window.low = m1_anchor
+        log(f'In [update_ternary_indices]: '
+            f'low increased to m1_anchor: {m1_anchor}')
+
+    elif m1_rate == '1' and m2_rate == '2':
+        window.low = m1_anchor
+        window.high = m2_anchor
+        log(f'In [update_ternary_indices]: '
+            f'low increased to m1_anchor: {m1_anchor}, high decreased to m2_anchor: {m2_anchor}')
+
+    elif m1_rate == '2' and m2_rate == '2':
+        window.high = m2_anchor
+        log(f'In [update_ternary_indices]: '
+            f'high decreased to m2_anchor: {m2_anchor}')
 
     else:
-        log(f'In [possibly_remove_item_from_list]: index has not changed ==> No need to remove item from list...\n')
+        log(f'In [update_ternary_indices]: m1 and m2 rates are m1 = {m1_rate}, m2 = {m2_rate}')
+        raise NotImplementedError('Unexpected m1 and m2 rates')
+
+    log(f'In [update_ternary_indices]: Updated indices are low: {window.low}, high: {window.high} \n')
 
 
-def update_binary_search_inds_and_possibly_insert(window, pressed):
+def update_binary_inds(window, pressed):
     """
     This will update the low and high indices for the binary search. In case binary search is completed or 9 is
     pressed by the radiologist, it inserts the image in the right position and resets the low and high indices.
@@ -211,121 +385,293 @@ def update_binary_search_inds_and_possibly_insert(window, pressed):
     """
     mid = (window.low + window.high) // 2  # for train data, this represents bin number
     # ====== update the low and high indexes based ond the rating until suitable position is found
-    if window.high != window.low and eval(pressed) != '9':
-        if eval(pressed) == '1':  # rated as harder, go to the right half of the list
-            window.low = mid if (window.high - window.low) > 1 else window.high
-            log(f'In [binary_search_step]: low increased to {window.low}')
+    # if window.high != window.low and eval(pressed) != '9':
+    if eval(pressed) == '1':  # rated as harder, go to the right half of the list
+        window.low = mid if (window.high - window.low) > 1 else window.high
+        log(f'In [binary_search_step]: low increased to {window.low}')
 
-        else:  # rated as easier, go to the left half of the list
-            window.high = mid
-            log(f'In [binary_search_step]: high decreased to {window.high}')
+    else:  # rated as easier, go to the left half of the list
+        window.high = mid
+        log(f'In [binary_search_step]: high decreased to {window.high}')
 
-        log(f'In [binary_search_step]: Updated indices: low = {window.low}, high = {window.high}')
+    log(f'In [binary_search_step]: Updated indices: low = {window.low}, high = {window.high}')
 
-        if indicators_exist(window):  # indicators should be reset when changing the indices
-            reset_consistency_indicators(window)
-            log(f'In [update_binary_search_inds_and_possibly_insert]: also low_consistency and low_consistency are reset \n')
+        # if indicators_exist(window):  # indicators should be reset when changing the indices
+        #     reset_consistency_indicators(window)
+        #     log(f'In [update_binary_search_inds_and_possibly_insert]: also low_consistency and low_consistency are reset \n')
             # \n'f'to: low_consistency: "{window.low_consistency}", high: "{window.high_consistency}"\n')
 
     # ====== suitable position is found (low = high), insert here
+    # else:
+
+
+def insert_with_ternary_inds(window, anchor, item):
+    """
+    Note: insert_with_ternary_inds only happens if 9 is pressed, it is assumed that ternary indices are never equal.
+    :param anchor:
+    :param window:
+    :param anchor_name:
+    :param item:
+    :return:
+    """
+    # anchor = getattr(window, anchor_name)  # get the anchor using its name
+    if window.data_mode == 'test':
+        insert_to_list(window.sorted_list, anchor, item)
+        window.prev_result['insert_index'] = anchor
+
     else:
-        # for test data
-        if window.data_mode == 'test':
-            mid_image = window.sorted_list[mid]
+        pos = 'last' if globals.params['bin_rep_type'] == 'random' else 'before_last'
+        insert_into_bin_and_save(which_bin=anchor, pos=pos, img=item)
+        window.prev_result['insert_index'] = anchor
+        window.prev_result['insert_pos'] = pos
 
-            # if both images are equal
-            if eval(pressed) == '9':  # 9 is pressed, so we insert directly
-                window.sorted_list.insert(mid, window.curr_left_file)  # insert to the left
-                window.prev_result.update({'mid_index': mid, 'mid_image': mid_image})
-                log(f'In [binary_search_step]: the two images are equal, inserted into index {mid} of sorted_list - '
-                    f'Now sorted_list has len: {len(window.sorted_list)}\n')
 
-            # if ref image is harder (and binary search is completed)
-            if eval(pressed) == '1':
-                log(f'In [binary_search_step]: low and high are equal. '
-                    f'Inserting into list...')
-                window.sorted_list.insert(mid + 1, window.curr_left_file)  # insert to the right side if the index
-                window.prev_result.update({'mid_index': mid + 1, 'mid_image': mid_image})
-                log(f'In [binary_search_step]: inserted into index {mid + 1} of sorted_list - '
-                    f'Now sorted_list has len: {len(window.sorted_list)}\n')
-
-            # if ref image is easier (and binary search is completed)
+def insert_with_binary_inds(window, pressed, item):
+    # for test data
+    mid = (window.low + window.high) // 2  # for train data, this represents bin number
+    if window.data_mode == 'test':
+        # if both images are equal
+        if eval(pressed) == '9' or eval(pressed) == '2':  # 9 is pressed, so we insert directly
+            insert_index = mid
+            # window.sorted_list.insert(mid, window.curr_left_file)  # insert to the left
+            # window.prev_result.update({'mid_index': mid, 'mid_image': mid_image})
+            # window.prev_result.update({'insert_index': mid})
+            if eval(pressed) == '9':
+                log(f'In [insert_with_binary_inds]: the two images are equal')
             if eval(pressed) == '2':
-                log(f'In [binary_search_step]: low and high are equal. '
-                    f'Inserting into list...')
-                window.sorted_list.insert(mid, window.curr_left_file)  # insert to the left side if the index
-                window.prev_result.update({'mid_index': mid, 'mid_image': mid_image})
-                log(f'In [binary_search_step]: inserted into index {mid} of sorted_list - '
-                    f'Now sorted_list has len: {len(window.sorted_list)}\n')
+                log(f'In [insert_with_binary_inds]: low and high are equal')
 
-            # save the modified list
-            log(f'In [binary_search_step]: saving '
-                f'sorted_list...')
+        # if ref image is harder (and binary search is completed)
+        # elif eval(pressed) == '1':
+        else:  # eval(pressed) == '1'
+            # log(f'In [binary_search_step]: low and high are equal. '
+            #     f'Inserting into list...')
+            # window.prev_result.update({'mid_index': mid + 1, 'mid_image': mid_image})
+            insert_index = mid + 1
+            log(f'In [insert_with_binary_inds]: low and high are equal')
+            # window.sorted_list.insert(mid + 1, window.curr_left_file)  # insert to the right side if the index
+            # window.prev_result.update({'insert_index': mid + 1})
+            # log(f'In [binary_search_step]: low and high are equal. Inserted into index {mid + 1} of sorted_list - '
+            #     f'Now sorted_list has len: {len(window.sorted_list)}\n')
+
+        # if ref image is easier (and binary search is completed)
+        # else:  # eval(pressed) == '2':
+        #     # log(f'In [binary_search_step]: low and high are equal. '
+        #     #     f'Inserting into list...')
+        #     # window.prev_result.update({'mid_index': mid, 'mid_image': mid_image})
+        #     insert_index = mid
+        #     # window.sorted_list.insert(mid, window.curr_left_file)  # insert to the left side if the index
+        #     # window.prev_result.update({'insert_index': mid})
+        #     log(f'In [binary_search_step]: low and high are equal. Inserted into index {mid} of sorted_list - '
+        #         f'Now sorted_list has len: {len(window.sorted_list)}\n')
+
+        # window.sorted_list.insert(insert_index, window.curr_left_file)
+        # insert_to_list(window.sorted_list, insert_index, window.curr_left_file)
+        insert_to_list(window.sorted_list, insert_index, item)
+        window.prev_result.update({'insert_index': insert_index})
+        # log(f'In [binary_search_step]: also updated prev_result to include '
+        #     f'insert_index: {window.prev_result["insert_index"]}\n')
+        # save the modified list
+        # log(f'In [binary_search_step]: saving '
+        #     f'sorted_list...')
+        # write_sorted_list_to_file(window.sorted_list)
+        # log(f'In [binary_search_step]: also updated prev_result to have '
+        #     f'mid index and img_img.')
+
+        # reset the indices for the next round of binary search
+        # reset_attributes(window)
+        # window.current_index += 1
+        log(f'In [insert_with_binary_inds]: inserted into index {insert_index} of sorted_list')
+
+        # if globals.debug:
+        #     print_list(window.sorted_list)
+
+    # for train data
+    else:
+        which_bin = mid  # bin number to insert to
+        bin_rep_type = globals.params['bin_rep_type']
+
+        if bin_rep_type == 'random':
+            pos = 'last'
+        else:
+            if eval(pressed) == '9' or eval(pressed) == '2':
+                pos = 'before_last'
+            else:
+                pos = 'last'
+
+        string = 'the two images are equal' if eval(pressed) == '9' else 'low and high are equal'
+        log(f'In [insert_with_binary_inds]: {string} and bin_rep_type is "{bin_rep_type}", '
+            f'inserting into position "{pos}" of bin {which_bin + 1}')
+
+        # insert_into_bin_and_save(which_bin, pos, window.curr_left_file)
+        insert_into_bin_and_save(which_bin, pos, item)
+        window.prev_result.update({'insert_index': which_bin, 'insert_pos': pos})
+
+        # # if both images are equal
+        # if eval(pressed) == '9':
+        #     insert_into_bin_and_save(which_bin=mid, pos='before_last', img=window.curr_left_file)
+        #     window.prev_result.update({'mid_index': mid, 'insert_pos': 'before_last'})  # mid represents the bin here
+        #     log(f'In [binary_search_step]: the two images are equal, inserted into pos '
+        #         f'"before_last" of bin {mid + 1}')
+        #     log(f'In [binary_search_step]: also updated prev_result to have bin number '
+        #         f'and insertion pos.\n')
+        #
+        # # if ref image is harder (and binary search is completed)
+        # if eval(pressed) == '1':
+        #     log(f'In [binary_search_step]: low and high are equal. '
+        #         f'Inserting into bin...')
+        #     insert_into_bin_and_save(which_bin=mid, pos='last', img=window.curr_left_file)
+        #     window.prev_result.update({'mid_index': mid, 'insert_pos': 'last'})  # bin and the insertion position
+        #     log(f'In [binary_search_step]: inserted into pos "last" of '
+        #         f'bin {mid + 1} and saved bin.')
+        #
+        # # if ref image is easier (and binary search is completed)
+        # if eval(pressed) == '2':
+        #     log(f'In [binary_search_step]: low and high are equal. '
+        #         f'Inserting into bin...')
+        #     insert_into_bin_and_save(which_bin=mid, pos='before_last', img=window.curr_left_file)
+        #     window.prev_result.update({'mid_index': mid, 'insert_pos': 'before_last'})  # mid represents the bin here
+        #     log(f'In [binary_search_step]: inserted into pos '
+        #         f'"before_last" of bin {mid + 1} and saved bin.')
+        #
+        # log(f'In [binary_search_step]: also updated prev_result to have bin number '
+        #     f'and insertion pos.')
+
+        # reset indices
+        # reset_attributes(window)
+        # window.current_index += 1
+
+
+# with the change of indices, we set curr_bin_representative to None sine the bin will be changed
+# if window.data_mode == 'train':
+#     window.curr_bin_representative = None
+#     log(f'In [binary_search_step]: Updated indices: also set curr_bin_representative to None. \n')
+
+
+# ========== list-related functions
+def remove_last_inserted(window):
+    if window.data_mode == 'test':
+        # insertion_index = window.prev_result['mid_index']  # only in this case we have insertion index, otherwise it is None
+        insertion_index = window.prev_result['insert_index']  # only in this case we have insertion index, otherwise it is None
+        del window.sorted_list[insertion_index]  # delete the wrongly inserted element from the list
+        log(f'In [remove_last_inserted]: index should be decreased ==> '
+            f'removed index {insertion_index} from sorted_list - '
+            f'Now sorted_list has len: {len(window.sorted_list)}')
+
+        log(f'In [remove_last_inserted]: saving sorted_list with removed index...')
+        write_sorted_list_to_file(window.sorted_list)
+
+        # if globals.debug:
+        #     print_list(window.sorted_list)
+
+    else:  # e.g. prev_result: (left_img, right_img, rate, bin, 'last')
+        which_bin, insert_pos = window.prev_result['insert_index'], window.prev_result['insert_pos']
+        log(f'In [remove_last_inserted]: removing the "{insert_pos}" element from bin_{which_bin + 1}.txt')
+        del_from_bin_and_save(which_bin, insert_pos)
+
+
+def _remove_if_index_has_changed(window):
+    # if index_should_be_changed(window, direction='previous'):
+    if current_index_has_changed(window):  # index has been increased
+        if window.data_mode == 'test':
+            # insertion_index = window.prev_result['mid_index']  # only in this case we have insertion index, otherwise it is None
+            insertion_index = window.prev_result['insert_index']  # only in this case we have insertion index, otherwise it is None
+            del window.sorted_list[insertion_index]  # delete the wrongly inserted element from the list
+            log(f'In [_remove_if_index_has_changed]: index should be decreased ==> '
+                f'removed index {insertion_index} from sorted_list - '
+                f'Now sorted_list has len: {len(window.sorted_list)}')
+
+            log(f'In [_remove_if_index_has_changed]: saving sorted_list with removed index...')
             write_sorted_list_to_file(window.sorted_list)
-            log(f'In [binary_search_step]: also updated prev_result to include the '
-                f'insertion index: {window.prev_result["mid_index"]}\n')
-            log(f'In [binary_search_step]: also updated prev_result to have '
-                f'mid index and img_img.')
-
-            # reset the indices for the next round of binary search
-            reset_indices_and_possibly_consistency_indicators(window)
 
             if globals.debug:
                 print_list(window.sorted_list)
 
-        # for train data
-        else:
-            # if both images are equal
-            if eval(pressed) == '9':
-                insert_into_bin_and_save(which_bin=mid, pos='before_last', img=window.curr_left_file)
-                window.prev_result.update({'mid_index': mid, 'insert_pos': 'before_last'})  # mid represents the bin here
-                log(f'In [binary_search_step]: the two images are equal, inserted into pos '
-                    f'"before_last" of bin {mid + 1}')
-                log(f'In [binary_search_step]: also updated prev_result to have bin number '
-                    f'and insertion pos.\n')
+        else:  # e.g. prev_result: (left_img, right_img, rate, bin, 'last')
+            which_bin, insert_pos = window.prev_result['mid_index'], window.prev_result['insert_pos']
+            log(f'In [_remove_if_index_has_changed]: removing the "{insert_pos}" element from bin {which_bin + 1}')
+            del_from_bin_and_save(which_bin, insert_pos)
 
-            # if ref image is harder (and binary search is completed)
-            if eval(pressed) == '1':
-                log(f'In [binary_search_step]: low and high are equal. '
-                    f'Inserting into bin...')
-                insert_into_bin_and_save(which_bin=mid, pos='last', img=window.curr_left_file)
-                window.prev_result.update({'mid_index': mid, 'insert_pos': 'last'})  # bin and the insertion position
-                log(f'In [binary_search_step]: inserted into pos "last" of '
-                    f'bin {mid + 1} and saved bin.')
+    else:
+        log(f'In [_remove_if_index_has_changed]: index has not changed ==> No need to remove item from list...\n')
 
-            # if ref image is easier (and binary search is completed)
-            if eval(pressed) == '2':
-                log(f'In [binary_search_step]: low and high are equal. '
-                    f'Inserting into bin...')
-                insert_into_bin_and_save(which_bin=mid, pos='before_last', img=window.curr_left_file)
-                window.prev_result.update({'mid_index': mid, 'insert_pos': 'before_last'})  # mid represents the bin here
-                log(f'In [binary_search_step]: inserted into pos '
-                    f'"before_last" of bin {mid + 1} and saved bin.')
 
-            log(f'In [binary_search_step]: also updated prev_result to have bin number '
-                f'and insertion pos.')
+def remove_item_from_list_if_needed(window):
+    """
+    The behavior of this function depends on whether we are dealing with test or train data.
+    :param window:
+    :return:
+    """
 
-            # reset indices
-            reset_indices_and_possibly_consistency_indicators(window)
+    # no remove if we are getting m2_rate
+    if showing_window_for(window) == 'm2':
+        log(f'In [remove_item_from_list_if_needed]: no remove '
+            f'since since we are getting rate for m2\n')
+        return
 
-    # with the change of indices, we set curr_bin_representative to None sine the bin will be changed
-    if window.data_mode == 'train':
-        window.curr_bin_representative = None
-        log(f'In [binary_search_step]: Updated indices: also set curr_bin_representative to None. \n')
+    # no remove if increase in index was due to abortion
+    # if prev_case_aborted(window):
+    if window.prev_result['aborted'] is True:
+        log(f'In [remove_item_from_list_if_needed]: no remove '
+            f'since the previous case had been aborted\n')
+        return
+
+    # now if index has changed, insertion has taken place
+    _remove_if_index_has_changed(window)
 
 
 # ========== very generic functions
+def window_attributes(window):
+    as_dict = {
+        'current_index': window.current_index,
+        'low': window.low,
+        'high': window.high
+    }
+
+    if hasattr(window, 'm1_anchor'):
+        as_dict['m1_anchor'] = window.m1_anchor
+
+    if hasattr(window, 'm2_anchor'):
+        as_dict['m2_anchor'] = window.m2_anchor
+
+    if hasattr(window, 'm1_rate'):
+        as_dict['m1_rate'] = window.m1_rate
+
+    if hasattr(window, 'm2_rate'):
+        as_dict['m2_rate'] = window.m2_rate
+
+    if hasattr(window, 'm1_rep'):
+        as_dict['m1_rep'] = pure_name(window.m1_rep)
+
+    if hasattr(window, 'm2_rep'):
+        as_dict['m2_rep'] = pure_name(window.m2_rep)
+
+    if hasattr(window, 'rep'):
+        as_dict['rep'] = pure_name(window.rep)
+    return as_dict
+
+
+def shorten(dictionary):
+    keys = ['m1_rep', 'm2_rep', 'rep']
+    for key in keys:
+        if key in dictionary.keys():
+            dictionary[key] = pure_name(dictionary[key])
+    return dictionary
+
+
 def read_img_and_resize_if_needed(window):
     if window.show_mode == 'single':
         # return logic.read_dicom_image(self.current_file, self.img_size)
         return logic.read_dicom_and_resize(window.current_file)
 
     if window.show_mode == 'side_by_side':
-        log(f'In [read_img_and_resize_if_needed]: reading the left file')
+        # log(f'In [read_img_and_resize_if_needed]: reading the left file')
         left_photo = logic.read_dicom_and_resize(window.curr_left_file)
 
-        log(f'In [read_img_and_resize_if_needed]: reading the right file')
+        # log(f'In [read_img_and_resize_if_needed]: reading the right file')
         right_photo = logic.read_dicom_and_resize(window.curr_right_file)
+
+        # log(f'In [read_img_and_resize_if_needed]: reading left and right files: done.\n')
         return left_photo, right_photo
 
 
@@ -334,6 +680,9 @@ def log_current_index(window, called_from):
         f"Current index: {window.current_index} - Case number: {window.case_number}\n", no_time=True)
     if window.show_mode != 'single' and window.data_mode != 'train':
         log(f'In [{called_from}]: There are {len(window.sorted_list)} images in the sorted_list\n', no_time=True)
+    log(f'Showing window with attributes: \n{window_attributes(window)}\n', no_time=True)
+    # log(f'Showing window with attributes: \n{window_attributes(window)}\n'
+    #     f'Prev_result is: {window.prev_result}\n', no_time=True)
 
 
 def get_prev_imgs_from_prev_result(window):
@@ -376,40 +725,40 @@ def get_prev_imgs_from_prev_result(window):
     return left_img, right_img
 
 
-def save_prev_rating(window):
-    if window.show_mode == 'single':
-        imgs = [window.prev_result[0]]
-        rate = window.prev_result[1]
-        # save_rating(self.session_name, imgs, rate)
-        save_rating(imgs, rate)
-
-    if window.show_mode == 'side_by_side':
-        prev_stat = window.prev_result['status']
-        prev_left_index = window.prev_result['left_index']  # index of the left image (previous current_index)
-        prev_right_index = window.prev_result['right_index']  # could be index of image or bin
-
-        prev_left_img = window.cases[prev_left_index]
-        prev_right_img = None
-
-        if prev_stat == 'OK':
-            pass
-
-        elif prev_stat == 'aborted':
-            pass
-        elif prev_stat == 'discarded':
-            pass
-        else:
-            raise NotImplementedError
-
-        left_img, right_img = get_prev_imgs_from_prev_result(window)
-        imgs = [left_img, right_img]
-        rate = window.prev_result["rate"]
-        save_rating(imgs, rate)
-        # update_and_save_comparisons_list(window, left_img, right_img, rate)
-
-        # keep track of the aborted cases
-        if prev_case_aborted(window):
-            save_to_aborted_list(left_img)
+# def save_prev_rating(window):
+#     if window.show_mode == 'single':
+#         imgs = [window.prev_result[0]]
+#         rate = window.prev_result[1]
+#         # save_rating(self.session_name, imgs, rate)
+#         save_rating(imgs, rate)
+#
+#     if window.show_mode == 'side_by_side':
+#         prev_stat = window.prev_result['status']
+#         prev_left_index = window.prev_result['left_index']  # index of the left image (previous current_index)
+#         prev_right_index = window.prev_result['right_index']  # could be index of image or bin
+#
+#         prev_left_img = window.cases[prev_left_index]
+#         prev_right_img = None
+#
+#         if prev_stat == 'OK':
+#             pass
+#
+#         elif prev_stat == 'aborted':
+#             pass
+#         elif prev_stat == 'discarded':
+#             pass
+#         else:
+#             raise NotImplementedError
+#
+#         left_img, right_img = get_prev_imgs_from_prev_result(window)
+#         imgs = [left_img, right_img]
+#         rate = window.prev_result["rate"]
+#         save_rating(imgs, rate)
+#         # update_and_save_comparisons_list(window, left_img, right_img, rate)
+#
+#         # keep track of the aborted cases
+#         if prev_case_aborted(window):
+#             save_to_aborted_list(left_img)
 
 
 def read_discarded_cases():
@@ -551,3 +900,12 @@ def update_and_save_comparisons_list(window, left_img, right_img, rate):
 
     save_comparisons_list(window.comparisons)
     log(f'In [update_comparison_sets]: saved comparison_sets to file.\n')
+
+
+def upload_results_regularly(window):
+    if globals.params['email_interval'] is None:
+        return
+
+    if window.current_index <= 1 or window.current_index % globals.params['email_interval'] == 0:
+        thread = Thread(target=logic.email_results)  # make it non-blocking as emailing takes time
+        thread.start()
