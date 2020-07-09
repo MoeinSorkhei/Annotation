@@ -273,7 +273,6 @@ def revert_attributes(window):
         attrs_as_dict['rep'] = window.rep
 
     log(f'In [revert_attributes]: Reverted all attributes.')
-    # log(f'In [revert_attributes]: Reverted all attributes. Now attributes are: \n{attrs_as_dict}')
 
 
 def reset_attributes(window, exclude_inds=False):
@@ -295,11 +294,6 @@ def reset_attributes(window, exclude_inds=False):
             # log(f'In [binary_search_step]: low and high are reset for the new image: '
             #     f'low: {window.low}, high: {window.high}\n')
 
-    # also reset low_consistency and high_consistency for the 'robust' checking mode
-    # if indicators_exist(window):   # NOT SURE IF IT IS RIGHT: it checks based on prev_result, change code like below
-    #     reset_consistency_indicators(window)
-
-    # rest m1 and m2 rates
     if hasattr(window, 'm1_rate'):
         window.m1_rate = None
 
@@ -332,8 +326,6 @@ def calc_ternary_anchors(window):
     m2 = low + int(length * (2/3))
 
     anchors = {'m1': m1, 'm2': m2}
-    # log(f'In [calc_ternary_anchors]: '
-    #     f'computed anchors for low: {low}, high: {high} are: {anchors}\n')
     return anchors
 
 
@@ -377,25 +369,18 @@ def update_binary_inds(window, pressed):
     :return:
     """
     mid = (window.low + window.high) // 2  # for train data, this represents bin number
-    # ====== update the low and high indexes based ond the rating until suitable position is found
-    # if window.high != window.low and eval(pressed) != '9':
     if eval(pressed) == '1':  # rated as harder, go to the right half of the list
         window.low = mid if (window.high - window.low) > 1 else window.high
-        log(f'In [binary_search_step]: low increased to {window.low}')
+        log(f'In [binary_search_step]: '
+            f'low increased to {window.low}')
 
     else:  # rated as easier, go to the left half of the list
         window.high = mid
-        log(f'In [binary_search_step]: high decreased to {window.high}')
+        log(f'In [binary_search_step]: '
+            f'high decreased to {window.high}')
 
-    log(f'In [binary_search_step]: Updated indices: low = {window.low}, high = {window.high}')
-
-        # if indicators_exist(window):  # indicators should be reset when changing the indices
-        #     reset_consistency_indicators(window)
-        #     log(f'In [update_binary_search_inds_and_possibly_insert]: also low_consistency and low_consistency are reset \n')
-            # \n'f'to: low_consistency: "{window.low_consistency}", high: "{window.high_consistency}"\n')
-
-    # ====== suitable position is found (low = high), insert here
-    # else:
+    log(f'In [binary_search_step]: Updated indices: '
+        f'low = {window.low}, high = {window.high}')
 
 
 def insert_with_ternary_inds(window, anchor, item):
@@ -407,7 +392,6 @@ def insert_with_ternary_inds(window, anchor, item):
     :param item:
     :return:
     """
-    # anchor = getattr(window, anchor_name)  # get the anchor using its name
     if window.data_mode == 'test':
         insert_to_list(window.sorted_list, anchor, item)
         window.prev_result['insert_index'] = anchor
@@ -423,61 +407,14 @@ def insert_with_binary_inds(window, pressed, item):
     # for test data
     mid = (window.low + window.high) // 2  # for train data, this represents bin number
     if window.data_mode == 'test':
-        # if both images are equal
         if eval(pressed) == '9' or eval(pressed) == '2':  # 9 is pressed, so we insert directly
             insert_index = mid
-            # window.sorted_list.insert(mid, window.curr_left_file)  # insert to the left
-            # window.prev_result.update({'mid_index': mid, 'mid_image': mid_image})
-            # window.prev_result.update({'insert_index': mid})
-            # if eval(pressed) == '9':
-            #     log(f'In [insert_with_binary_inds]: the two images are equal')
-            # if eval(pressed) == '2':
-            #     log(f'In [insert_with_binary_inds]: low and high are equal')
-
-        # if ref image is harder (and binary search is completed)
-        # elif eval(pressed) == '1':
         else:  # eval(pressed) == '1'
-            # log(f'In [binary_search_step]: low and high are equal. '
-            #     f'Inserting into list...')
-            # window.prev_result.update({'mid_index': mid + 1, 'mid_image': mid_image})
             insert_index = mid + 1
-            # log(f'In [insert_with_binary_inds]: low and high are equal')
-            # window.sorted_list.insert(mid + 1, window.curr_left_file)  # insert to the right side if the index
-            # window.prev_result.update({'insert_index': mid + 1})
-            # log(f'In [binary_search_step]: low and high are equal. Inserted into index {mid + 1} of sorted_list - '
-            #     f'Now sorted_list has len: {len(window.sorted_list)}\n')
 
-        # if ref image is easier (and binary search is completed)
-        # else:  # eval(pressed) == '2':
-        #     # log(f'In [binary_search_step]: low and high are equal. '
-        #     #     f'Inserting into list...')
-        #     # window.prev_result.update({'mid_index': mid, 'mid_image': mid_image})
-        #     insert_index = mid
-        #     # window.sorted_list.insert(mid, window.curr_left_file)  # insert to the left side if the index
-        #     # window.prev_result.update({'insert_index': mid})
-        #     log(f'In [binary_search_step]: low and high are equal. Inserted into index {mid} of sorted_list - '
-        #         f'Now sorted_list has len: {len(window.sorted_list)}\n')
-
-        # window.sorted_list.insert(insert_index, window.curr_left_file)
-        # insert_to_list(window.sorted_list, insert_index, window.curr_left_file)
         insert_to_list(window.sorted_list, insert_index, item)
         window.prev_result.update({'insert_index': insert_index})
-        # log(f'In [binary_search_step]: also updated prev_result to include '
-        #     f'insert_index: {window.prev_result["insert_index"]}\n')
-        # save the modified list
-        # log(f'In [binary_search_step]: saving '
-        #     f'sorted_list...')
-        # write_sorted_list_to_file(window.sorted_list)
-        # log(f'In [binary_search_step]: also updated prev_result to have '
-        #     f'mid index and img_img.')
-
-        # reset the indices for the next round of binary search
-        # reset_attributes(window)
-        # window.current_index += 1
         log(f'In [insert_with_binary_inds]: inserted into index {insert_index} of sorted_list')
-
-        # if globals.debug:
-        #     print_list(window.sorted_list)
 
     # for train data
     else:
@@ -492,55 +429,16 @@ def insert_with_binary_inds(window, pressed, item):
             else:
                 pos = 'last'  # if new image is harder
 
-        # string = 'the two images are equal' if eval(pressed) == '9' else 'low and high are equal'
-        # log(f'In [insert_with_binary_inds]: {string} and bin_rep_type is "{bin_rep_type}", '
-        #     f'inserting into position "{pos}" of bin {which_bin + 1}')
         log(f'In [insert_with_binary_inds]: bin_rep_type is "{bin_rep_type}", '
             f'inserting into position "{pos}" of bin {which_bin + 1}')
 
-        # insert_into_bin_and_save(which_bin, pos, window.curr_left_file)
         insert_into_bin_and_save(which_bin, pos, item)
         window.prev_result.update({'insert_index': which_bin, 'insert_pos': pos})
-
-        # # if both images are equal
-        # if eval(pressed) == '9':
-        #     insert_into_bin_and_save(which_bin=mid, pos='before_last', img=window.curr_left_file)
-        #     window.prev_result.update({'mid_index': mid, 'insert_pos': 'before_last'})  # mid represents the bin here
-        #     log(f'In [binary_search_step]: the two images are equal, inserted into pos '
-        #         f'"before_last" of bin {mid + 1}')
-        #     log(f'In [binary_search_step]: also updated prev_result to have bin number '
-        #         f'and insertion pos.\n')
-        #
-        # # if ref image is harder (and binary search is completed)
-        # if eval(pressed) == '1':
-        #     log(f'In [binary_search_step]: low and high are equal. '
-        #         f'Inserting into bin...')
-        #     insert_into_bin_and_save(which_bin=mid, pos='last', img=window.curr_left_file)
-        #     window.prev_result.update({'mid_index': mid, 'insert_pos': 'last'})  # bin and the insertion position
-        #     log(f'In [binary_search_step]: inserted into pos "last" of '
-        #         f'bin {mid + 1} and saved bin.')
-        #
-        # # if ref image is easier (and binary search is completed)
-        # if eval(pressed) == '2':
-        #     log(f'In [binary_search_step]: low and high are equal. '
-        #         f'Inserting into bin...')
-        #     insert_into_bin_and_save(which_bin=mid, pos='before_last', img=window.curr_left_file)
-        #     window.prev_result.update({'mid_index': mid, 'insert_pos': 'before_last'})  # mid represents the bin here
-        #     log(f'In [binary_search_step]: inserted into pos '
-        #         f'"before_last" of bin {mid + 1} and saved bin.')
-        #
-        # log(f'In [binary_search_step]: also updated prev_result to have bin number '
-        #     f'and insertion pos.')
-
-        # reset indices
-        # reset_attributes(window)
-        # window.current_index += 1
 
 
 # ========== list-related functions
 def remove_last_inserted(window):
     if window.data_mode == 'test':
-        # insertion_index = window.prev_result['mid_index']  # only in this case we have insertion index, otherwise it is None
         insertion_index = window.prev_result['insert_index']  # only in this case we have insertion index, otherwise it is None
         del window.sorted_list[insertion_index]  # delete the wrongly inserted element from the list
         log(f'In [remove_last_inserted]: index should be decreased ==> '
@@ -549,9 +447,6 @@ def remove_last_inserted(window):
 
         log(f'In [remove_last_inserted]: saving sorted_list with removed index...')
         write_sorted_list_to_file(window.sorted_list)
-
-        # if globals.debug:
-        #     print_list(window.sorted_list)
 
     else:  # e.g. prev_result: (left_img, right_img, rate, bin, 'last')
         which_bin, insert_pos = window.prev_result['insert_index'], window.prev_result['insert_pos']
@@ -646,6 +541,15 @@ def shorten(dictionary):
         if key in dictionary.keys():
             dictionary[key] = pure_name(dictionary[key])
     return dictionary
+
+
+def rate_to_text(rate):
+    if rate == '1':
+        return 'harder'
+    elif rate == '2':
+        return 'easier'
+    else:
+        return 'equal'
 
 
 def read_img_and_resize_if_needed(window):

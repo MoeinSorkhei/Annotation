@@ -100,11 +100,6 @@ class Window:
                 self.m1_anchor = None
                 self.m2_anchor = None
 
-                # # if data_mode == 'train' and globals.params['bin_rep_type'] == 'random':
-                # if data_mode == 'train':
-                #     self.m1_rep = None  # whenever m1_anchor has a value, m1_rep should also have a value
-                #     self.m2_rep = None  # representatives are actual image names
-
             if self.data_mode == 'test':
                 if len(already_sorted) > 0:  # the file sorted.txt already exists, so create the list based on them
                     self.sorted_list = already_sorted
@@ -133,7 +128,6 @@ class Window:
                 if search_type == 'ternary':
                     self.m1_rep = None  # whenever m1_anchor has a value, m1_rep should also have a value
                     self.m2_rep = None  # representatives are actual image names
-                    # else:
                     self.rep = None  # used only in binary search - m1_rep and m2_rep only used in robust checking
 
                 self.bins_list = list(range(train_bins))  # e.g. [0, ..., 31], only indicates bin indices
@@ -142,23 +136,10 @@ class Window:
 
                 self.low = 0
                 self.high = len(self.bins_list) - 1
-                # self.curr_bin_representative = None
-
-                # if search_type == 'robust':
-                #     self.low_consistency = 'unspecified'
-                #     self.high_consistency = 'unspecified'
 
                 self.init_or_update_case_number()
                 log_current_index(self, called_from='__init__')
                 self.update_files()
-
-                # self.curr_left_file = self.cases[self.current_index]  # image with current index (reference image)
-                # which_bin = self.bins_list[(self.low + self.high) // 2]  # get the bin number to show its last img
-                # # read the last image (most difficult one) in the bin
-                # self.curr_right_file = last_img_in_bin(which_bin)  # which_bin = 0 ==> read from bin_1 file
-
-                # if data_mode == 'train':
-                # log(f'In Window [__init__]: Starting comparison with the last image in bin: {which_bin + 1}')
 
             # ======= define attributes and set to None. They will be initialized in different functions.
             self.left_frame, self.right_frame = None, None
@@ -192,7 +173,6 @@ class Window:
         self.right_frame.pack(side=RIGHT, padx=10, pady=10)
 
         # ======== show left and right images with caption, if caption enabled
-        # self.left_photo, self.right_photo = self.read_img_and_resize_if_needed()
         self.left_photo, self.right_photo = read_img_and_resize_if_needed(self)
 
         self.left_photo_panel = Label(self.left_frame, image=self.left_photo)  # left photo panel inside left frame
@@ -211,10 +191,10 @@ class Window:
         self.right_caption_panel.pack(side=RIGHT)
 
     def init_stat_panel_and_buttons(self, master):
-        # ======== status panel
-        stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - ' \
-                    f'Case number: {self.case_number}' + \
-                    (f'\nPrevious rating: {self.prev_result["rate"]}' if self.prev_result is not None else '')
+        stat_text = ''  # no stat in the beginning
+        if globals.params['ui_verbosity'] == 'full':
+            stat_text += f'\n\n{self.create_verbose_stat()}'
+
         self.stat_panel = Label(master, text=stat_text, font='-size 15')
         self.stat_panel.pack(side=TOP)
 
@@ -241,25 +221,56 @@ class Window:
     def init_or_update_case_number(self):
         self.case_number = f'{self.start_time}-{self.current_index}-{int(time.time() % 1000)}'
 
+    def create_verbose_stat(self):
+        def as_text(item):
+            return f'{item}' if item is not None else None
+
+        def _get_compare_index():
+            if robust_checking_needed(self):
+                if showing_window_for(self) == 'm1':
+                    return f'{self.m1_anchor}' if self.data_mode == 'test' else f'{self.m1_anchor + 1}'
+                else:
+                    return f'{self.m2_anchor}' if self.data_mode == 'test' else f'{self.m2_anchor + 1}'
+            else:  # binary
+                return f'{(self.low + self.high) // 2}' if self.data_mode == 'test' \
+                    else f'{(self.low + self.high) // 2 + 1}'
+
+        search_text = f'Search interval: [{self.low} - {self.high}] ' \
+                      f'of [{0} - {len(self.sorted_list) - 1 if self.data_mode == "test" else len(self.bins_list) - 1}]'
+        index_or_bin = 'index' if self.data_mode == 'test' else 'bin'
+        compare_index = _get_compare_index()
+        anchors_text = f'm1_anchor: {as_text(self.m1_anchor)} \t m2_anchor: {as_text(self.m2_anchor)}'
+
+        rep_text = ''
+        if self.data_mode == 'train':
+            rep_text = f'm1_rep: {as_text(pure_name(self.m1_rep))} \t m2_rep: {as_text(pure_name(self.m2_rep))} \t' \
+                       f'rep: {as_text(pure_name(self.rep))}'
+
+        rate_text = f'm1_rate: {as_text(self.m1_rate)} \t\t m2_rate: {self.m2_rate}'
+
+        attributes_text = f'{search_text} - Comparing with {index_or_bin} {compare_index} \n' \
+                          f'{"_" * 40}\n' \
+                          f'{anchors_text}\t\t' \
+                          f'{rep_text}\n\n' \
+                          f'{rate_text}'
+        return attributes_text
+
     def update_stat(self):
-        stat_text = ''
-        if self.current_index != len(self.cases):
-            if self.show_mode == 'single':
-                stat_text = f'Rating for image {self.current_index + 1} of {len(self.cases)} - Case number: {self.case_number}' + \
-                            (f'\nPrevious rating: {self.prev_result[1]}' if self.prev_result is not None else '')
+        # final page
+        if self.current_index == len(self.cases):
+            stat_text = ''
+        # other pages
+        else:
+            stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - ' \
+                        f'Case number: {self.case_number}'
 
-            if self.show_mode == 'side_by_side':
-                stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - ' \
-                            f'Case number: {self.case_number}' + \
-                            (f'\nPrevious rating: {self.prev_result["rate"]}' if self.prev_result is not None else '')
+            if self.prev_result is not None:
+                rate_text = f'Previous rate for reference image: ' \
+                            f'{self.prev_result["rate"]} ({rate_to_text(self.prev_result["rate"])})'
+                stat_text += f'\n{rate_text}'
 
-        else:  # do not show case on the final page
-            if self.show_mode == 'single':
-                stat_text = f'\nPrevious rating: {self.prev_result["rate"]}'
-
-            if self.show_mode == 'side_by_side':
-                # if prev_result is None: previous case was discarded
-                stat_text = f'\nPrevious rating: {self.prev_result["rate"]}' if self.prev_result is not None else ''
+            if globals.params['ui_verbosity'] == 'full':
+                stat_text += f'\n\n{self.create_verbose_stat()}'
 
         self.stat_panel.configure(text=stat_text)
 
@@ -276,32 +287,8 @@ class Window:
         # if self.data_mode == 'test':
         if robust_checking_needed(self, print_details=True):
             log(f'In [update_files]: ROBUST CHECKING NEEDED...')
-
             # init anchor and rep if None, otherwise use them
             _curr_anchor, _curr_rep = init_or_use_anchor_and_rep(self)
-            # _curr_anchor = None
-            # _curr_rep = None  # only initialized and set in train mode
-            #
-            # # specifying the name of the anchor and representative to be used
-            # window_for = showing_window_for(self)  # 'm1' or 'm2'
-            # if window_for == 'm1':
-            #     _curr_anchor_name = 'm1_anchor'
-            #     _curr_rep_name = 'm1_rep'
-            # else:  # m2
-            #     _curr_anchor_name = 'm2_anchor'
-            #     _curr_rep_name = 'm2_rep'
-            #
-            # _curr_anchor = getattr(self, _curr_anchor_name)
-            #
-            # # init or use the anchor
-            # if _curr_anchor is None:
-            #     _curr_anchor = calc_ternary_anchors(self)[window_for]
-            #     setattr(self, _curr_anchor_name, _curr_anchor)
-            #     log(f'In [update_files]: {_curr_anchor_name} is None. '
-            #         f'Calculated anchor and set attribute...')
-            # else:
-            #     log(f'In [update_files]: {_curr_anchor_name} already set to: {_curr_anchor}. '
-            #         f'Using the anchor...')
 
             # update right file for test mode
             if self.data_mode == 'test':
@@ -311,91 +298,10 @@ class Window:
 
             # update right file for train mode
             else:
-                # _curr_rep = getattr(self, _curr_rep_name)
-                # if _curr_rep is None:
-                #     _curr_rep = bin_representative(which_bin=_curr_anchor)
-                #     setattr(self, _curr_rep_name, _curr_rep)
-                #     log(f'In [update_files]: {_curr_rep_name} is None. '
-                #         f'Calculated representative and set attribute...')
-                # else:
-                #     log(f'In [update_files]: {_curr_rep_name} already set to: {_curr_rep}. '
-                #         f'Using the representative...')
                 self.curr_right_file = _curr_rep
                 log(f'In [update_files]: Updated right photo to '
                     f'show representative: "{pure_name(_curr_rep)}" of bin_{_curr_anchor + 1}.txt\n')
 
-            # showing for 'm1'
-            # if showing_window_for(self) == 'm1':
-            #     if self.m1_anchor is None:
-            #         log(f'In [update_files]: m1_anchors is None. '
-            #             f'Calculating anchor...')
-            #         self.m1_anchor = calc_ternary_anchors(self)['m1']  # otherwise anchor already set (showing prev case)
-            #     else:
-            #         log(f'In [update_files]: m1_anchor already set to: {self.m1_anchor}. '
-            #             f'Using the anchor...')
-            #     _curr_anchor = self.m1_anchor
-            #
-            #     if self.data_mode == 'train':
-            #         if self.m1_rep is None:
-            #             log(f'In [update_files]: m1_rep is None. '
-            #                 f'Calculating representative...')
-            #             self.m1_rep = bin_representative(which_bin=self.m1_anchor)
-            #         else:
-            #             log(f'In [update_files]: m1_rep already set to: {self.m1_rep}. '
-            #                 f'Using the representative...')
-            #         _curr_rep = self.m1_rep
-            #
-            # # showing for 'm2'
-            # else:
-            #     if self.m2_anchor is None:
-            #         log(f'In [update_files]: m2_anchor is None. '
-            #             f'Calculating anchor...')
-            #         self.m2_anchor = calc_ternary_anchors(self)['m2']
-            #     else:
-            #         log(f'In [update_files]: m2_anchor already set to: {self.m2_anchor}. '
-            #             f'Using the anchor...')
-            #     _curr_anchor = self.m2_anchor
-            #
-            #     if self.data_mode == 'train':
-            #         if self.m2_rep is None:
-            #             log(f'In [update_files]: m2_rep is None. '
-            #                 f'Calculating representative...')
-            #             self.m2_rep = bin_representative(which_bin=self.m2_anchor)
-            #         else:
-            #             log(f'In [update_files]: m2_rep already set to: {self.m2_rep}. '
-            #                 f'Using the representative...')
-            #         _curr_rep = self.m2_rep
-            #
-            # # now updating the right file based on anchors and representatives
-            # if self.data_mode == 'test':
-            #     self.curr_right_file = self.sorted_list[_curr_anchor]
-            #     log(f'In [update_files]: Updated right photo to '
-            #         f'show element: {_curr_anchor} of sorted_list \n')
-            # else:
-            #     self.curr_right_file = _curr_rep
-            #     log(f'In [update_files]: Updated right photo to '
-            #         f'show representative: {_curr_rep} of bin: {_curr_anchor} \n')
-
-        # if self.search_type == 'binary' and robust_checking_needed(self):
-        #     log(f'In [update_files]: SHOULD DO ROBUST CHECKING...')
-        #
-        #     if to_be_checked_for_consistency(self) == 'low':
-        #         self.curr_right_file = self.sorted_list[self.low]
-        #         log(f'In [update_files]: Checking with "low" ==> Updated right photo to index '
-        #             f'low: {self.low} of sorted_list\n')
-        #
-        #     elif to_be_checked_for_consistency(self) == 'high':
-        #         self.curr_right_file = self.sorted_list[self.high]
-        #         log(f'In [update_files]: Checking with "high" ==> Updated right photo to index '
-        #             f'high: {self.high} of sorted_list\n')
-        #
-        #     elif to_be_checked_for_consistency(self) == 'middle':
-        #         self.curr_right_file = self.sorted_list[mid]  # right photo changed to be compared against
-        #         log(f'In [update_files]: Checking with "middle" ==> Updated right photo to index '
-        #             f'mid: {mid} of sorted_list\n')
-
-        # normal mode
-        # normal mode
         else:
             log(f'In [update_files]: NO ROBUST CHECKING NEEDED... \n')
             mid = (self.low + self.high) // 2
@@ -408,68 +314,6 @@ class Window:
                 self.curr_right_file = rep
                 log(f'In [update_files]: Updated right photo to show rep: '
                     f'"{pure_name(rep)}" of bin_{mid + 1}.txt')
-
-
-        # # train data
-        # else:
-        #     bin_rep_type = globals.params['bin_rep_type']  # 'random' or 'last'
-        #
-        #     if self.curr_bin_representative is not None:  # showing previous case (bin representative already sampled)
-        #         # self.curr_right_file = self.curr_bin_representative
-        #         log(f'In [update_files]: curr_bin_representative is not None, no need to choose bin representative.')
-        #         pass
-        #
-        #     elif self.search_type == 'ternary' and robust_checking_needed(self):
-        #         pass
-        #
-        #     # robust checking (possibly with sampling representative)
-        #     elif self.search_type == 'binary' and robust_checking_needed(self):
-        #         log(f'In [update_files]: curr_bin_representative is None, '
-        #             f'need to choose bin representative with ROBUST CHECKING...')
-        #
-        #         if to_be_checked_for_consistency(self) == 'low':
-        #             # self.curr_right_file = last_img_in_bin(which_bin=self.low)
-        #             # self.curr_right_file = bin_representative(which_bin=self.low)
-        #             self.curr_bin_representative = bin_representative(which_bin=self.low)
-        #             log(f'In [update_files]: Checking with "low" ==> Set curr_bin_representative to "{bin_rep_type}" image of bin '
-        #                 f'low: {self.low + 1}\n')
-        #
-        #         elif to_be_checked_for_consistency(self) == 'high':
-        #             # self.curr_right_file = last_img_in_bin(which_bin=self.high)
-        #             # self.curr_right_file = bin_representative(which_bin=self.high)
-        #             self.curr_bin_representative = bin_representative(which_bin=self.high)
-        #             log(f'In [update_files]: Checking with "high" ==> Set curr_bin_representative to "{bin_rep_type}" image of bin '
-        #                 f'high: {self.high + 1}\n')
-        #
-        #         elif to_be_checked_for_consistency(self) == 'middle':
-        #             # self.curr_right_file = last_img_in_bin(which_bin=mid)
-        #             # self.curr_right_file = bin_representative(which_bin=mid)
-        #             self.curr_bin_representative = bin_representative(which_bin=mid)
-        #             log(f'In [update_files]: Checking with "middle" ==> Set curr_bin_representative to "{bin_rep_type}" image of bin '
-        #                 f'middle: {mid + 1}\n')
-        #
-        #         # updating the right file to the representative
-        #         # self.curr_right_file = self.curr_bin_representative
-        #         # log(f'In [update_files]: Updated the right file to show '
-        #         #     f'curr_bin_representative: "{self.curr_bin_representative}" \n')
-        #
-        #     # normal case
-        #     else:
-        #         log(f'In [update_files]: curr_bin_representative is None, '
-        #             f'need to choose bin representative with NO ROBUST CHECKING... \n')
-        #         # self.curr_right_file = last_img_in_bin(which_bin=mid)
-        #         # self.curr_right_file = bin_representative(which_bin=mid)
-        #         self.curr_bin_representative = bin_representative(which_bin=mid)
-        #         log(f'In [update_files]: Set curr_bin_representative to "{bin_rep_type}" image of bin middle: {mid + 1}')
-        #
-        #         # self.curr_right_file = self.curr_bin_representative
-        #         # log(f'In [update_files]: Updated right file to show '
-        #         #     f'curr_bin_representative: "{self.curr_bin_representative}".\n')  # +1 is for printing bin 0 as bin 1
-        #
-        #     # update the current file according to the bin representative
-        #     self.curr_right_file = self.curr_bin_representative
-        #     log(f'In [update_files]: Updated right file to show '
-        #         f'curr_bin_representative: "{pure_name(self.curr_bin_representative)}".\n')  # +1 is for printing bin 0 as bin 1
 
         logic.log(f'In [update_files]: Left file: "{pure_name(self.curr_left_file)}"')
         logic.log(f'In [update_files]: Left Full path: "{self.curr_left_file}" \n')
@@ -548,8 +392,8 @@ class Window:
                 if globals.debug:
                     self.left_caption_panel.configure(text=pure_name(self.curr_left_file))
                     self.right_caption_panel.configure(text=pure_name(self.curr_right_file))
-                    self.left_caption_panel.pack(side=TOP)
-                    self.right_caption_panel.pack(side=TOP)
+                    self.left_caption_panel.pack(side=LEFT)
+                    self.right_caption_panel.pack(side=RIGHT)
 
     def update_frame(self):
         """
@@ -611,22 +455,20 @@ class Window:
             4. Once all the indices and the list have been reverted, we update the frame.
         """
         if self.show_mode == 'side_by_side':
-            # undo the las index update by binary search
             log(f'In [show_previous_case]: Clicked "show_previous_case".')
 
             remove_last_rating()
-            log(f'In [show_previous_case]: removed the last rate')
+            log(f'In [show_previous_case]: '
+                f'removed the last rate')
 
             # remove if we have inserted
             if 'insert_index' in self.prev_result.keys():
-                log(f'In [show_previous_case]: "insert_index" available in prev_result, should remove from list...')
+                log(f'In [show_previous_case]: "insert_index" available in prev_result, '
+                    f'should remove from list...')
                 remove_last_inserted(self)
 
-            # remove_item_from_list_if_needed(self)  # same behavior regardless of the search mode
-            revert_attributes(self)  # revert the search indices
-
-            # log(f'In [show_previous_case]: checking if index should be decreased...')
-            # update_current_index_if_needed(self, direction='previous')  # uses prev_result to decide if current_index should be changed
+            # revert the window attributes
+            revert_attributes(self)
 
             self.prev_result = None  # because now we are in the previous window
             log(f'In [show_previous_case]: set prev_result to None. Updating frame to show the previous case...')
@@ -699,41 +541,27 @@ class Window:
             log(f'In [keep_current_state_in_prev_result]: prev_result is None ==> initialized prev_result with: '
                 f'an empty dictionary')
 
+        # generic attributes
         self.prev_result['current_index'] = self.current_index
         self.prev_result['low'] = self.low
         self.prev_result['high'] = self.high
         self.prev_result['rate'] = eval(pressed)  # regardless of search mode
 
-        # for ternary search
-        if self.search_type == 'ternary':
-            if robust_checking_needed(self):
-                self.prev_result['m1_anchor'] = self.m1_anchor
-                self.prev_result['m2_anchor'] = self.m2_anchor
+        # ternary attributes (will remain None for binary)
+        self.prev_result['m1_anchor'] = self.m1_anchor
+        self.prev_result['m2_anchor'] = self.m2_anchor
 
-                self.prev_result['m1_rate'] = self.m1_rate
-                self.prev_result['m2_rate'] = self.m2_rate
+        self.prev_result['m1_rate'] = self.m1_rate
+        self.prev_result['m2_rate'] = self.m2_rate
 
-                if self.data_mode == 'train':
-                    self.prev_result['m1_rep'] = self.m1_rep
-                    self.prev_result['m2_rep'] = self.m2_rep
-            # step 1: getting rate for m1
-            # if showing_window_for(self) == 'm1':
-            #     pass
-            #     # self.prev_result['m1_rate'] = None
-            #     # self.prev_result['m2_rate'] = None
-            #     # self.prev_result['m1_anchor'] = self.anchor  # already computed when showing the window
-            #
-            # # step 2: getting rate for m2
-            # else:
-            #     # self.prev_result['m1_rate'] = self.m1_rate  # add these new attributes
-            #     # self.prev_result['m2_rate'] = None
-                #     # self.prev_result['m2_anchor'] = self.anchor
-                if showing_window_for(self) == 'm2':
-                    self.prev_result['aborted'] = False  # set as default, might change to True after consistency check
-            # normal mode
-            else:
-                if self.data_mode == 'train':
-                    self.prev_result['rep'] = self.rep
+        if robust_checking_needed(self) and showing_window_for(self) == 'm2':
+            self.prev_result['aborted'] = False  # set as default, might change to True after consistency check
+
+        # attributes specific for training
+        if self.data_mode == 'train':
+            self.prev_result['m1_rep'] = self.m1_rep
+            self.prev_result['m2_rep'] = self.m2_rep
+            self.prev_result['rep'] = self.rep
 
         # for binary search
         elif self.search_type == 'binary' and robust_checking_needed(self):  # 'binary'
@@ -749,13 +577,6 @@ class Window:
 
             raise NotImplementedError('Need to do consistency check here')
 
-        # normal mode
-        # else:
-        #     if self.search_type == 'train':
-        #         self.prev_result['rep'] = self.rep
-            # self.prev_result.update({'low': self.low, 'high': self.high, 'rate': eval(pressed)})  # adding the indices
-
-        # log(f'In [keep_current_state_in_prev_result]: now prev_result is: \n{self.prev_result}\n')
         log(f'In [keep_current_state_in_prev_result]: now prev_result is: \n{shorten(deepcopy(self.prev_result))}\n')
 
     def keyboard_press(self, event):
@@ -789,12 +610,6 @@ class Window:
 
         # ======== take action if keystroke is valid (ie, prev_result is confirmed)
         if keystroke_is_valid(self, pressed):
-            # ======== save the prev_result once confirmed (ie when keyboard is pressed on current window)
-            # if self.prev_result is not None:  # that is we are not in the prev window
-            #     log(f'In [keyboard_press]: Saving previous result...')
-            #     save_prev_rating(self)
-
-            # ======== update the prev_result to current decision
             save_rating(self.curr_left_file, self.curr_right_file, eval(pressed))
             log(f'In [keyboard_press]: saved the rating\n')
 
