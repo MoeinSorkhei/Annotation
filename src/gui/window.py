@@ -693,15 +693,6 @@ class Window:
             log(f'In [check_for_consistency]: low and high indicators changed to: '
                 f'"low_consistency": {self.low_consistency}, "high_consistency": {self.high_consistency} \n')
 
-    # def abort(self):
-    #     pass
-    #     # self.prev_result['aborted'] = True
-    #     # self.current_index += 1
-    #     # reset_attributes(self)
-
-    # def insert_directly(self, anchor):
-    #     pass
-
     def keep_current_state_in_prev_result(self, pressed):
         if self.prev_result is None:  # either for m1 or normal case
             self.prev_result = {}
@@ -872,57 +863,20 @@ class Window:
                         # reset anchor so it is calculated in the next frame
                         # self.anchor = None
 
-
-                # if self.search_type == 'ternary' and robust_checking_needed(self):
-                #     pass
-                #
-                # if self.search_type == 'binary' and robust_checking_needed(self):
-                #     log(f'In [keyboard_press]: '
-                #         f'SHOULD DO ROBUST CHECKING... \n')
-                #
-                #     if to_be_checked_for_consistency(self) == 'low':
-                #         self.check_for_consistency(pressed, with_respect_to='low')  # updates the consistency indicators
-                #         self.abort_if_not_consistent()
-                #
-                #     elif to_be_checked_for_consistency(self) == 'high':
-                #         self.check_for_consistency(pressed, with_respect_to='high')  # updates the consistency indicators
-                #         self.abort_if_not_consistent()
-                #
-                #     elif to_be_checked_for_consistency(self) == 'middle':
-                #         update_binary_search_inds_and_possibly_insert(self, pressed)
-                #         update_current_index_if_needed(self, direction='next')  # uses current low and high to decide if index should change
-
-                # normal mode or no robust checking
-                # normal case or no robust checking
                 # normal binary mode
                 else:
                     self.keep_current_state_in_prev_result(pressed)
-                    if self.high != self.low and eval(pressed) != '9':  # continue search
-                        update_binary_inds(self, pressed)
-                        reset_attributes(self, exclude_inds=True)
-                        # if self.data_mode == 'train':
-                        #     self.rep = None  # new rep should be chosen for updated indices
 
-                    else:
+                    if eval(pressed) == '9' or self.high == self.low or (self.high - self.low == 1 and eval(pressed) == '2'):
                         insert_with_binary_inds(self, pressed, self.curr_left_file)
                         reset_attributes(self)
                         self.current_index += 1
                         log(f'In [keyboard_press]: reset attributes - '
                             f'current_index increased to: {self.current_index}\n')
-
-                    # now that we keep indices in prev_result, we can update them
-
-
-                    # if indices_are_reset(self):
-                    #     self.current_index += 1
-                    # update_current_index_if_needed(self, direction='next')  # checks if low, high are reset
+                    else:
+                        update_binary_inds(self, pressed)
+                        reset_attributes(self, exclude_inds=True)
 
             upload_results_regularly(self)
-            # ======== upload results regularly
-            # if self.current_index <= 1 or self.current_index % globals.params['email_interval'] == 0:
-            #     thread = Thread(target=logic.email_results)  # make it non-blocking as emailing takes time
-            #     thread.start()
-
-            # self.anchor = None  # so it is calculated in the next frame (if robust checking)
             self.update_frame()  # update the frame and photos based in the new low and high indices
 

@@ -183,10 +183,10 @@ def init_or_use_rep(window, mid):
         rep = bin_representative(which_bin=mid)
         window.rep = rep
         log(f'In [init_or_use_rep]: rep is None. '
-            f'Calculated rep and set attribute to: {window.rep}')
+            f'Calculated rep and set attribute to: {pure_name(window.rep)}')
     else:
         log(f'In [init_or_use_rep]: rep is already '
-            f'set to: {window.rep}. Using the rep...')
+            f'set to: {pure_name(window.rep)}. Using the rep...')
     return rep
 
 
@@ -225,7 +225,7 @@ def init_or_use_anchor_and_rep(window):
             log(f'In [init_or_use_anchor_and_rep]: {_curr_rep_name} is None. '
                 f'Calculated representative and set attribute to: {pure_name(_curr_rep)}')
         else:
-            log(f'In [init_or_use_anchor_and_rep]: {_curr_rep_name} already set to: {_curr_rep}. '
+            log(f'In [init_or_use_anchor_and_rep]: {_curr_rep_name} already set to: {pure_name(_curr_rep)}. '
                 f'Using the representative...')
 
     return _curr_anchor, _curr_rep
@@ -322,13 +322,6 @@ def reset_attributes(window, exclude_inds=False):
         window.rep = None
 
     log(f'In [reset_attributes]: attributes are reset for the new image.')
-
-
-# def update_m1_m2_rates(window, pressed):
-#     if showing_window_for(window) == 'm1':
-#         window.m1_rate = eval(pressed)
-#     else:  # for m2
-#         window.m2_rate = eval(pressed)
 
 
 def calc_ternary_anchors(window):
@@ -436,10 +429,10 @@ def insert_with_binary_inds(window, pressed, item):
             # window.sorted_list.insert(mid, window.curr_left_file)  # insert to the left
             # window.prev_result.update({'mid_index': mid, 'mid_image': mid_image})
             # window.prev_result.update({'insert_index': mid})
-            if eval(pressed) == '9':
-                log(f'In [insert_with_binary_inds]: the two images are equal')
-            if eval(pressed) == '2':
-                log(f'In [insert_with_binary_inds]: low and high are equal')
+            # if eval(pressed) == '9':
+            #     log(f'In [insert_with_binary_inds]: the two images are equal')
+            # if eval(pressed) == '2':
+            #     log(f'In [insert_with_binary_inds]: low and high are equal')
 
         # if ref image is harder (and binary search is completed)
         # elif eval(pressed) == '1':
@@ -448,7 +441,7 @@ def insert_with_binary_inds(window, pressed, item):
             #     f'Inserting into list...')
             # window.prev_result.update({'mid_index': mid + 1, 'mid_image': mid_image})
             insert_index = mid + 1
-            log(f'In [insert_with_binary_inds]: low and high are equal')
+            # log(f'In [insert_with_binary_inds]: low and high are equal')
             # window.sorted_list.insert(mid + 1, window.curr_left_file)  # insert to the right side if the index
             # window.prev_result.update({'insert_index': mid + 1})
             # log(f'In [binary_search_step]: low and high are equal. Inserted into index {mid + 1} of sorted_list - '
@@ -492,15 +485,17 @@ def insert_with_binary_inds(window, pressed, item):
         bin_rep_type = globals.params['bin_rep_type']
 
         if bin_rep_type == 'random':
-            pos = 'last'
+            pos = 'last'  # always last
         else:
             if eval(pressed) == '9' or eval(pressed) == '2':
-                pos = 'before_last'
+                pos = 'before_last'  # image the new image is easier
             else:
-                pos = 'last'
+                pos = 'last'  # if new image is harder
 
-        string = 'the two images are equal' if eval(pressed) == '9' else 'low and high are equal'
-        log(f'In [insert_with_binary_inds]: {string} and bin_rep_type is "{bin_rep_type}", '
+        # string = 'the two images are equal' if eval(pressed) == '9' else 'low and high are equal'
+        # log(f'In [insert_with_binary_inds]: {string} and bin_rep_type is "{bin_rep_type}", '
+        #     f'inserting into position "{pos}" of bin {which_bin + 1}')
+        log(f'In [insert_with_binary_inds]: bin_rep_type is "{bin_rep_type}", '
             f'inserting into position "{pos}" of bin {which_bin + 1}')
 
         # insert_into_bin_and_save(which_bin, pos, window.curr_left_file)
@@ -540,12 +535,6 @@ def insert_with_binary_inds(window, pressed, item):
         # reset indices
         # reset_attributes(window)
         # window.current_index += 1
-
-
-# with the change of indices, we set curr_bin_representative to None sine the bin will be changed
-# if window.data_mode == 'train':
-#     window.curr_bin_representative = None
-#     log(f'In [binary_search_step]: Updated indices: also set curr_bin_representative to None. \n')
 
 
 # ========== list-related functions
@@ -723,42 +712,6 @@ def get_prev_imgs_from_prev_result(window):
             right_img = bin_representative(prev_bin)   # ABOSLUTELY WRONG; SHOULD READ IT FROM PREV_RESULT
 
     return left_img, right_img
-
-
-# def save_prev_rating(window):
-#     if window.show_mode == 'single':
-#         imgs = [window.prev_result[0]]
-#         rate = window.prev_result[1]
-#         # save_rating(self.session_name, imgs, rate)
-#         save_rating(imgs, rate)
-#
-#     if window.show_mode == 'side_by_side':
-#         prev_stat = window.prev_result['status']
-#         prev_left_index = window.prev_result['left_index']  # index of the left image (previous current_index)
-#         prev_right_index = window.prev_result['right_index']  # could be index of image or bin
-#
-#         prev_left_img = window.cases[prev_left_index]
-#         prev_right_img = None
-#
-#         if prev_stat == 'OK':
-#             pass
-#
-#         elif prev_stat == 'aborted':
-#             pass
-#         elif prev_stat == 'discarded':
-#             pass
-#         else:
-#             raise NotImplementedError
-#
-#         left_img, right_img = get_prev_imgs_from_prev_result(window)
-#         imgs = [left_img, right_img]
-#         rate = window.prev_result["rate"]
-#         save_rating(imgs, rate)
-#         # update_and_save_comparisons_list(window, left_img, right_img, rate)
-#
-#         # keep track of the aborted cases
-#         if prev_case_aborted(window):
-#             save_to_aborted_list(left_img)
 
 
 def read_discarded_cases():
