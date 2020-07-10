@@ -10,6 +10,9 @@ def read_args_and_adjust():
     parser.add_argument('--data_mode', type=str)
     parser.add_argument('--n_bins', type=int)
     parser.add_argument('--resize_factor', type=int)
+    parser.add_argument('--max_imgs_per_session', type=int)
+    parser.add_argument('--email_interval', type=int)
+    parser.add_argument('--ui_verbosity', type=int)   # set be set to 2 for moderate verbosity
 
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--email_results', action='store_true')
@@ -22,11 +25,17 @@ def read_args_and_adjust():
     if arguments.resize_factor:
         globals.params['resize_factor'] = arguments.resize_factor
 
+    if arguments.max_imgs_per_session:
+        globals.params['max_imgs_per_session'] = arguments.max_imgs_per_session
+
+    if arguments.email_interval:
+        globals.params['email_interval'] = arguments.email_interval
+
     return arguments
 
 
 def show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons,
-                                    data_mode, search_type, train_bins=None):
+                                    data_mode, search_type, ui_verbosity, train_bins=None):
     if mode == 'single':
         text = 'How hard the image is? 1:  Easy, 2: Medium, 3: Hard'
 
@@ -45,6 +54,7 @@ def show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, al
                    show_mode=mode,
                    data_mode=data_mode,
                    search_type=search_type,
+                   ui_verbosity=ui_verbosity,
                    train_bins=train_bins)
     root.mainloop()  # run the main window continuously
 
@@ -94,6 +104,12 @@ def manage_sessions_and_run(args):
     mode = 'side_by_side'
     search_type = globals.params['search_type']
 
+    ui_verbosity = 1  # default, leas verbose
+    if globals.debug:
+        ui_verbosity = 3
+    elif args.ui_verbosity is not None:
+        ui_verbosity = args.ui_verbosity
+
     log(f"\n\n\n\n{'*' * 150} \n{'*' * 150} \n{'*' * 150} \n{'*' * 150}", no_time=True)
     log(f'In [manage_sessions]: session_name: "{session_name}" - data_mode: {data_mode}')
 
@@ -112,7 +128,7 @@ def manage_sessions_and_run(args):
         log(f'In [manage_sessions]: already_comparisons loaded/created of {len(already_comparisons)} keys in it. \n\n')
 
         show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons,
-                                        data_mode, search_type, n_bins)
+                                        data_mode, search_type, ui_verbosity, n_bins)
 
     elif session_name == 'split':
         split_sorted_list_to_bins(args.n_bins)
@@ -139,6 +155,7 @@ if __name__ == '__main__':
 # SCRIPTS:
 # =========  On my mac:
 # /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug
+# /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --ui_verbosity 2
 # /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode train --debug
 # /Users/user/.conda/envs/ADL/bin/python main.py --session_name split --n_bins 2 --debug
 

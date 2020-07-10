@@ -8,7 +8,8 @@ from .logical import *
 
 
 class Window:
-    def __init__(self, master, cases, already_sorted, already_comparisons, show_mode, data_mode, search_type, train_bins=None):
+    def __init__(self, master, cases, already_sorted, already_comparisons,
+                 show_mode, data_mode, search_type, ui_verbosity, train_bins=None):
         """
         :param master:
         :param cases:
@@ -50,6 +51,7 @@ class Window:
         self.show_mode = show_mode  # single or side_by_side
         self.data_mode = data_mode  # test or train
         self.search_type = search_type   # used in robust checking
+        self.ui_verbosity = ui_verbosity
         self.start_time = int(time.time() // 60)  # used for stat panel
         self.case_number = None
 
@@ -157,7 +159,7 @@ class Window:
             self.init_stat_panel_and_buttons(master)  # init and pack
             self.update_stat()  # put content
 
-            if globals.debug:
+            if self.ui_verbosity > 1:
                 self.init_caption_panels()
 
     # ======================================== UI-level functions  ========================================
@@ -235,28 +237,36 @@ class Window:
                 # return f'{(self.low + self.high) // 2}' if self.data_mode == 'test' \
                 #     else f'{(self.low + self.high) // 2 + 1}'
 
-        interval_text = f'Search interval: [{self.low} - {self.high}] ' \
-                        f'of [{0} - {len(self.sorted_list) - 1 if self.data_mode == "test" else len(self.bins_list) - 1}]'
-        search_mode = "ternary" if robust_checking_needed(self) else "binary"
+        if self.ui_verbosity == 1:
+            return ''
 
-        index_or_bin = 'index' if self.data_mode == 'test' else 'bin'
-        compare_index = _get_compare_index()
-        anchors_text = f'm1_anchor: {as_text(self.m1_anchor)} \t m2_anchor: {as_text(self.m2_anchor)}'
+        verbose_text = ''
+        if self.ui_verbosity >= 2:
+            interval_text = f'Search interval: [{self.low} - {self.high}] ' \
+                            f'of [{0} - {len(self.sorted_list) - 1 if self.data_mode == "test" else len(self.bins_list) - 1}]'
 
-        rep_text = ''
-        if self.data_mode == 'train':
-            rep_text = f'm1_rep: {as_text(pure_name(self.m1_rep))} \t m2_rep: {as_text(pure_name(self.m2_rep))} \t' \
-                       f'rep: {as_text(pure_name(self.rep))}'
+            index_or_bin = 'index' if self.data_mode == 'test' else 'bin'
+            compare_text = f'Comparing with {index_or_bin}: {_get_compare_index()} - ' \
+                           f'Level: {self.comp_level} - ' \
+                           f'Search: {"ternary" if robust_checking_needed(self) else "binary"}'
 
-        rate_text = f'm1_rate: {as_text(self.m1_rate)} \t\t m2_rate: {self.m2_rate}'
+            level_2_text = f'{interval_text} - {compare_text}'
+            verbose_text += f'\n\n{level_2_text}'
 
-        attributes_text = f'{interval_text} - Comparing with {index_or_bin}: {compare_index} - ' \
-                          f'Level: {self.comp_level} - Search: {search_mode}\n' \
-                          f'{"_" * 40}\n' \
-                          f'{anchors_text}\t\t' \
-                          f'{rep_text}\n\n' \
-                          f'{rate_text}'
-        return attributes_text
+        if self.ui_verbosity == 3:
+            anchors_text = f'm1_anchor: {as_text(self.m1_anchor)} \t m2_anchor: {as_text(self.m2_anchor)}'
+
+            rep_text = ''
+            if self.data_mode == 'train':
+                rep_text = f'm1_rep: {as_text(pure_name(self.m1_rep))} \t m2_rep: {as_text(pure_name(self.m2_rep))} \t' \
+                           f'rep: {as_text(pure_name(self.rep))}'
+
+            rate_text = f'm1_rate: {as_text(self.m1_rate)} \t\t m2_rate: {self.m2_rate}'
+
+            level_3_text = f'{anchors_text}\t\t{rep_text}\n\n{rate_text}'
+            verbose_text += f'\n{"_" * 100}\n{level_3_text}'
+
+        return verbose_text
 
     def update_stat(self):
         # final page
@@ -272,8 +282,7 @@ class Window:
                             f'{self.prev_result["rate"]} ({rate_to_text(self.prev_result["rate"])})'
                 stat_text += f'\n{rate_text}'
 
-            if globals.debug:
-                stat_text += f'\n\n{self.create_verbose_stat()}'
+            stat_text += f'{self.create_verbose_stat()}'
 
         self.stat_panel.configure(text=stat_text)
 
@@ -392,7 +401,7 @@ class Window:
                 self.right_photo_panel.pack(side=RIGHT)
 
                 # ======== update captions
-                if globals.debug:
+                if self.ui_verbosity > 1:
                     self.left_caption_panel.configure(text=pure_name(self.curr_left_file))
                     self.right_caption_panel.configure(text=pure_name(self.curr_right_file))
                     self.left_caption_panel.pack(side=LEFT)
