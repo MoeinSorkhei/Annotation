@@ -89,6 +89,7 @@ class Window:
             # this file only has comparisons in a structured way, nothing more
             self.comparisons = already_comparisons
             self.curr_left_file, self.curr_right_file = None, None
+            self.comp_level = 1
 
             if search_type == 'binary':
                 self.low_consistency = 'unspecified'
@@ -152,12 +153,12 @@ class Window:
             self.prev_button, self.fin_button = None, None
             self.discard_button = None
 
-            self.init_frames_and_photos(master)
+            self.init_frames_and_photos(master)  # init and pack
+            self.init_stat_panel_and_buttons(master)  # init and pack
+            self.update_stat()  # put content
 
             if globals.debug:
                 self.init_caption_panels()
-
-        self.init_stat_panel_and_buttons(master)
 
     # ======================================== UI-level functions  ========================================
     # =====================================================================================================
@@ -191,11 +192,7 @@ class Window:
         self.right_caption_panel.pack(side=RIGHT)
 
     def init_stat_panel_and_buttons(self, master):
-        stat_text = ''  # no stat in the beginning
-        if globals.params['ui_verbosity'] == 'full':
-            stat_text += f'\n\n{self.create_verbose_stat()}'
-
-        self.stat_panel = Label(master, text=stat_text, font='-size 15')
+        self.stat_panel = Label(master, text='', font='-size 15')
         self.stat_panel.pack(side=TOP)
 
         # ======== prev_button
@@ -235,8 +232,10 @@ class Window:
                 return f'{(self.low + self.high) // 2}' if self.data_mode == 'test' \
                     else f'{(self.low + self.high) // 2 + 1}'
 
-        search_text = f'Search interval: [{self.low} - {self.high}] ' \
-                      f'of [{0} - {len(self.sorted_list) - 1 if self.data_mode == "test" else len(self.bins_list) - 1}]'
+        interval_text = f'Search interval: [{self.low} - {self.high}] ' \
+                        f'of [{0} - {len(self.sorted_list) - 1 if self.data_mode == "test" else len(self.bins_list) - 1}]'
+        search_mode = "ternary" if robust_checking_needed(self) else "binary"
+
         index_or_bin = 'index' if self.data_mode == 'test' else 'bin'
         compare_index = _get_compare_index()
         anchors_text = f'm1_anchor: {as_text(self.m1_anchor)} \t m2_anchor: {as_text(self.m2_anchor)}'
@@ -248,7 +247,8 @@ class Window:
 
         rate_text = f'm1_rate: {as_text(self.m1_rate)} \t\t m2_rate: {self.m2_rate}'
 
-        attributes_text = f'{search_text} - Comparing with {index_or_bin} {compare_index} \n' \
+        attributes_text = f'{interval_text} - Comparing with {index_or_bin}: {compare_index} - ' \
+                          f'Level: {self.comp_level} - Search: {search_mode}\n' \
                           f'{"_" * 40}\n' \
                           f'{anchors_text}\t\t' \
                           f'{rep_text}\n\n' \
@@ -261,15 +261,15 @@ class Window:
             stat_text = ''
         # other pages
         else:
-            stat_text = f'Rating for image {self.current_index + 1} (with border around it) of {len(self.cases)} - ' \
+            stat_text = f'Rating for image {self.current_index + 1} of {len(self.cases)} - ' \
                         f'Case number: {self.case_number}'
 
             if self.prev_result is not None:
-                rate_text = f'Previous rate for reference image: ' \
+                rate_text = f'Previous rate: ' \
                             f'{self.prev_result["rate"]} ({rate_to_text(self.prev_result["rate"])})'
                 stat_text += f'\n{rate_text}'
 
-            if globals.params['ui_verbosity'] == 'full':
+            if globals.debug:
                 stat_text += f'\n\n{self.create_verbose_stat()}'
 
         self.stat_panel.configure(text=stat_text)
@@ -435,9 +435,10 @@ class Window:
         log(f'In [finalize_session]: saving aborted cases...')
         save_aborted_cases(self)
 
-        log(f'In [finalize_session]: Session is finalized. Uploading the result and terminating...')
+        if globals.params['email_interval'] is not None:
+            logic.email_results()
 
-        logic.email_results()
+        log(f'In [finalize_session]: All done')
         exit(0)
 
     def show_previous_case(self, event):
@@ -482,14 +483,16 @@ class Window:
         self.update_frame()
 
     def discard_case(self, event):
+        log(f'In [discard_case]: Pushed the Discard button. Discarding the case...')
         save_to_discarded_list(self.curr_left_file)  # save current left file to discarded.txt
 
         self.current_index += 1
         reset_attributes(self)
-
         self.prev_result = None
+
+        log('In [discard_case]: current_index increased, indices reset, '
+            'and prev_result set to None. Updating the frame...\n')
         self.update_frame()
-        log('In [discard_case]: current_index increased, indices reset, and prev_result set to None. Frame updated...\n')
 
     def abort_if_not_consistent(self):  # no difference whether to be used for test or train data
         if self.search_type == 'ternary':
@@ -543,6 +546,7 @@ class Window:
 
         # generic attributes
         self.prev_result['current_index'] = self.current_index
+        self.prev_result['comp_level'] = self.comp_level
         self.prev_result['low'] = self.low
         self.prev_result['high'] = self.high
         self.prev_result['rate'] = eval(pressed)  # regardless of search mode
@@ -637,13 +641,6 @@ class Window:
                             log(f'In [keyboard_press]: inserted directly to list and reset attributes - '
                                 f'current_index increased to {self.current_index}')
 
-                        # reset anchor so it is calculated in the next frame
-                        # self.anchor = None
-
-                        # else:
-                        #    pass  # show next page to get rate for m2
-                            # update_ternary_indices(self, pressed)
-
                     # showing for m2
                     else:
                         log(f'In [keyboard_press]: showing '
@@ -670,27 +667,24 @@ class Window:
                         else:
                             log(f'In [keyboard_press]: rates are consistent. Updating ternary indices...\n')
                             update_ternary_indices(self, pressed)
-                            reset_attributes(self, exclude_inds=True)
-                            # self.m1_rate = None  # rest to show for updated indices
-                            # self.m2_rate = None
-                            # update_current_index_if_needed(self, direction='next')  # checks if low, high are reset
-
-                        # reset anchor so it is calculated in the next frame
-                        # self.anchor = None
+                            reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
 
                 # normal binary mode
                 else:
                     self.keep_current_state_in_prev_result(pressed)
 
+                    # insert
                     if eval(pressed) == '9' or self.high == self.low or (self.high - self.low == 1 and eval(pressed) == '2'):
                         insert_with_binary_inds(self, pressed, self.curr_left_file)
                         reset_attributes(self)
                         self.current_index += 1
                         log(f'In [keyboard_press]: reset attributes - '
                             f'current_index increased to: {self.current_index}\n')
+
+                    # update indices
                     else:
                         update_binary_inds(self, pressed)
-                        reset_attributes(self, exclude_inds=True)
+                        reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
 
             upload_results_regularly(self)
             self.update_frame()  # update the frame and photos based in the new low and high indices

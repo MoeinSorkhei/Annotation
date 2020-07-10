@@ -121,23 +121,28 @@ def update_current_index_if_needed(window, direction):  # no difference whether 
 
 
 def robust_checking_needed(window, print_details=False):
-    levels = globals.params['robust_levels']
+    robust_levels = globals.params['robust_levels']
     min_length = globals.params['robust_min_length']
 
-    if window.search_type == 'ternary':
-        total_length = len(window.sorted_list) if window.data_mode == 'test' else len(window.bins_list)
-        current_length = window.high - window.low + 1
-        frac = (2 / 3) ** (levels - 1)
+    current_length = window.high - window.low + 1
+    length_match = True if current_length >= min_length else False
 
-        length_match = True if current_length >= min_length else False
-        level_match = True if current_length / total_length >= frac else False
+    level_match = True if window.comp_level <= robust_levels else False
 
-    else:
-        raise NotImplementedError
-        length_match = True if (window.high - window.low) >= min_length else False  # there is at least one item in between
-        total_length = len(window.sorted_list) if window.data_mode == 'test' else len(window.bins_list)
-
-        level_match = True if (window.high - window.low + 1) / total_length >= (1 / (2 ** (levels - 1))) else False
+    # if window.search_type == 'ternary':
+    #     total_length = len(window.sorted_list) if window.data_mode == 'test' else len(window.bins_list)
+    #     current_length = window.high - window.low + 1
+    #     frac = (2 / 3) ** (robust_levels - 1)
+    #
+    #     length_match = True if current_length >= min_length else False
+    #     level_match = True if current_length / total_length >= frac else False
+    #
+    # else:
+    #     raise NotImplementedError
+    #     length_match = True if (window.high - window.low) >= min_length else False  # there is at least one item in between
+    #     total_length = len(window.sorted_list) if window.data_mode == 'test' else len(window.bins_list)
+    #
+    #     level_match = True if (window.high - window.low + 1) / total_length >= (1 / (2 ** (robust_levels - 1))) else False
 
     # return search_type_match and length_match and level_match
     if print_details:
@@ -233,15 +238,16 @@ def init_or_use_anchor_and_rep(window):
 
 def revert_attributes(window):
     # revert low, high indices
-    window.low, window.high = window.prev_result['low'], window.prev_result['high']
     window.current_index = window.prev_result['current_index']
+    window.comp_level = window.prev_result['comp_level']
+    window.low, window.high = window.prev_result['low'], window.prev_result['high']
 
     # for print purposes
     attrs_as_dict = {
+        'current_index': window.current_index,
+        'comp_level': window.comp_level,
         'low': window.low,
         'high': window.high,
-        'current_index': window.current_index,
-
     }
 
     # revert m1 and m2 rates
@@ -275,10 +281,11 @@ def revert_attributes(window):
     log(f'In [revert_attributes]: Reverted all attributes.')
 
 
-def reset_attributes(window, exclude_inds=False):
+def reset_attributes(window, exclude_inds=False, new_comp_level=None):
     """
     The behavior of this function depends on whether we are dealing with test or train data.
 
+    :param new_comp_level:
     :param exclude_inds:
     :param window:
     :return:
@@ -291,8 +298,12 @@ def reset_attributes(window, exclude_inds=False):
         else:
             window.low = 0
             window.high = len(window.bins_list) - 1
-            # log(f'In [binary_search_step]: low and high are reset for the new image: '
-            #     f'low: {window.low}, high: {window.high}\n')
+
+    # reset comp level
+    if new_comp_level is not None:
+        window.comp_level = new_comp_level
+    else:
+        window.comp_level = 1
 
     if hasattr(window, 'm1_rate'):
         window.m1_rate = None

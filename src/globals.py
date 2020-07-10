@@ -1,7 +1,7 @@
 import os
 
 # ===== running the program in debug mode
-debug = True
+debug = False
 
 # ===== the mode for showing the images
 # mode = 'single'
@@ -39,5 +39,5 @@ params = {
     "resize_factor": 7,
     "email_interval": None,
 
-    "ui_verbosity": 'full'
+    # "ui_verbosity": 'full'
 }
