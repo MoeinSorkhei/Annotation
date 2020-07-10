@@ -160,3 +160,4 @@ if __name__ == '__main__':
 # /Users/user/.conda/envs/ADL/bin/python main.py --session_name split --n_bins 2 --debug
 
 # /Users/user/.conda/envs/ADL/bin/python test.py
+#  /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug --resize_factor 10 --max_imgs_per_session 4 --email_interval 1
