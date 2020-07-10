@@ -4,8 +4,8 @@ import os
 debug = False
 
 params = {
-    "test_imgs_dir": os.path.join('..', 'data', 'dicoms_very_limited'),  # for test data
-    "train_imgs_dir": os.path.join('..', 'data', 'dicoms_limited'),  # for train data
+    "test_imgs_dir": os.path.join('..', 'data', 'test'),  # for test data
+    "train_imgs_dir": os.path.join('..', 'data', 'train'),  # for train data
 
     "ks_csv_file": os.path.join('..', 'data', 'csv_files', 'data_ks_all_200630.csv'),
     "nonKS_csv_file": os.path.join('..', 'data', 'csv_files', 'data_nonks_all_200630.csv'),
