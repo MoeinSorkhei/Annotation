@@ -31,7 +31,7 @@ params = {
 
     "bin_rep_type": 'random',  # or 'last': specifies how the bin representative should be chosen
 
-    "max_imgs_per_session": 10,  # to be changed to 100 in real use
+    "max_imgs_per_session": 10,
     "resize_factor": 7,
     "email_interval": None,
 }
