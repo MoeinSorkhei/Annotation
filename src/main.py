@@ -52,13 +52,13 @@ def show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, al
 def retrieve_not_already_sorted_files(data_mode):
     # create lists of images for test data
     if data_mode == 'test':
-        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['main_imgs_dir'])  # the dicom files
+        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['test_imgs_dir'])  # the dicom files
         already_sorted = read_sorted_imgs()
         n_bins = None
 
     # create lists of images for train data
     else:
-        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['other_imgs_dir'])
+        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['train_imgs_dir'])
         n_bins, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
 
     aborted_cases = read_aborted_cases()
@@ -98,23 +98,6 @@ def manage_sessions_and_run(args):
     log(f'In [manage_sessions]: session_name: "{session_name}" - data_mode: {data_mode}')
 
     if 'sort' in session_name:
-        # create lists of images for test data
-        # if data_mode == 'test':
-        #     img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['main_imgs_dir'])  # the dicom files
-        #     already_sorted = read_sorted_imgs()
-        #     n_bins = None
-        #
-        # # create lists of images for train data
-        # else:
-        #     img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['other_imgs_dir'])
-        #     n_bins, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
-        #
-        # not_already_sorted = [img for img in img_lst if img not in already_sorted]
-        # log(f'In [manage_sessions]: read img_list of len: {len(img_lst)}, already_sorted (or entered into bins) images are '
-        #     f'of len: {len(already_sorted)} - there are {len(not_already_sorted)} images that are not already sorted')
-
-        # return if all the images are already sorted
-
         not_already_sorted, already_sorted, n_bins = retrieve_not_already_sorted_files(data_mode)
         if len(not_already_sorted) == 0:
             log(f'In [main]: not_already_sorted images are of len: 0 ==> Session is already complete. Terminating...')
@@ -155,7 +138,6 @@ if __name__ == '__main__':
 
 # SCRIPTS:
 # =========  On my mac:
-# /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug
 # /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug
 # /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode train --debug
 # /Users/user/.conda/envs/ADL/bin/python main.py --session_name split --n_bins 2 --debug

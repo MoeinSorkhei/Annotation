@@ -441,7 +441,7 @@ def insert_with_binary_inds(window, pressed, item):
                 pos = 'last'  # if new image is harder
 
         log(f'In [insert_with_binary_inds]: bin_rep_type is "{bin_rep_type}", '
-            f'inserting into position "{pos}" of bin {which_bin + 1}')
+            f'inserting into position "{pos}" of bin {which_bin}')
 
         insert_into_bin_and_save(which_bin, pos, item)
         window.prev_result.update({'insert_index': which_bin, 'insert_pos': pos})
@@ -461,7 +461,7 @@ def remove_last_inserted(window):
 
     else:  # e.g. prev_result: (left_img, right_img, rate, bin, 'last')
         which_bin, insert_pos = window.prev_result['insert_index'], window.prev_result['insert_pos']
-        log(f'In [remove_last_inserted]: removing the "{insert_pos}" element from bin_{which_bin + 1}.txt')
+        log(f'In [remove_last_inserted]: removing the "{insert_pos}" element from bin_{which_bin}.txt')
         del_from_bin_and_save(which_bin, insert_pos)
 
 
@@ -484,7 +484,7 @@ def _remove_if_index_has_changed(window):
 
         else:  # e.g. prev_result: (left_img, right_img, rate, bin, 'last')
             which_bin, insert_pos = window.prev_result['mid_index'], window.prev_result['insert_pos']
-            log(f'In [_remove_if_index_has_changed]: removing the "{insert_pos}" element from bin {which_bin + 1}')
+            log(f'In [_remove_if_index_has_changed]: removing the "{insert_pos}" element from bin {which_bin}')
             del_from_bin_and_save(which_bin, insert_pos)
 
     else:

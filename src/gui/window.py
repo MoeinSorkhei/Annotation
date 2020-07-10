@@ -225,12 +225,15 @@ class Window:
         def _get_compare_index():
             if robust_checking_needed(self):
                 if showing_window_for(self) == 'm1':
-                    return f'{self.m1_anchor}' if self.data_mode == 'test' else f'{self.m1_anchor + 1}'
+                    # return f'{self.m1_anchor}' if self.data_mode == 'test' else f'{self.m1_anchor + 1}'
+                    return f'{self.m1_anchor}'
                 else:
-                    return f'{self.m2_anchor}' if self.data_mode == 'test' else f'{self.m2_anchor + 1}'
+                    # return f'{self.m2_anchor}' if self.data_mode == 'test' else f'{self.m2_anchor + 1}'
+                    return f'{self.m2_anchor}'
             else:  # binary
-                return f'{(self.low + self.high) // 2}' if self.data_mode == 'test' \
-                    else f'{(self.low + self.high) // 2 + 1}'
+                return f'{(self.low + self.high) // 2}'
+                # return f'{(self.low + self.high) // 2}' if self.data_mode == 'test' \
+                #     else f'{(self.low + self.high) // 2 + 1}'
 
         interval_text = f'Search interval: [{self.low} - {self.high}] ' \
                         f'of [{0} - {len(self.sorted_list) - 1 if self.data_mode == "test" else len(self.bins_list) - 1}]'
@@ -300,7 +303,7 @@ class Window:
             else:
                 self.curr_right_file = _curr_rep
                 log(f'In [update_files]: Updated right photo to '
-                    f'show representative: "{pure_name(_curr_rep)}" of bin_{_curr_anchor + 1}.txt\n')
+                    f'show representative: "{pure_name(_curr_rep)}" of bin_{_curr_anchor}.txt\n')
 
         else:
             log(f'In [update_files]: NO ROBUST CHECKING NEEDED... \n')
@@ -313,7 +316,7 @@ class Window:
                 rep = init_or_use_rep(self, mid)
                 self.curr_right_file = rep
                 log(f'In [update_files]: Updated right photo to show rep: '
-                    f'"{pure_name(rep)}" of bin_{mid + 1}.txt')
+                    f'"{pure_name(rep)}" of bin_{mid}.txt')
 
         logic.log(f'In [update_files]: Left file: "{pure_name(self.curr_left_file)}"')
         logic.log(f'In [update_files]: Left Full path: "{self.curr_left_file}" \n')

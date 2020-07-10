@@ -3,13 +3,9 @@ import os
 # ===== running the program in debug mode
 debug = False
 
-# ===== the mode for showing the images
-# mode = 'single'
-# mode = 'side_by_side'
-
 params = {
-    "main_imgs_dir": os.path.join('..', 'data', 'dicoms_very_limited'),  # for test data
-    "other_imgs_dir": os.path.join('..', 'data', 'dicoms_limited'),  # for train data
+    "test_imgs_dir": os.path.join('..', 'data', 'dicoms_very_limited'),  # for test data
+    "train_imgs_dir": os.path.join('..', 'data', 'dicoms_limited'),  # for train data
 
     "ks_csv_file": os.path.join('..', 'data', 'csv_files', 'data_ks_all_200630.csv'),
     "nonKS_csv_file": os.path.join('..', 'data', 'csv_files', 'data_nonks_all_200630.csv'),
@@ -31,13 +27,11 @@ params = {
 
     "search_type": 'ternary',  # or 'normal'
     "robust_levels": 2,
-    "robust_min_length": 3,  # minimum length of sorted list/number of bins valid for doing ternary
+    "robust_min_length": 4,  # minimum length of sorted list/number of bins valid for doing ternary
 
     "bin_rep_type": 'random',  # or 'last': specifies how the bin representative should be chosen
 
-    "max_imgs_per_session": 3,  # to be changed to 100 in real use
+    "max_imgs_per_session": 10,  # to be changed to 100 in real use
     "resize_factor": 7,
     "email_interval": None,
-
-    # "ui_verbosity": 'full'
 }
