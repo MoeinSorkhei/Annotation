@@ -26,10 +26,6 @@ def read_args_and_adjust():
 
     arguments = parser.parse_args()
 
-    if arguments.annotator is None:
-        print('Please provide annotator name using the --annotator argument')
-        exit(1)  # unsuccessful exit
-
     if arguments.debug:
         globals.debug = True
 
@@ -174,12 +170,18 @@ def main():
         helper.make_dir_if_not_exists(png_folder)
         convert_imgs_to_png(dicom_folder, png_folder)
 
-        dicom_folder = globals.params['test_imgs_renamed_dir']
-        png_folder = globals.params['test_imgs_renamed_dir'] + '_png'
-        helper.make_dir_if_not_exists(png_folder)
-        convert_imgs_to_png(dicom_folder, png_folder)
+        # for renamed images if they exist
+        if os.path.exists(globals.params['test_imgs_renamed_dir']):
+            dicom_folder = globals.params['test_imgs_renamed_dir']
+            png_folder = globals.params['test_imgs_renamed_dir'] + '_png'
+            helper.make_dir_if_not_exists(png_folder)
+            convert_imgs_to_png(dicom_folder, png_folder)
 
     else:
+        if args.annotator is None:
+            print('Please provide annotator name using the --annotator argument')
+            exit(1)  # unsuccessful exit
+
         manage_sessions_and_run(args)
 
 
