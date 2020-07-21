@@ -4,7 +4,7 @@ import os
 debug = False
 
 params = {
-    "registry_file": os.path.join('..', 'data', 'test_img_registry_ddsm.txt'),
+    "registry_file": os.path.join('..', 'data', 'img_registry_ddsm.txt'),
     "test_imgs_renamed_dir": os.path.join('..', 'data', 'test_imgs_renamed'),
 
     "test_imgs_dir": os.path.join('..', 'data', 'test_imgs'),  # for test data
