@@ -6,6 +6,7 @@ from logic import *
 
 def read_args_and_adjust():
     parser = argparse.ArgumentParser(description='Annotation tool')
+    parser.add_argument('--annotator', type=str)
     parser.add_argument('--session_name', type=str)
     parser.add_argument('--data_mode', type=str)
     parser.add_argument('--n_bins', type=int)
@@ -15,9 +16,14 @@ def read_args_and_adjust():
     parser.add_argument('--ui_verbosity', type=int)   # set be set to 2 for moderate verbosity
 
     parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--email_results', action='store_true')
+    parser.add_argument('--email_results', action='store_true')  # used only for emailing results directly
+    parser.add_argument('--no_email', action='store_true')
 
     arguments = parser.parse_args()
+
+    if arguments.annotator is None:
+        print('Please provide annotator name using the --annotator argument')
+        exit(1)  # unsuccessful exit
 
     if arguments.debug:
         globals.debug = True
@@ -28,8 +34,11 @@ def read_args_and_adjust():
     if arguments.max_imgs_per_session:
         globals.params['max_imgs_per_session'] = arguments.max_imgs_per_session
 
-    if arguments.email_interval:
+    if arguments.email_interval:  # change default email interval
         globals.params['email_interval'] = arguments.email_interval
+
+    if arguments.no_email:
+        globals.params['email_interval'] = None
 
     return arguments
 
@@ -111,7 +120,7 @@ def manage_sessions_and_run(args):
         ui_verbosity = args.ui_verbosity
 
     log(f"\n\n\n\n{'*' * 150} \n{'*' * 150} \n{'*' * 150} \n{'*' * 150}", no_time=True)
-    log(f'In [manage_sessions]: session_name: "{session_name}" - data_mode: {data_mode}')
+    log(f'In [manage_sessions]: session_name: "{session_name}" - data_mode: {data_mode} - annotator: {args.annotator}')
 
     if 'sort' in session_name:
         not_already_sorted, already_sorted, n_bins = retrieve_not_already_sorted_files(data_mode)
@@ -154,10 +163,10 @@ if __name__ == '__main__':
 
 # SCRIPTS:
 # =========  On my mac:
-# /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug
-# /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --ui_verbosity 2
-# /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode train --debug
-# /Users/user/.conda/envs/ADL/bin/python main.py --session_name split --n_bins 2 --debug
+# /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session sort --data_mode test --debug
+# /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session sort --data_mode test --ui_verbosity 2
+# /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session sort --data_mode train --debug
+# /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session_name split --n_bins 2 --debug
 
 # /Users/user/.conda/envs/ADL/bin/python test.py
 #  /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug --resize_factor 10 --max_imgs_per_session 4 --email_interval 1

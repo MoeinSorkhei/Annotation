@@ -804,6 +804,6 @@ def upload_results_regularly(window):
     if globals.params['email_interval'] is None:
         return
 
-    if window.current_index <= 1 or window.current_index % globals.params['email_interval'] == 0:
+    if window.current_index <= 5 or window.current_index % globals.params['email_interval'] == 0:
         thread = Thread(target=logic.email_results)  # make it non-blocking as emailing takes time
         thread.start()
