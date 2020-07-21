@@ -440,12 +440,7 @@ class Window:
     # ======================================== logical functions  ========================================
     # ====================================================================================================
     def finalize_session(self, event):
-        log(f'In [finalize_session]: Clicked "finalize_session."\n')
-        # log(f'In [finalize_session]: saving previous result...')
-        # save_prev_rating(self)
-
-        log(f'In [finalize_session]: saving aborted cases...')
-        save_aborted_cases(self)
+        log(f'In [finalize_session]: Clicked "finalize_session."')
 
         if globals.params['email_interval'] is not None:
             logic.email_results()
@@ -479,6 +474,11 @@ class Window:
                 log(f'In [show_previous_case]: "insert_index" available in prev_result, '
                     f'should remove from list...')
                 remove_last_inserted(self)
+
+            if self.prev_result['aborted']:
+                log(f'In [show_previous_case]: '
+                    f'removed last aborted item from aborted file.')
+                remove_last_aborted()
 
             # revert the window attributes
             revert_attributes(self)
@@ -642,44 +642,70 @@ class Window:
                         self.prev_result = None  # init prev result from scratch
                         self.keep_current_state_in_prev_result(pressed)
                         self.m1_rate = eval(pressed)  # to be used in the next page
-                        # log(f'In [keyboard_press]: '
-                        #     f'set self.m1_rate to: {self.m1_rate}')
 
                         # insert directly
-                        if eval(pressed) == '9':
-                            insert_with_ternary_inds(self, self.m1_anchor, self.curr_left_file)
-                            reset_attributes(self)
-                            self.current_index += 1
-                            log(f'In [keyboard_press]: inserted directly to list and reset attributes - '
-                                f'current_index increased to {self.current_index}')
+                        # if eval(pressed) == '9':
+                        #     insert_with_ternary_inds(self, self.m1_anchor, self.curr_left_file)
+                        #     reset_attributes(self)
+                        #     self.current_index += 1
+                        #     log(f'In [keyboard_press]: inserted directly to list and reset attributes - '
+                        #         f'current_index increased to {self.current_index}')
 
                     # showing for m2
                     else:
                         log(f'In [keyboard_press]: showing '
                             f'window for: m2')
                         self.keep_current_state_in_prev_result(pressed)
+                        rule = calc_rule(self.m1_rate, eval(pressed))
 
-                        # insert directly
-                        if eval(pressed) == '9':
-                            insert_with_ternary_inds(self, self.m2_anchor, self.curr_left_file)
+                        if 'update' in rule:
+                            update_ternary_indices(self, update_type=rule)
+                            reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
+                            log(f'In [keyboard_press]: Updated ternary indices according to "{rule}".\n')
+
+                        elif rule == 'insert_m1':
+                            insert_with_ternary_inds(self, anchor=self.m1_anchor, item=self.curr_left_file)
                             reset_attributes(self)
                             self.current_index += 1
-                            log(f'In [keyboard_press]: inserted directly to list and reset attributes - '
+                            log(f'In [keyboard_press]: inserted directly to "m1_anchor" and reset attributes - '
                                 f'current_index increased to {self.current_index}')
 
-                        # check consistency
-                        elif self.m1_rate == '2' and eval(pressed) == '1':  # inconsistent: easier than m1, harder than m2
+                        elif rule == 'insert_m2':
+                            insert_with_ternary_inds(self, anchor=self.m2_anchor, item=self.curr_left_file)
+                            reset_attributes(self)
+                            self.current_index += 1
+                            log(f'In [keyboard_press]: inserted directly to "m2_anchor" and reset attributes - '
+                                f'current_index increased to {self.current_index}')
+
+                        else:  # abort
                             self.prev_result['aborted'] = True
                             self.current_index += 1
                             reset_attributes(self)
-                            log(f'In [keyboard_press]: rates are inconsistent. Case aborted and reset attributes - '
+                            save_to_aborted_list(self.curr_left_file)
+                            log(f'In [keyboard_press]: rates are INCONSISTENT. Case aborted and reset attributes - '
                                 f'current_index increased to: {self.current_index}')
 
+                        # # insert directly
+                        # if eval(pressed) == '9':
+                        #     insert_with_ternary_inds(self, self.m2_anchor, self.curr_left_file)
+                        #     reset_attributes(self)
+                        #     self.current_index += 1
+                        #     log(f'In [keyboard_press]: inserted directly to list and reset attributes - '
+                        #         f'current_index increased to {self.current_index}')
+
+                        # check consistency
+                        # elif self.m1_rate == '2' and eval(pressed) == '1':  # inconsistent: easier than m1, harder than m2
+                        #     self.prev_result['aborted'] = True
+                        #     self.current_index += 1
+                        #     reset_attributes(self)
+                        #     log(f'In [keyboard_press]: rates are inconsistent. Case aborted and reset attributes - '
+                        #         f'current_index increased to: {self.current_index}')
+
                         # update indices
-                        else:
-                            log(f'In [keyboard_press]: rates are consistent. Updating ternary indices...\n')
-                            update_ternary_indices(self, pressed)
-                            reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
+                        # else:
+                        #     log(f'In [keyboard_press]: rates are consistent. Updating ternary indices...\n')
+                        #     update_ternary_indices(self, pressed)
+                        #     reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
 
                 # normal binary mode
                 else:

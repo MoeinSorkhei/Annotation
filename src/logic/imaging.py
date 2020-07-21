@@ -3,6 +3,7 @@ from matplotlib import cm
 import pydicom
 import numpy as np
 import os
+from pathlib import Path
 
 import globals
 from .helper import log
@@ -20,13 +21,14 @@ def get_dicom_files_paths(imgs_dir):
 def read_dicom_and_resize(file, only_save_to=None):
     # ======== read dicom file
     dataset = pydicom.dcmread(file)
+    # print(dataset)
+    # input()
+
     pixels = dataset.pixel_array
     pixels = pixels / np.max(pixels)  # normalize to 0-1
 
     orientation = str(dataset.get('PatientOrientation', "(missing)"))
-    # log(f'In [read_dicom_image]: orientation: "{orientation}"')
     if 'A' in orientation:  # anterior view, should be flipped
-        # log(f'In [read_dicom_image]: the view is Anterior. Image is flipped when shown.')
         pixels = np.flip(pixels, axis=1)
     log('', no_time=True)  # extra print in log file for more readability
 
@@ -37,9 +39,6 @@ def read_dicom_and_resize(file, only_save_to=None):
     resize_factor = globals.params['resize_factor']
     if resize_factor is not None:
         image = image.resize((pixels.shape[1] // resize_factor, pixels.shape[0] // resize_factor))
-        # photo = ImageTk.PhotoImage(image)
-    # else:  # no resize
-    #    photo = ImageTk.PhotoImage(image)
 
     if only_save_to:
         image.save(only_save_to)
@@ -47,3 +46,13 @@ def read_dicom_and_resize(file, only_save_to=None):
 
     photo = ImageTk.PhotoImage(image)
     return photo
+
+
+def all_dicoms_to_png(path, save=False):
+    dicoms_list = list((Path(path).rglob("*.dcm")))
+    dicoms_list = [str(dicom_path) for dicom_path in dicoms_list]
+
+    if save:
+        for dicom in dicoms_list:
+            read_dicom_and_resize(dicom, dicom.replace('.dcm', '.png'))
+    return dicoms_list

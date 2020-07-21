@@ -173,10 +173,22 @@ def save_rating(left_img, right_img, rate):
 
 def remove_last_rating():
     rate_file = globals.params['ratings']
-    lines = read_file_to_list_if_exists(rate_file)
-    lines = lines[:-1]
-    write_list_to_file(lines, rate_file)
+    remove_last_line_from_file(rate_file)
+    # lines = read_file_to_list_if_exists(rate_file)
+    # lines = lines[:-1]
+    # write_list_to_file(lines, rate_file)
     # log(f'In [remove_last_rating]: removed tha last rate\n')
+
+
+def remove_last_aborted():
+    aborted_file = globals.params['aborted']
+    remove_last_line_from_file(aborted_file)
+
+
+def remove_last_line_from_file(filename):
+    lines = read_file_to_list_if_exists(filename)
+    lines = lines[:-1]
+    write_list_to_file(lines, filename)
 
 
 def email_results():

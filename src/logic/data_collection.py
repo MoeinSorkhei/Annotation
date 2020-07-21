@@ -153,58 +153,123 @@ def csv_to_db(data_source):
     if data_source == 'KS':
         csv_file = globals.params['ks_csv_file']
         columns = ['patient', 'x_case', 'x_diadate', 'split']
+        sep = ';'
 
-        db_string = 'CREATE TABLE "KS" ("patient" varchar, "x_case" integer, "x_diadate" varchar, "split" varchar);'
         db_path = globals.params['ks_db_path']
 
+        db_string = 'CREATE TABLE "KS" ("patient" varchar, "x_case" integer, "x_diadate" varchar, "split" varchar);'
+        insert_command = 'INSERT INTO patients VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+
+    elif data_source == 'nonKS':
+        # csv_file = globals.params['nonKS_csv_file']
+        # columns = None
+        raise NotImplementedError
+
+    elif data_source == 'ddsm_mass' or 'ddsm_calc':
+        db_path = f'../data/ddsm/databases/{data_source}.sqlite'
+        csv_file = globals.params[data_source]
+        sep = ','
+
+        # different names
+        if data_source == 'ddsm_mass':
+            columns = ['patient_id', 'breast_density', 'left or right breast', 'image view', 'subtlety']
+            db_string = 'CREATE TABLE "DDSM_MASS" ' \
+                        '("patient_id" varchar, ' \
+                        '"breast_density" integer, ' \
+                        '"left or right breast" varchar, ' \
+                        '"image view" varchar, ' \
+                        '"subtlety" integer);'
+            insert_command = 'INSERT INTO DDSM_MASS VALUES (?, ?, ?, ?, ?)'
+
+        if data_source == 'ddsm_calc':
+            columns = ['patient_id', 'breast density', 'left or right breast', 'image view', 'subtlety']
+            db_string = 'CREATE TABLE "DDSM_CALC" ' \
+                        '("patient_id" varchar, ' \
+                        '"breast_density" integer, ' \
+                        '"left or right breast" varchar, ' \
+                        '"image view" varchar, ' \
+                        '"subtlety" integer);'
+            insert_command = 'INSERT INTO DDSM_CALC VALUES (?, ?, ?, ?, ?)'
     else:
-        csv_file = globals.params['nonKS_csv_file']
-        columns = None
+        raise NotImplementedError
 
-    df = pd.read_csv(csv_file, sep=';', engine='python', usecols=columns)  # data frame
+    # read the csv file
+    df = pd.read_csv(csv_file, sep=sep, engine='python', usecols=columns)  # data frame
     # print(df)
-
     df_as_list = df.values.tolist()
-    # print(len(df_as_list))
-
-    con = sqlite3.Connection(db_path)
-    cur = con.cursor()
-    cur.execute(db_string)
-    # insert command
-
-
-def create_db():
-    db_path = globals.params['db_path']
+    # print(df_as_list[:3])
 
     # delete db file if exists
     if os.path.exists(db_path):
         os.remove(db_path)
-        print('Previous database destoryed')
+        print('Previous database destroyed')
 
     con = sqlite3.Connection(db_path)
     cur = con.cursor()
-    cur.execute('CREATE TABLE "patients" '
-                '("FileAnalyzed" varchar, "Manufacturer" varchar, "Laterality" varchar, "ViewPosition" varchar, '
-                '"BreastArea_sqcm_" float, "DenseArea_sqcm_" float, "BreastDensity___" float, "basename" varchar, '
-                '"source" varchar);')
+
+    # create database
+    cur.execute(db_string)
     print('Database created successfully')
 
-    combined, ks_rows, non_ks_rows = combine_csv_files(also_return_separately=True)
-    # for row in data:
-    #     if len(row) == 7:
-    #         row.append('')  # append empty string for the rows that do nat have the basename attribute
-
-    for row in ks_rows:
-        row.extend(['KS'])  # append data source
-
-    for row in non_ks_rows:
-        row.extend(['', 'nonKS'])  # append data source and empty string (they do not have basename)
-
-    for data in [ks_rows, non_ks_rows]:
-        cur.executemany('INSERT INTO patients VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', data)
+    # insert items
+    # for item in df_as_list:
+    cur.executemany(insert_command, df_as_list)
     print('Inserted into database successfully')
 
     cur.close()
     con.commit()
     con.close()
+
+
+# def create_db():
+#     db_path = globals.params['db_path']
+#
+#     # delete db file if exists
+#     if os.path.exists(db_path):
+#         os.remove(db_path)
+#         print('Previous database destroyed')
+#
+#     con = sqlite3.Connection(db_path)
+#     cur = con.cursor()
+#     cur.execute('CREATE TABLE "patients" '
+#                 '("FileAnalyzed" varchar, "Manufacturer" varchar, "Laterality" varchar, "ViewPosition" varchar, '
+#                 '"BreastArea_sqcm_" float, "DenseArea_sqcm_" float, "BreastDensity___" float, "basename" varchar, '
+#                 '"source" varchar);')
+#     print('Database created successfully')
+#
+#     combined, ks_rows, non_ks_rows = combine_csv_files(also_return_separately=True)
+#     # for row in data:
+#     #     if len(row) == 7:
+#     #         row.append('')  # append empty string for the rows that do nat have the basename attribute
+#
+#     for row in ks_rows:
+#         row.extend(['KS'])  # append data source
+#
+#     for row in non_ks_rows:
+#         row.extend(['', 'nonKS'])  # append data source and empty string (they do not have basename)
+#
+#     for data in [ks_rows, non_ks_rows]:
+#         cur.executemany('INSERT INTO patients VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', data)
+#     print('Inserted into database successfully')
+#
+#     cur.close()
+#     con.commit()
+#     con.close()
+
+def create_ddsm_query(mass_or_calc, left_or_right, view, attribute, value, limit=40):
+    query_file = f'../data/ddsm/queries/{mass_or_calc}_{left_or_right}_{view}/{attribute}/{attribute}={value}.txt'
+    with open(query_file) as f:
+        lines = f.read().splitlines()
+
+    subject_ids = [query_to_subject_id(mass_or_calc, patient_id, left_or_right, view) for patient_id in lines]
+    subject_ids = subject_ids[:limit]
+    query = ','.join(subject_ids)
+
+    print(query)
+    return query
+
+
+def query_to_subject_id(mass_or_calc, patient_id, left_or_right, view):
+    subject_id = f'{mass_or_calc}-Training_{patient_id}_{left_or_right}_{view}'
+    return subject_id
 

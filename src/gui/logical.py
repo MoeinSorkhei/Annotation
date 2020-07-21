@@ -176,6 +176,21 @@ def showing_window_for(window):  # could possibly add input_type which says if i
                                   'm2_rate condition')
 
 
+def calc_rule(m1_rate, m2_rate):
+    if m1_rate == '1' and m2_rate == '1':
+        return 'update_1'
+    elif m1_rate == '2' and m2_rate == '2':
+        return 'update_2'
+    elif m1_rate == '1' and m2_rate == '2':
+        return 'update_3'
+    elif m1_rate == '9' and m2_rate == '2':
+        return 'insert_m1'
+    elif m1_rate == '1' and m2_rate == '9':
+        return 'insert_m2'
+    else:
+        return 'inconsistency'
+
+
 # ========== functions for changing window attributes
 def reset_consistency_indicators(window):
     window.low_consistency = 'unspecified'
@@ -340,7 +355,22 @@ def calc_ternary_anchors(window):
     return anchors
 
 
-def update_ternary_indices(window, pressed):
+def update_ternary_indices(window, update_type):
+    if update_type == 'update_1':
+        window.low = window.m2_anchor
+
+    elif update_type == 'update_2':
+        window.high = window.m1_anchor
+
+    elif update_type == 'update_3':
+        window.low = window.m1_anchor
+        window.high = window.m2_anchor
+
+    else:
+        raise NotImplementedError('In [update_ternary_indices]: unexpected update_type')
+
+
+def update_ternary_indices0(window, pressed):
     m1_anchor = window.m1_anchor
     m2_anchor = window.m2_anchor
     m1_rate = window.m1_rate
