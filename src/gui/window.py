@@ -643,14 +643,6 @@ class Window:
                         self.keep_current_state_in_prev_result(pressed)
                         self.m1_rate = eval(pressed)  # to be used in the next page
 
-                        # insert directly
-                        # if eval(pressed) == '9':
-                        #     insert_with_ternary_inds(self, self.m1_anchor, self.curr_left_file)
-                        #     reset_attributes(self)
-                        #     self.current_index += 1
-                        #     log(f'In [keyboard_press]: inserted directly to list and reset attributes - '
-                        #         f'current_index increased to {self.current_index}')
-
                     # showing for m2
                     else:
                         log(f'In [keyboard_press]: showing '
@@ -684,28 +676,6 @@ class Window:
                             save_to_aborted_list(self.curr_left_file)
                             log(f'In [keyboard_press]: rates are INCONSISTENT. Case aborted and reset attributes - '
                                 f'current_index increased to: {self.current_index}')
-
-                        # # insert directly
-                        # if eval(pressed) == '9':
-                        #     insert_with_ternary_inds(self, self.m2_anchor, self.curr_left_file)
-                        #     reset_attributes(self)
-                        #     self.current_index += 1
-                        #     log(f'In [keyboard_press]: inserted directly to list and reset attributes - '
-                        #         f'current_index increased to {self.current_index}')
-
-                        # check consistency
-                        # elif self.m1_rate == '2' and eval(pressed) == '1':  # inconsistent: easier than m1, harder than m2
-                        #     self.prev_result['aborted'] = True
-                        #     self.current_index += 1
-                        #     reset_attributes(self)
-                        #     log(f'In [keyboard_press]: rates are inconsistent. Case aborted and reset attributes - '
-                        #         f'current_index increased to: {self.current_index}')
-
-                        # update indices
-                        # else:
-                        #     log(f'In [keyboard_press]: rates are consistent. Updating ternary indices...\n')
-                        #     update_ternary_indices(self, pressed)
-                        #     reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
 
                 # normal binary mode
                 else:

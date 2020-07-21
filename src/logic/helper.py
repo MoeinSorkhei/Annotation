@@ -6,6 +6,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+import glob
+from shutil import copyfile
 
 import globals
 
@@ -17,10 +19,11 @@ def read_params(params_path):
     return parameters
 
 
-def make_dir_if_not_exists(directory):
+def make_dir_if_not_exists(directory, verbose=True):
     if not os.path.isdir(directory):
         os.makedirs(directory)
-        print(f'In [make_dir_if_not_exists]: created path "{directory}"')
+        if verbose:
+            print(f'In [make_dir_if_not_exists]: created path "{directory}"')
 
 
 def multi_log(to_be_logged):
@@ -112,6 +115,29 @@ def shorten_file_name(filename):
         return filename
     else:
         return '...' + filename[-15:]
+
+
+def create_img_registry(img_folder, output_file):
+    all_dicoms = glob.glob(f'{img_folder}/**/*.dcm', recursive=True)  # it assumes '/' path separator
+    print(f'In [create_img_registry]: read {len(all_dicoms)} images from: "{img_folder}"')
+
+    all_dicoms = [filename.replace(f'{img_folder}/', '') for filename in all_dicoms]  # get relative path from the base dir
+    all_dicoms = sorted(all_dicoms)
+    write_list_to_file(all_dicoms, output_file)
+    print(f'In [create_img_registry]: creating image registry at: "{output_file}" done')
+
+
+def rename_test_imgs(registry_file, test_imgs_folder, renamed_test_imgs_folder):
+    img_registry = read_file_to_list_if_exists(registry_file)
+
+    make_dir_if_not_exists(renamed_test_imgs_folder)
+    for i in range(len(img_registry)):
+        source = os.path.join(test_imgs_folder, img_registry[i])
+        renamed = os.path.join(renamed_test_imgs_folder, f'{i}.dcm')
+        copyfile(src=source, dst=renamed)
+
+        print(f'In [rename_test_imgs]: copied "{source}" to "{renamed}"')
+    print('In [rename_test_imgs]: all done')
 
 
 # ========== functions for saving/reading results

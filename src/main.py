@@ -19,6 +19,11 @@ def read_args_and_adjust():
     parser.add_argument('--email_results', action='store_true')  # used only for emailing results directly
     parser.add_argument('--no_email', action='store_true')
 
+    # data preparation args
+    parser.add_argument('--create_img_registry', action='store_true')
+    parser.add_argument('--rename_test_imgs', action='store_true')
+    parser.add_argument('--convert_test_imgs_to_png', action='store_true')
+
     arguments = parser.parse_args()
 
     if arguments.annotator is None:
@@ -152,6 +157,27 @@ def main():
     if args.email_results:  # used only for emailing results
         log('In [main]: emailing results...')
         logic.email_results()
+
+    elif args.create_img_registry:
+        registry_file = globals.params['registry_file']
+        create_img_registry(img_folder=globals.params['test_imgs_dir'],
+                            output_file=registry_file)
+
+    elif args.rename_test_imgs:
+        rename_test_imgs(globals.params['registry_file'],
+                         globals.params['test_imgs_dir'],
+                         globals.params['test_imgs_renamed_dir'])
+
+    elif args.convert_test_imgs_to_png:
+        dicom_folder = globals.params['test_imgs_dir']
+        png_folder = globals.params['test_imgs_dir'] + '_png'
+        helper.make_dir_if_not_exists(png_folder)
+        convert_imgs_to_png(dicom_folder, png_folder)
+
+        dicom_folder = globals.params['test_imgs_renamed_dir']
+        png_folder = globals.params['test_imgs_renamed_dir'] + '_png'
+        helper.make_dir_if_not_exists(png_folder)
+        convert_imgs_to_png(dicom_folder, png_folder)
 
     else:
         manage_sessions_and_run(args)

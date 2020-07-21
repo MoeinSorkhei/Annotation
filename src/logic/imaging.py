@@ -4,9 +4,11 @@ import pydicom
 import numpy as np
 import os
 from pathlib import Path
+import glob
 
 import globals
 from .helper import log
+from . import helper
 
 
 def get_dicom_files_paths(imgs_dir):
@@ -19,11 +21,7 @@ def get_dicom_files_paths(imgs_dir):
 
 
 def read_dicom_and_resize(file, only_save_to=None):
-    # ======== read dicom file
     dataset = pydicom.dcmread(file)
-    # print(dataset)
-    # input()
-
     pixels = dataset.pixel_array
     pixels = pixels / np.max(pixels)  # normalize to 0-1
 
@@ -56,3 +54,17 @@ def all_dicoms_to_png(path, save=False):
         for dicom in dicoms_list:
             read_dicom_and_resize(dicom, dicom.replace('.dcm', '.png'))
     return dicoms_list
+
+
+def convert_imgs_to_png(source_dir, dest_dir):
+    all_dicoms = sorted(glob.glob(f'{source_dir}/**/*.dcm', recursive=True))  # it assumes '/' path separator
+
+    for dicom_file in all_dicoms:
+        png_file = os.path.join(dest_dir, dicom_file.replace(f'{source_dir}/', '').replace('.dcm', '.png'))  # relative name
+        print(f'Doing for dicom: "{dicom_file}"')
+
+        sub_folders = os.path.split(png_file)[0]
+        helper.make_dir_if_not_exists(sub_folders, verbose=False)  # create all the sub-folders needed
+        read_dicom_and_resize(dicom_file, only_save_to=png_file)
+
+    print('In [convert_imgs_to_png]: all done')

@@ -4,9 +4,12 @@ import os
 debug = False
 
 params = {
-    "test_imgs_dir": os.path.join('..', 'data', 'test'),  # for test data
+    "registry_file": os.path.join('..', 'data', 'test_img_registry_ddsm.txt'),
+    "test_imgs_renamed_dir": os.path.join('..', 'data', 'test_imgs_renamed'),
+
+    "test_imgs_dir": os.path.join('..', 'data', 'test_imgs'),  # for test data
     # "test_imgs_dir": os.path.join('..', 'data', 'all_dicoms', 'dicoms'),  # for test data
-    "train_imgs_dir": os.path.join('..', 'data', 'train'),  # for train data
+    "train_imgs_dir": os.path.join('..', 'data', 'train_imgs'),  # for train data
 
     "ks_csv_file": os.path.join('..', 'data', 'csv_files', 'data_ks_all_200630.csv'),
     "nonKS_csv_file": os.path.join('..', 'data', 'csv_files', 'data_nonks_all_200630.csv'),
