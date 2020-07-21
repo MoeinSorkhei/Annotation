@@ -185,11 +185,11 @@ class Window:
         self.right_photo_panel.pack(side=RIGHT)
 
     def init_caption_panels(self):
-        self.left_caption_panel = Label(self.photos_panel, text=pure_name(self.curr_left_file),
+        self.left_caption_panel = Label(self.photos_panel, text=shorten_file_name(pure_name(self.curr_left_file)),
                                         font='-size 10')
         self.left_caption_panel.pack(side=LEFT)
 
-        self.right_caption_panel = Label(self.photos_panel, text=pure_name(self.curr_right_file),
+        self.right_caption_panel = Label(self.photos_panel, text=shorten_file_name(pure_name(self.curr_right_file)),
                                          font='-size 10')
         self.right_caption_panel.pack(side=RIGHT)
 
@@ -328,9 +328,9 @@ class Window:
                     f'"{pure_name(rep)}" of bin_{mid}.txt')
 
         logic.log(f'In [update_files]: Left file: "{pure_name(self.curr_left_file)}"')
-        logic.log(f'In [update_files]: Left Full path: "{self.curr_left_file}" \n')
+        # logic.log(f'In [update_files]: Left Full path: "{self.curr_left_file}" \n')
         logic.log(f'In [update_files]: Right file: "{pure_name(self.curr_right_file)}"')
-        logic.log(f'In [update_files]: Right Full path: "{self.curr_right_file}" \n')
+        # logic.log(f'In [update_files]: Right Full path: "{self.curr_right_file}" \n')
 
     def update_photos(self, frame):
         """
@@ -402,8 +402,8 @@ class Window:
 
                 # ======== update captions
                 if self.ui_verbosity > 1:
-                    self.left_caption_panel.configure(text=pure_name(self.curr_left_file))
-                    self.right_caption_panel.configure(text=pure_name(self.curr_right_file))
+                    self.left_caption_panel.configure(text=shorten_file_name(pure_name(self.curr_left_file)))
+                    self.right_caption_panel.configure(text=shorten_file_name(pure_name(self.curr_right_file)))
                     self.left_caption_panel.pack(side=LEFT)
                     self.right_caption_panel.pack(side=RIGHT)
 

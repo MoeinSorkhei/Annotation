@@ -107,6 +107,13 @@ def insert_to_list(lst, pos, item):
     write_sorted_list_to_file(lst)
 
 
+def shorten_file_name(filename):
+    if len(filename) < 10:
+        return filename
+    else:
+        return '...' + filename[-15:]
+
+
 # ========== functions for saving/reading results
 def read_comparison_lists():
     output_file = globals.params['comparisons_structured']  # output/comparisons.json
