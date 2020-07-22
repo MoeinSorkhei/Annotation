@@ -23,6 +23,7 @@ def read_args_and_adjust():
     parser.add_argument('--create_img_registry', action='store_true')
     parser.add_argument('--rename_test_imgs', action='store_true')
     parser.add_argument('--convert_test_imgs_to_png', action='store_true')
+    parser.add_argument('--make_seed_list', action='store_true')
 
     arguments = parser.parse_args()
 
@@ -176,6 +177,20 @@ def main():
             png_folder = globals.params['test_imgs_renamed_dir'] + '_png'
             helper.make_dir_if_not_exists(png_folder)
             convert_imgs_to_png(dicom_folder, png_folder)
+
+    elif args.make_seed_list:
+        # might have .DS_Store etc.file, so only choose .dcm ones
+        test_imgs = sorted([file for file in os.listdir(globals.params['test_imgs_dir']) if file.endswith('.dcm')])
+        print(f'Read test image names with len: {len(test_imgs)}')
+
+        seed_list = []
+        for filename in test_imgs:
+            number = int(filename.replace('.dcm', ''))
+            if number % 10 == 0:
+                seed_list.append(os.path.abspath(filename))
+
+        helper.write_list_to_file(seed_list, globals.params['sorted'])
+        print(f'Wrote seed list of len {len(seed_list)} to: "{globals.params["sorted"]}"')
 
     else:
         if args.annotator is None:
