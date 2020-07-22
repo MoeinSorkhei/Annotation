@@ -187,7 +187,8 @@ def main():
         for filename in test_imgs:
             number = int(filename.replace('.dcm', ''))
             if number % 10 == 0:
-                seed_list.append(os.path.abspath(filename))
+                path = os.path.join(os.path.abspath(globals.params['test_imgs_dir']), filename)
+                seed_list.append(path)
 
         helper.write_list_to_file(seed_list, globals.params['sorted'])
         print(f'Wrote seed list of len {len(seed_list)} to: "{globals.params["sorted"]}"')
@@ -206,10 +207,14 @@ if __name__ == '__main__':
 
 # SCRIPTS:
 # =========  On my mac:
-# /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session sort --data_mode test --debug
-# /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session sort --data_mode test --ui_verbosity 2
-# /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session sort --data_mode train --debug
+# /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session_name sort --data_mode test --debug
+# /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session_name sort --data_mode test --ui_verbosity 2
+# /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session_name sort --data_mode train --debug
 # /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session_name split --n_bins 2 --debug
 
 # /Users/user/.conda/envs/ADL/bin/python test.py
-#  /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug --resize_factor 10 --max_imgs_per_session 4 --email_interval 1
+# /Users/user/.conda/envs/ADL/bin/python main.py --session sort --data_mode test --debug --resize_factor 10 --max_imgs_per_session 4 --email_interval 1
+
+
+# trial run
+# /Users/user/.conda/envs/ADL/bin/python main.py --make_seed_list
