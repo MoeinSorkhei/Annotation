@@ -43,4 +43,4 @@ Note that the default values of all the parameters could be found in the `global
 ___
 ### Links
 * Test images: https://www.dropbox.com/sh/hrz6stxczlzl95q/AAD9ZuMplzJYGbMHmsh7QyRVa?dl=0
-* Train images: https://drive.google.com/drive/folders/1kmtVjS-bUvPv-YouwJmgIW8_eoGnZZD4?usp=sharing
+* Train images: https://drive.google.com/file/d/1T-8oRoG2i1wUJrPv1RTDM2pVqBkNqvfl/view?usp=sharing
