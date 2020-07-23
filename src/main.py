@@ -180,6 +180,7 @@ def main():
 
     elif args.make_seed_list:
         # might have .DS_Store etc.file, so only choose .dcm ones
+        helper.make_dir_if_not_exists(globals.params['output_path'])
         test_imgs = sorted([file for file in os.listdir(globals.params['test_imgs_dir']) if file.endswith('.dcm')])
         print(f'Read test image names with len: {len(test_imgs)}')
 
