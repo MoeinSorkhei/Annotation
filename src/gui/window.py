@@ -475,7 +475,7 @@ class Window:
                     f'should remove from list...')
                 remove_last_inserted(self)
 
-            if self.prev_result['aborted']:
+            if 'aborted' in self.prev_result.keys() and self.prev_result['aborted']:
                 log(f'In [show_previous_case]: '
                     f'removed last aborted item from aborted file.')
                 remove_last_aborted()
