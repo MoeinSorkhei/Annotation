@@ -20,10 +20,13 @@ All the commands should be run from inside the `src` folder.
 `python main.py --make_seed_list`
 
 * Starting a session for rating the test images:  
-`python main.py --annotator [YourName] --session_name sort --data_mode test --ui_verbosity 2`
+`python main.py --annotator [YourName] --session_name sort --data_mode test --ui_verbosity 2`  
+ As soon as you start the first session, the `output` folder will be created.
 
 * Splitting the sorted list to bins needed for sorting train data:  
-`python main.py --annotator [YourName] --session_name split --n_bins 24`
+`python main.py --annotator [YourName] --session_name split --n_bins 24`  
+ After running this command, you should see the files containing images in different bins. The file are named like `bin_1.txt`, `bin_2.txt` etc. and are located in
+ the `output` folder.
 
 * Starting a session for rating train images:  
 `python main.py --annotator [YourName] --session_name sort --data_mode train --ui_verbosity 2`
