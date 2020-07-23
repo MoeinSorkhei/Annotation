@@ -11,6 +11,9 @@ ___
 - Download the test images and put the test images (the ones that are going to be perfectly sorted) in the `data/test` folder
 - Download the train images and put the train images in the `data/train` folder
 
+### Links
+* Test images: https://www.dropbox.com/sh/hrz6stxczlzl95q/AAD9ZuMplzJYGbMHmsh7QyRVa?dl=0
+* Train images: https://drive.google.com/file/d/1T-8oRoG2i1wUJrPv1RTDM2pVqBkNqvfl/view?usp=sharing
 
 ___
 ### Example commands
@@ -42,8 +45,3 @@ ___
 * `--resize_factor`: Determines how much the DICOM high resolution images should be resized (default: 7).
 
 Note that the default values of all the parameters could be found in the `globals.py` file.
-
-___
-### Links
-* Test images: https://www.dropbox.com/sh/hrz6stxczlzl95q/AAD9ZuMplzJYGbMHmsh7QyRVa?dl=0
-* Train images: https://drive.google.com/file/d/1T-8oRoG2i1wUJrPv1RTDM2pVqBkNqvfl/view?usp=sharing
