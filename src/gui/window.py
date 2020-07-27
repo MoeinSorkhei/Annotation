@@ -628,6 +628,43 @@ class Window:
             6. Now that the indices are updated, update_frame function updates the window in a UI-level based on the
                updated low and high indices.
         """
+        def _check_rates_automatically():
+            log(f'\n{"*" * 100}', no_time=True)
+            log('In [keyboard_press] - automatic rate: Checking if '
+                'rate is already available for the next case.\n')
+            self.update_files()
+            update_file_called = True
+
+            # if the rate exists, perform updates based on available ratings
+            rate = get_rate_if_already_exists(self.curr_left_file, self.curr_right_file)
+
+            if rate is None:
+                log(f'In [keyboard_press] - automatic rate: rate NOT already available. '
+                    f'Updating window to get the rate....')
+
+            while rate is not None:  # rate already exists
+                log(f'In [keyboard_press] - automatic rate: rate ALREADY AVAILABLE '
+                    f'for the the next case and is: {rate}')
+                if matches_binary_insert_rule(self, rate):
+                    log(f'In [keyboard_press] - automatic rate: matches with insertion rule. Inserting...')
+                    insert_with_binary_inds(self, rate, self.curr_left_file)
+                    reset_attributes_and_increase_index(self)
+                    update_file_called = False
+                    break
+
+                else:
+                    update_binary_inds(self, rate)
+                    reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
+                    self.update_files()
+                    rate = get_rate_if_already_exists(self.curr_left_file, self.curr_right_file)
+                    log(f'In [keyboard_press] - automatic rate: updated - again checking '
+                        f'if already available for the next case...')
+                    if rate is None:
+                        log(f'In [keyboard_press] - automatic rate: rate NOT already available. '
+                            f'Updating window to get the rate....')
+            log(f'{"*" * 100}\n', no_time=True)
+            return update_file_called
+
         # ignore keyboard press for the final page
         if self.current_index == len(self.cases):
             logic.log(f'In [keyboard_press]: Ignoring keyboard press for index "{self.current_index}"')
@@ -716,43 +753,43 @@ class Window:
                         reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
 
             upload_results_regularly(self)
-
-            # for next frame (ternary -> binary or binary -> binary) with updated inds if we have not inserted
+            # check automatically if the rate is available for the next page(s)
             if not insert_happened and not abort_happened and not robust_checking_needed(self):
-                log(f'\n{"*" * 100}', no_time=True)
-                log('In [keyboard_press] - automatic rate: Checking if '
-                    'rate is already available for the next case.\n')
-                self.update_files()
-                files_already_updated = True
-
-                # if the rate exists, perform updates based on available ratings
-                rate = get_rate_if_already_exists(self.curr_left_file, self.curr_right_file)
-
-                if rate is None:
-                    log(f'In [keyboard_press] - automatic rate: rate NOT already available. '
-                        f'Updating window to get the rate....')
-
-                while rate is not None:  # rate already exists
-                    log(f'In [keyboard_press] - automatic rate: rate ALREADY AVAILABLE '
-                        f'for the the next case and is: {rate}')
-                    if matches_binary_insert_rule(self, rate):
-                        log(f'In [keyboard_press] - automatic rate: matches with insertion rule. Inserting...')
-                        insert_with_binary_inds(self, rate, self.curr_left_file)
-                        reset_attributes_and_increase_index(self)
-                        files_already_updated = False
-                        break
-
-                    else:
-                        update_binary_inds(self, rate)
-                        reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
-                        self.update_files()
-                        rate = get_rate_if_already_exists(self.curr_left_file, self.curr_right_file)
-                        log(f'In [keyboard_press] - automatic rate: updated - again checking '
-                            f'if already available for the next case...')
-                        if rate is None:
-                            log(f'In [keyboard_press] - automatic rate: rate NOT already available. '
-                                f'Updating window to get the rate....')
-                log(f'{"*" * 100}\n', no_time=True)
+                files_already_updated = _check_rates_automatically()
+                # log(f'\n{"*" * 100}', no_time=True)
+                # log('In [keyboard_press] - automatic rate: Checking if '
+                #     'rate is already available for the next case.\n')
+                # self.update_files()
+                # update_file_called = True
+                #
+                # # if the rate exists, perform updates based on available ratings
+                # rate = get_rate_if_already_exists(self.curr_left_file, self.curr_right_file)
+                #
+                # if rate is None:
+                #     log(f'In [keyboard_press] - automatic rate: rate NOT already available. '
+                #         f'Updating window to get the rate....')
+                #
+                # while rate is not None:  # rate already exists
+                #     log(f'In [keyboard_press] - automatic rate: rate ALREADY AVAILABLE '
+                #         f'for the the next case and is: {rate}')
+                #     if matches_binary_insert_rule(self, rate):
+                #         log(f'In [keyboard_press] - automatic rate: matches with insertion rule. Inserting...')
+                #         insert_with_binary_inds(self, rate, self.curr_left_file)
+                #         reset_attributes_and_increase_index(self)
+                #         update_file_called = False
+                #         break
+                #
+                #     else:
+                #         update_binary_inds(self, rate)
+                #         reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
+                #         self.update_files()
+                #         rate = get_rate_if_already_exists(self.curr_left_file, self.curr_right_file)
+                #         log(f'In [keyboard_press] - automatic rate: updated - again checking '
+                #             f'if already available for the next case...')
+                #         if rate is None:
+                #             log(f'In [keyboard_press] - automatic rate: rate NOT already available. '
+                #                 f'Updating window to get the rate....')
+                # log(f'{"*" * 100}\n', no_time=True)
 
             # asynchronously update the frame and photos based in the new low and high indices
             thread = Thread(target=self.update_frame, kwargs={'files_already_updated': files_already_updated})
