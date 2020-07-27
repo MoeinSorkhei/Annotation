@@ -169,11 +169,14 @@ class Window:
         self.photos_panel = Frame(master)
         self.photos_panel.pack(side=TOP)
 
-        self.left_frame = Frame(master=self.photos_panel, background="red")
-        self.left_frame.pack(side=LEFT, padx=10, pady=10)
+        # self.left_frame = Frame(master=self.photos_panel, background="red")
+        self.left_frame = Frame(master=self.photos_panel)
+        # self.left_frame.pack(side=LEFT, padx=10, pady=10)
+        self.left_frame.pack(side=LEFT)
 
         self.right_frame = Frame(master=self.photos_panel)
-        self.right_frame.pack(side=RIGHT, padx=10, pady=10)
+        # self.right_frame.pack(side=RIGHT, padx=10, pady=10)
+        self.right_frame.pack(side=RIGHT)
 
         # ======== show left and right images with caption, if caption enabled
         self.left_photo, self.right_photo = read_img_and_resize_if_needed(self)
@@ -182,7 +185,7 @@ class Window:
         self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
 
         self.right_photo_panel = Label(self.right_frame, image=self.right_photo)
-        self.right_photo_panel.pack(side=RIGHT)
+        self.right_photo_panel.pack(side=RIGHT, padx=5, pady=5)
 
     def init_caption_panels(self):
         self.left_caption_panel = Label(self.photos_panel, text=shorten_file_name(pure_name(self.curr_left_file)),
@@ -332,6 +335,19 @@ class Window:
         logic.log(f'In [update_files]: Right file: "{pure_name(self.curr_right_file)}"')
         # logic.log(f'In [update_files]: Right Full path: "{self.curr_right_file}" \n')
 
+    def reset_backgrounds(self):
+        self.left_frame.configure(bg="white")
+        self.right_frame.configure(bg="white")
+
+    def draw_boarder(self, pressed):
+        if eval(pressed) == '1':
+            self.left_frame.configure(bg='red')
+            self.left_frame.after(500, self.reset_backgrounds)
+
+        elif eval(pressed) == '2':
+            self.right_frame.configure(bg='red')
+            self.right_frame.after(500, self.reset_backgrounds)
+
     def update_photos(self, frame):
         """
         :param frame:
@@ -390,15 +406,13 @@ class Window:
             if self.show_mode == 'side_by_side':
                 self.update_files()
 
-                # ======== make background appear on pages other than the final
-                self.left_frame.configure(background="red")
                 # ======== update photos
                 self.left_photo, self.right_photo = read_img_and_resize_if_needed(self)
                 self.left_photo_panel.configure(image=self.left_photo)
                 self.right_photo_panel.configure(image=self.right_photo)
 
                 self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
-                self.right_photo_panel.pack(side=RIGHT)
+                self.right_photo_panel.pack(side=RIGHT, padx=5, pady=5)
 
                 # ======== update captions
                 if self.ui_verbosity > 1:
@@ -624,6 +638,11 @@ class Window:
         pressed = repr(event.char)
         logic.log(f'In [keyboard_press]: pressed {pressed}')
 
+        # draw boarder asynchronously
+        if eval(pressed) == '1' or eval(pressed) == '2':
+            thread = Thread(target=self.draw_boarder, kwargs={'pressed': pressed})
+            thread.start()
+
         # ======== take action if keystroke is valid (ie, prev_result is confirmed)
         if keystroke_is_valid(self, pressed):
             save_rating(self.curr_left_file, self.curr_right_file, eval(pressed))
@@ -695,5 +714,8 @@ class Window:
                         reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
 
             upload_results_regularly(self)
-            self.update_frame()  # update the frame and photos based in the new low and high indices
 
+            # asynchronously update the frame and photos based in the new low and high indices
+            # self.update_frame(pressed=pressed)
+            thread = Thread(target=self.update_frame)
+            thread.start()

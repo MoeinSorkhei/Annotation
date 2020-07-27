@@ -208,7 +208,7 @@ if __name__ == '__main__':
 
 # SCRIPTS:
 # =========  On my mac:
-# /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session_name sort --data_mode test --debug
+# python3 main.py --annotator Moein --session_name sort --data_mode test --debug
 # /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session_name sort --data_mode test --ui_verbosity 2
 # /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session_name sort --data_mode train --debug
 # /Users/user/.conda/envs/ADL/bin/python main.py --annotator Moein --session_name split --n_bins 2 --debug
