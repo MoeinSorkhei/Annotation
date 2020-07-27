@@ -40,7 +40,7 @@ ___
 * `--session_name`: Specifies the type of the session, could be either `sort` (for rating test/train images) or `split` (for splitting the perfectly sorted list).
 * `--data_mode`: Specifies the type of data that is being rated, could be either `test` or `train`.
 * `--annotator`: The name of the annotator, this should always be provided when beginning a session for rating test/train images.
-* `--ui_verbosity`: Determines how much the UI should be verbose (default: 1). Use a value of 2 to see the search intervals and other details in the UI.
+* `--ui_verbosity`: Determines how much the UI should be verbose (default: 1). Use a value of 2 to also see the image names, a value of 3 to also see the search intervals and other details in the UI. A value of 4 is used for debugging (automatically set when using `--debug`).
 * `--max_imgs_per_session`: The number images that one should rate in each session (default: 10).
 * `--resize_factor`: Determines how much the DICOM high resolution images should be resized (default: 7).
 
