@@ -34,5 +34,5 @@ params = {
 
     "max_imgs_per_session": 10,
     "resize_factor": 7,
-    "email_interval": 10
+    "email_interval": None
 }

@@ -240,11 +240,11 @@ class Window:
                 # return f'{(self.low + self.high) // 2}' if self.data_mode == 'test' \
                 #     else f'{(self.low + self.high) // 2 + 1}'
 
-        if self.ui_verbosity == 1:
+        if self.ui_verbosity < 3:
             return ''
 
         verbose_text = ''
-        if self.ui_verbosity >= 2:
+        if self.ui_verbosity >= 3:
             interval_text = f'Search interval: [{self.low} - {self.high}] ' \
                             f'of [{0} - {len(self.sorted_list) - 1 if self.data_mode == "test" else len(self.bins_list) - 1}]'
 
@@ -256,7 +256,7 @@ class Window:
             level_2_text = f'{interval_text} - {compare_text}'
             verbose_text += f'\n\n{level_2_text}'
 
-        if self.ui_verbosity == 3:
+        if self.ui_verbosity == 4:
             anchors_text = f'm1_anchor: {as_text(self.m1_anchor)} \t m2_anchor: {as_text(self.m2_anchor)}'
 
             rep_text = ''
@@ -414,7 +414,7 @@ class Window:
                 self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
                 self.right_photo_panel.pack(side=RIGHT, padx=5, pady=5)
 
-                # ======== update captions
+                # ======== update captions (image names)
                 if self.ui_verbosity > 1:
                     self.left_caption_panel.configure(text=shorten_file_name(pure_name(self.curr_left_file)))
                     self.right_caption_panel.configure(text=shorten_file_name(pure_name(self.curr_right_file)))

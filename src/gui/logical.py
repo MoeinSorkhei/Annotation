@@ -1,4 +1,5 @@
 from threading import Thread
+import concurrent.futures
 
 from logic import *
 import logic
@@ -592,19 +593,26 @@ def rate_to_text(rate):
         return 'equal'
 
 
-def read_img_and_resize_if_needed(window):
+def read_img_and_resize_if_needed(window, threading=False):
     if window.show_mode == 'single':
         # return logic.read_dicom_image(self.current_file, self.img_size)
         return logic.read_dicom_and_resize(window.current_file)
 
     if window.show_mode == 'side_by_side':
-        # log(f'In [read_img_and_resize_if_needed]: reading the left file')
-        left_photo = logic.read_dicom_and_resize(window.curr_left_file)
+        if threading:  # does not work at the moment
+            # left_thread = Thread(target=logic.read_dicom_and_resize, kwargs={'file': window.curr_left_file})
+            # right_thread = Thread(target=logic.read_dicom_and_resize, kwargs={'file': window.curr_right_file})
+            # left_thread.start()
+            # right_thread.start()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                left_thread = executor.submit(logic.read_dicom_and_resize, window.curr_left_file)
+                right_thread = executor.submit(logic.read_dicom_and_resize, window.curr_right_file)
+                left_photo, right_photo = left_thread.result(), right_thread.result()
 
-        # log(f'In [read_img_and_resize_if_needed]: reading the right file')
-        right_photo = logic.read_dicom_and_resize(window.curr_right_file)
+        else:
+            left_photo = logic.read_dicom_and_resize(window.curr_left_file)
+            right_photo = logic.read_dicom_and_resize(window.curr_right_file)
 
-        # log(f'In [read_img_and_resize_if_needed]: reading left and right files: done.\n')
         return left_photo, right_photo
 
 
