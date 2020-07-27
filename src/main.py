@@ -218,3 +218,8 @@ if __name__ == '__main__':
 
 # trial run
 # python3 main.py --make_seed_list
+
+# actual run
+# use --email_interval option
+# use --max_imgs_per_session option
+# use --resize_factor option

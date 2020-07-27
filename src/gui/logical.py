@@ -146,7 +146,7 @@ def robust_checking_needed(window, print_details=False):
 
     # return search_type_match and length_match and level_match
     if print_details:
-        log(f'In [robust_checking_needed]: length_match: {length_match}, level_match: {level_match}\n')
+        log(f'In [robust_checking_needed]: length_match: {length_match}, level_match: {level_match}')
     return length_match and level_match
 
 
@@ -189,6 +189,12 @@ def calc_rule(m1_rate, m2_rate):
         return 'insert_m2'
     else:
         return 'inconsistency'
+
+
+def matches_binary_insert_rule(window, rate):
+    if rate == '9' or window.high == window.low or (window.high - window.low == 1 and rate == '2'):
+        return True
+    return False
 
 
 # ========== functions for changing window attributes
@@ -341,7 +347,12 @@ def reset_attributes(window, exclude_inds=False, new_comp_level=None):
     if hasattr(window, 'rep'):
         window.rep = None
 
-    log(f'In [reset_attributes]: attributes are reset for the new image.')
+    log(f'In [reset_attributes]: attributes are reset for the new image.\n\n')
+
+
+def reset_attributes_and_increase_index(window):
+    reset_attributes(window)
+    window.current_index += 1
 
 
 def calc_ternary_anchors(window):
@@ -370,47 +381,47 @@ def update_ternary_indices(window, update_type):
         raise NotImplementedError('In [update_ternary_indices]: unexpected update_type')
 
 
-def update_ternary_indices0(window, pressed):
-    m1_anchor = window.m1_anchor
-    m2_anchor = window.m2_anchor
-    m1_rate = window.m1_rate
-    m2_rate = eval(pressed)
+# def update_ternary_indices0(window, pressed):
+#     m1_anchor = window.m1_anchor
+#     m2_anchor = window.m2_anchor
+#     m1_rate = window.m1_rate
+#     m2_rate = eval(pressed)
+#
+#     if m1_rate == '1' and m2_rate == '1':
+#         window.low = m1_anchor
+#         log(f'In [update_ternary_indices]: '
+#             f'low increased to m1_anchor: {m1_anchor}')
+#
+#     elif m1_rate == '1' and m2_rate == '2':
+#         window.low = m1_anchor
+#         window.high = m2_anchor
+#         log(f'In [update_ternary_indices]: '
+#             f'low increased to m1_anchor: {m1_anchor}, high decreased to m2_anchor: {m2_anchor}')
+#
+#     elif m1_rate == '2' and m2_rate == '2':
+#         window.high = m2_anchor
+#         log(f'In [update_ternary_indices]: '
+#             f'high decreased to m2_anchor: {m2_anchor}')
+#
+#     else:
+#         log(f'In [update_ternary_indices]: m1 and m2 rates are m1 = {m1_rate}, m2 = {m2_rate}')
+#         raise NotImplementedError('Unexpected m1 and m2 rates')
+#
+#     log(f'In [update_ternary_indices]: Updated indices are low: {window.low}, high: {window.high} \n')
 
-    if m1_rate == '1' and m2_rate == '1':
-        window.low = m1_anchor
-        log(f'In [update_ternary_indices]: '
-            f'low increased to m1_anchor: {m1_anchor}')
 
-    elif m1_rate == '1' and m2_rate == '2':
-        window.low = m1_anchor
-        window.high = m2_anchor
-        log(f'In [update_ternary_indices]: '
-            f'low increased to m1_anchor: {m1_anchor}, high decreased to m2_anchor: {m2_anchor}')
-
-    elif m1_rate == '2' and m2_rate == '2':
-        window.high = m2_anchor
-        log(f'In [update_ternary_indices]: '
-            f'high decreased to m2_anchor: {m2_anchor}')
-
-    else:
-        log(f'In [update_ternary_indices]: m1 and m2 rates are m1 = {m1_rate}, m2 = {m2_rate}')
-        raise NotImplementedError('Unexpected m1 and m2 rates')
-
-    log(f'In [update_ternary_indices]: Updated indices are low: {window.low}, high: {window.high} \n')
-
-
-def update_binary_inds(window, pressed):
+def update_binary_inds(window, rate):
     """
     This will update the low and high indices for the binary search. In case binary search is completed or 9 is
     pressed by the radiologist, it inserts the image in the right position and resets the low and high indices.
     The behavior of this function depends on whether we are dealing with test or train data.
 
     :param window:
-    :param pressed:
+    :param rate:
     :return:
     """
     mid = (window.low + window.high) // 2  # for train data, this represents bin number
-    if eval(pressed) == '1':  # rated as harder, go to the right half of the list
+    if rate == '1':  # rated as harder, go to the right half of the list
         window.low = mid if (window.high - window.low) > 1 else window.high
         log(f'In [binary_search_step]: '
             f'low increased to {window.low}')
@@ -444,11 +455,11 @@ def insert_with_ternary_inds(window, anchor, item):
         window.prev_result['insert_pos'] = pos
 
 
-def insert_with_binary_inds(window, pressed, item):
+def insert_with_binary_inds(window, rate, item):
     # for test data
     mid = (window.low + window.high) // 2  # for train data, this represents bin number
     if window.data_mode == 'test':
-        if eval(pressed) == '9' or eval(pressed) == '2':  # 9 is pressed, so we insert directly
+        if rate == '9' or rate == '2':  # 9 is pressed, so we insert directly
             insert_index = mid
         else:  # eval(pressed) == '1'
             insert_index = mid + 1
@@ -465,7 +476,7 @@ def insert_with_binary_inds(window, pressed, item):
         if bin_rep_type == 'random':
             pos = 'last'  # always last
         else:
-            if eval(pressed) == '9' or eval(pressed) == '2':
+            if rate == '9' or rate == '2':
                 pos = 'before_last'  # image the new image is easier
             else:
                 pos = 'last'  # if new image is harder

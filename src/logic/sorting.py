@@ -79,7 +79,8 @@ def insert_into_bin_and_save(which_bin, pos, img):
     bin_images = read_imgs_from_bin(which_bin)
     insertion_index = len(bin_images) if pos == 'last' else len(bin_images) - 1
     bin_images.insert(insertion_index, img)
-    log(f'In [insert_into_bin_and_save]: inserting image to the "{pos}" of the bin_{which_bin}.txt: done')
+    log(f'In [insert_into_bin_and_save]: inserting image to the "{pos}" of the bin_{which_bin}.txt: done. '
+        f'Now bin has len: {len(bin_images)}')
     save_bin(which_bin, bin_images)
 
 

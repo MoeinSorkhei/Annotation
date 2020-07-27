@@ -61,7 +61,7 @@ def print_list(sorted_list):
     log(f'In [binary_search_step]: sorted_list:')
     for item in sorted_list:
         log(item, no_time=True)
-    log('________________________________________________________________', no_time=True)
+    log('________________________________________________________________\n\n', no_time=True)
 
 
 # def dict_to_lines(dictionary):
@@ -108,6 +108,7 @@ def append_to_file(filename, item):
 def insert_to_list(lst, pos, item):
     lst.insert(pos, item)
     write_sorted_list_to_file(lst)
+    log(f'In [insert_to_list]: Now sorted list has len: {len(lst)}')
 
 
 def shorten_file_name(filename):
@@ -222,6 +223,25 @@ def remove_last_line_from_file(filename):
     lines = read_file_to_list_if_exists(filename)
     lines = lines[:-1]
     write_list_to_file(lines, filename)
+
+
+def _parse_ratings():
+    ratings_file = globals.params['ratings']
+    ratings = read_file_to_list_if_exists(ratings_file)
+
+    parsed_ratings = []
+    for rating in ratings:
+        left_file, right_file, rate = rating.split('-')
+        parsed_ratings.append((left_file.strip(), right_file.strip(), rate.strip()))
+    return parsed_ratings
+
+
+def get_rate_if_already_exists(left_file, right_file):
+    parsed_ratings = _parse_ratings()
+    for record in parsed_ratings:
+        if record[0] == left_file and record[1] == right_file:
+            return record[2]  # the rate
+    return None
 
 
 def email_results():
