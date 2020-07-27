@@ -64,12 +64,6 @@ def print_list(sorted_list):
     log('________________________________________________________________\n\n', no_time=True)
 
 
-# def dict_to_lines(dictionary):
-#     string = ''
-#     for item in dictionary.items():
-#
-
-
 def print_comparisons_lists(comparisons):
     log('________________________________________________________________', no_time=True)
     log(f'In [print_comparisons_dict]: comparisons:', no_time=True)
@@ -78,12 +72,6 @@ def print_comparisons_lists(comparisons):
         for lst in lists:
             log(lst, no_time=True)
     log('________________________________________________________________', no_time=True)
-
-
-# def read_file_to_list(file):
-#     with open(file) as f:
-#         lines = f.read().splitlines()
-#     return lines
 
 
 def read_file_to_list_if_exists(filename):

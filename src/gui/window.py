@@ -518,50 +518,6 @@ class Window:
             'and prev_result set to None. Updating the frame...\n')
         self.update_frame()
 
-    # def abort_if_not_consistent(self):  # no difference whether to be used for test or train data
-    #     if self.search_type == 'ternary':
-    #         self.current_index += 1
-    #         self.prev_result['aborted'] = True
-    #         raise NotImplementedError
-    #
-    #     else:  # binary
-    #         if self.low_consistency is False or self.high_consistency is False:
-    #             log(f'In [abort_current_case]: increasing current index, '
-    #                 f'resetting indices/indicators, setting prev_result["aborted"] to True...')
-    #
-    #             self.current_index += 1
-    #             self.prev_result['aborted'] = True
-    #             reset_attributes(self)
-    #
-    #             log(f'In [abort_current_case]: aborting: done.\n')
-    #             raise NotImplementedError('Need to make check this part of code')
-    #
-    # def check_for_consistency(self, pressed, with_respect_to):  # no difference whether to be used for test or train data
-    #     if with_respect_to == 'low':
-    #         if is_consistent(pressed, with_respect_to='low'):
-    #             self.low_consistency = True
-    #             log(f'In [check_consistency_and_abort_if_not_consistent]: case IS consistent '
-    #                 f'with respect to "low" \n')
-    #
-    #         else:
-    #             self.low_consistency = False
-    #             log(f'In [check_consistency_and_abort_if_not_consistent]: case IS NOT consistent '
-    #                 f'with respect to "low" \n')
-    #
-    #     if with_respect_to == 'high':
-    #         if is_consistent(pressed, with_respect_to='high'):
-    #             self.high_consistency = True
-    #             log(f'In [check_consistency_and_abort_if_not_consistent]: case IS consistent '
-    #                 f'with respect to "high" \n')
-    #
-    #         else:
-    #             self.high_consistency = False
-    #             log(f'In [check_consistency_and_abort_if_not_consistent]: case IS NOT consistent '
-    #                 f'with respect to "high" \n')
-    #
-    #         log(f'In [check_for_consistency]: low and high indicators changed to: '
-    #             f'"low_consistency": {self.low_consistency}, "high_consistency": {self.high_consistency} \n')
-
     def keep_current_state_in_prev_result(self, pressed):
         if self.prev_result is None:  # either for m1 or normal case
             self.prev_result = {}
@@ -756,40 +712,6 @@ class Window:
             # check automatically if the rate is available for the next page(s)
             if not insert_happened and not abort_happened and not robust_checking_needed(self):
                 files_already_updated = _check_rates_automatically()
-                # log(f'\n{"*" * 100}', no_time=True)
-                # log('In [keyboard_press] - automatic rate: Checking if '
-                #     'rate is already available for the next case.\n')
-                # self.update_files()
-                # update_file_called = True
-                #
-                # # if the rate exists, perform updates based on available ratings
-                # rate = get_rate_if_already_exists(self.curr_left_file, self.curr_right_file)
-                #
-                # if rate is None:
-                #     log(f'In [keyboard_press] - automatic rate: rate NOT already available. '
-                #         f'Updating window to get the rate....')
-                #
-                # while rate is not None:  # rate already exists
-                #     log(f'In [keyboard_press] - automatic rate: rate ALREADY AVAILABLE '
-                #         f'for the the next case and is: {rate}')
-                #     if matches_binary_insert_rule(self, rate):
-                #         log(f'In [keyboard_press] - automatic rate: matches with insertion rule. Inserting...')
-                #         insert_with_binary_inds(self, rate, self.curr_left_file)
-                #         reset_attributes_and_increase_index(self)
-                #         update_file_called = False
-                #         break
-                #
-                #     else:
-                #         update_binary_inds(self, rate)
-                #         reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
-                #         self.update_files()
-                #         rate = get_rate_if_already_exists(self.curr_left_file, self.curr_right_file)
-                #         log(f'In [keyboard_press] - automatic rate: updated - again checking '
-                #             f'if already available for the next case...')
-                #         if rate is None:
-                #             log(f'In [keyboard_press] - automatic rate: rate NOT already available. '
-                #                 f'Updating window to get the rate....')
-                # log(f'{"*" * 100}\n', no_time=True)
 
             # asynchronously update the frame and photos based in the new low and high indices
             thread = Thread(target=self.update_frame, kwargs={'files_already_updated': files_already_updated})

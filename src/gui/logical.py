@@ -381,35 +381,6 @@ def update_ternary_indices(window, update_type):
         raise NotImplementedError('In [update_ternary_indices]: unexpected update_type')
 
 
-# def update_ternary_indices0(window, pressed):
-#     m1_anchor = window.m1_anchor
-#     m2_anchor = window.m2_anchor
-#     m1_rate = window.m1_rate
-#     m2_rate = eval(pressed)
-#
-#     if m1_rate == '1' and m2_rate == '1':
-#         window.low = m1_anchor
-#         log(f'In [update_ternary_indices]: '
-#             f'low increased to m1_anchor: {m1_anchor}')
-#
-#     elif m1_rate == '1' and m2_rate == '2':
-#         window.low = m1_anchor
-#         window.high = m2_anchor
-#         log(f'In [update_ternary_indices]: '
-#             f'low increased to m1_anchor: {m1_anchor}, high decreased to m2_anchor: {m2_anchor}')
-#
-#     elif m1_rate == '2' and m2_rate == '2':
-#         window.high = m2_anchor
-#         log(f'In [update_ternary_indices]: '
-#             f'high decreased to m2_anchor: {m2_anchor}')
-#
-#     else:
-#         log(f'In [update_ternary_indices]: m1 and m2 rates are m1 = {m1_rate}, m2 = {m2_rate}')
-#         raise NotImplementedError('Unexpected m1 and m2 rates')
-#
-#     log(f'In [update_ternary_indices]: Updated indices are low: {window.low}, high: {window.high} \n')
-
-
 def update_binary_inds(window, rate):
     """
     This will update the low and high indices for the binary search. In case binary search is completed or 9 is
