@@ -45,13 +45,9 @@ def read_args_and_adjust():
     return arguments
 
 
-def show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons,
-                                    data_mode, search_type, ui_verbosity, train_bins=None):
-    if mode == 'single':
-        text = 'How hard the image is? 1:  Easy, 2: Medium, 3: Hard'
+def show_window_with_keyboard_input(not_already_sorted, already_sorted, data_mode, ui_verbosity, train_bins=None):
 
-    else:  # only 'binary_insert'
-        text = 'Which image is harder? 1: Left - 2: Right - 9: No difference ' \
+    text = 'Which image is harder? 1: Left - 2: Right - 9: No difference ' \
                '(Note: Even the slightest difference is important).'
 
     root = Tk()  # creates a blank window (or main window)
@@ -61,12 +57,9 @@ def show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, al
     frame = Window(master=root,
                    cases=not_already_sorted,
                    already_sorted=already_sorted,
-                   already_comparisons=already_comparisons,
-                   show_mode=mode,
                    data_mode=data_mode,
-                   search_type=search_type,
                    ui_verbosity=ui_verbosity,
-                   train_bins=train_bins)
+                   n_bins=train_bins)
     root.mainloop()  # run the main window continuously
 
 
@@ -112,8 +105,6 @@ def manage_sessions_and_run(args):
 
     session_name = args.session_name
     data_mode = args.data_mode
-    mode = 'side_by_side'
-    search_type = globals.params['search_type']
 
     ui_verbosity = 1  # default, least verbose
     if globals.debug:
@@ -124,7 +115,8 @@ def manage_sessions_and_run(args):
     log(f"\n\n\n\n{'*' * 150} \n{'*' * 150} \n{'*' * 150} \n{'*' * 150}", no_time=True)
     log(f'In [manage_sessions]: session_name: "{session_name}" - data_mode: {data_mode} - annotator: {args.annotator}')
 
-    if 'sort' in session_name:
+    assert session_name == 'sort' or session_name == 'split'
+    if session_name == 'sort':
         not_already_sorted, already_sorted, n_bins = retrieve_not_already_sorted_files(data_mode)
         if len(not_already_sorted) == 0:
             log(f'In [main]: not_already_sorted images are of len: 0 ==> Session is already complete. Terminating...')
@@ -134,18 +126,10 @@ def manage_sessions_and_run(args):
         max_imgs_per_session = globals.params['max_imgs_per_session']
         not_already_sorted = not_already_sorted[:max_imgs_per_session]
         log(f'In [manage_sessions]: not_already_sorted reduced to have len: {len(not_already_sorted)} in this session.')
-
-        already_comparisons = read_comparison_lists()
-        log(f'In [manage_sessions]: already_comparisons loaded/created of {len(already_comparisons)} keys in it. \n\n')
-
-        show_window_with_keyboard_input(mode, not_already_sorted, already_sorted, already_comparisons,
-                                        data_mode, search_type, ui_verbosity, n_bins)
-
-    elif session_name == 'split':
-        split_sorted_list_to_bins(args.n_bins)
+        show_window_with_keyboard_input(not_already_sorted, already_sorted, data_mode, ui_verbosity, n_bins)
 
     else:
-        raise NotImplementedError
+        split_sorted_list_to_bins(args.n_bins)
 
 
 def main():
@@ -209,8 +193,7 @@ if __name__ == '__main__':
 # SCRIPTS:
 # =========  On my mac:
 # python3 main.py --annotator Moein --session_name sort --data_mode test --resize_factor 15 --debug
-# python3 main.py --annotator Moein --session_name sort --data_mode test --ui_verbosity 2
-# python3 main.py --annotator Moein --session_name sort --data_mode train --debug
+# python3 main.py --annotator Moein --session_name sort --data_mode train --resize_factor 15 --debug
 # python3 main.py --annotator Moein --session_name split --n_bins 2 --debug
 
 # python3 main.py --session sort --data_mode test --debug --resize_factor 10 --max_imgs_per_session 4 --email_interval 1

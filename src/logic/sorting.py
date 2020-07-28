@@ -7,22 +7,6 @@ from .helper import *
 
 
 # ========== functions related to operations on the bins
-def compute_file_paths_for_bin(rate=None, which_bin=None):  # THIS FUNCTION WILL NO LONGER BE NEEDED
-    output_path = globals.params['output_path']
-
-    # for phase 1 -- only need bin_1.txt
-    if rate is not None:  # session name is ignored
-        filename = os.path.join(output_path, f'bin_{rate}.txt')  # e.g., output/bin_1.txt
-        sorted_filename = os.path.join(output_path, f'bin_{rate}_sorted.txt')
-        return filename, sorted_filename
-
-    # for phase 2
-    if which_bin is not None:
-        filename = os.path.join(output_path, f'bin_{which_bin}.txt')  # e.g., output/bin_1.txt
-        sorted_filename = os.path.join(output_path, f'bin_{which_bin}_sorted.txt')  # output/bin_1_sorted.txt
-        return filename, sorted_filename
-
-
 def get_bin_path(which_bin):
     output_path = globals.params['output_path']
     # bin_file = os.path.join(output_path, f'bin_{which_bin + 1}.txt')

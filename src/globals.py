@@ -25,9 +25,7 @@ params = {
     "discarded": os.path.join('..', 'output', 'discarded.txt'),
     "aborted": os.path.join('..', 'output', 'aborted.txt'),
     "ratings": os.path.join('..', 'output', 'ratings.txt'),
-    "comparisons_structured": os.path.join('..', 'output', 'comparisons.json'),
 
-    "search_type": 'ternary',  # or 'normal'
     "robust_levels": 2,
     "robust_min_length": 4,  # minimum length of sorted list/number of bins valid for doing ternary
     "bin_rep_type": 'random',  # or 'last': specifies how the bin representative should be chosen

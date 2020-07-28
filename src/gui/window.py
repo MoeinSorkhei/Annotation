@@ -1,25 +1,18 @@
 from tkinter import *
-from threading import Thread
 import time
 from copy import deepcopy
-from pprint import pformat
 
 from .logical import *
 
 
 class Window:
-    def __init__(self, master, cases, already_sorted, already_comparisons,
-                 show_mode, data_mode, search_type, ui_verbosity, train_bins=None):
+    def __init__(self, master, cases, already_sorted, data_mode, ui_verbosity, n_bins=None):
         """
         :param master:
         :param cases:
         :param already_sorted:
-        :param already_comparisons:
-        :param show_mode:
         :param data_mode:
-        :param search_type: could be 'normal' or 'robust'. If 'normal', the binary search is done as usual, and if
-        'robust', 3-way comparison will be done.
-        :param train_bins:
+        :param n_bins:
 
         Notes:
             - Regarding prev_results:
@@ -45,12 +38,9 @@ class Window:
               resulted in aborting or not. The window itself does not have this attribute, this attributes is added to
               prev_result a key is pressed on the window.
         """
-        # ======== attributes
         self.master = master
         self.cases = cases
-        self.show_mode = show_mode  # single or side_by_side
         self.data_mode = data_mode  # test or train
-        self.search_type = search_type   # used in robust checking
         self.ui_verbosity = ui_verbosity
         self.start_time = int(time.time() // 60)  # used for stat panel
         self.case_number = None
@@ -60,107 +50,66 @@ class Window:
         logic.log(f"{'_' * 150}\nIn Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
         master.bind("<Key>", self.keyboard_press)  # bind keyboard press to function
 
-        # init attributes
-        if show_mode == 'single':
-            self.current_index = 0
-            print(f'start time: {self.start_time}')
-            self.init_or_update_case_number()
-            log_current_index(self, called_from='__init__')
+        self.curr_left_file, self.curr_right_file = None, None
+        self.comp_level = 1
 
-            self.current_file = cases[self.current_index]  # this first file
-            multi_log([f'Image: "{pure_name(self.current_file)}"', f'Full path: "{self.current_file}" \n'])
+        self.m1_rate = None  # default
+        self.m2_rate = None
+        self.m1_anchor = None
+        self.m2_anchor = None
 
-            # ======== frame for putting things into it
-            self.frame = Frame(master=master)
-            self.frame.pack(side=TOP)
-
-            # ======== show image with caption, if caption enabled
-            self.photo = read_and_resize_imgs(self)
-
-            # ==== load the photo in a tkinter label
-            self.photo_panel = Label(master, image=self.photo)
-            self.photo_panel.pack(side=TOP)
-
-            # ==== caption panel (image name) if enabled
-            if globals.debug:
-                self.caption_panel = Label(self.frame, text=pure_name(self.current_file), font='-size 10')
-                self.caption_panel.pack(side=TOP)
-
-        if show_mode == 'side_by_side':
-            # ======== comparisons_list which contains, for very image, lists of images that were compared against it
-            # this file only has comparisons in a structured way, nothing more
-            self.comparisons = already_comparisons
-            self.curr_left_file, self.curr_right_file = None, None
-            self.comp_level = 1
-
-            if search_type == 'binary':
-                self.low_consistency = 'unspecified'
-                self.high_consistency = 'unspecified'
-
-            if search_type == 'ternary':
-                self.m1_rate = None  # default
-                self.m2_rate = None
-                self.m1_anchor = None
-                self.m2_anchor = None
-
-            if self.data_mode == 'test':
-                if len(already_sorted) > 0:  # the file sorted.txt already exists, so create the list based on them
-                    self.sorted_list = already_sorted
-                    log(f'In Window [__init__]: there ARE already_sorted images ==> init sorted_list with already_sorted '
-                        f'images of len {len(self.sorted_list)}.')
-                    self.current_index = 0
-
-                else:  # no sorted.txt exists, construct the list from scratch
-                    self.sorted_list = [self.cases[0]]
-                    log(f'In Window [__init__]: there are NO already_sorted images ==> init sorted_list with the first image '
-                        f'in the cases. sorted_list has len: {len(self.sorted_list)}.')
-                    self.current_index = 1  # because the first image is used to create the sorted_list
-
-                self.comparisons.update({self.cases[0]: [[], [], []]})  # add the first ref image (which has no comparisons so far)
-                log(f'In Window [__init__]: init sorted_list with len {len(self.sorted_list)}.')
-
-                self.low = 0
-                self.high = len(self.sorted_list) - 1
-
-                self.init_or_update_case_number()
-                log_current_index(self, called_from='__init__')
-                self.update_files()  # left and right files to be shown
-
-            # train mode
-            else:
-                if search_type == 'ternary':
-                    self.m1_rep = None  # whenever m1_anchor has a value, m1_rep should also have a value
-                    self.m2_rep = None  # representatives are actual image names
-                    self.rep = None  # used only in binary search - m1_rep and m2_rep only used in robust checking
-
-                self.bins_list = list(range(train_bins))  # e.g. [0, ..., 31], only indicates bin indices
+        if self.data_mode == 'test':
+            if len(already_sorted) > 0:  # the file sorted.txt already exists, so create the list based on them
+                self.sorted_list = already_sorted
+                log(f'In Window [__init__]: there ARE already_sorted images ==> init sorted_list with already_sorted '
+                    f'images of len {len(self.sorted_list)}.')
                 self.current_index = 0
-                log(f'In Window [__init__]: init bins_list with len: {len(self.bins_list)}.')  # ony used for comparing indices
 
-                self.low = 0
-                self.high = len(self.bins_list) - 1
+            else:  # no sorted.txt exists, construct the list from scratch
+                self.sorted_list = [self.cases[0]]
+                log(f'In Window [__init__]: there are NO already_sorted images ==> init sorted_list with the first image '
+                    f'in the cases. sorted_list has len: {len(self.sorted_list)}.')
+                self.current_index = 1  # because the first image is used to create the sorted_list
 
-                self.init_or_update_case_number()
-                log_current_index(self, called_from='__init__')
-                self.update_files()
+            log(f'In Window [__init__]: init sorted_list with len {len(self.sorted_list)}.')
 
-            # ======= define attributes and set to None. They will be initialized in different functions.
-            self.left_frame, self.right_frame = None, None
-            self.left_photo, self.right_photo = None, None
+            self.low = 0
+            self.high = len(self.sorted_list) - 1
 
-            self.left_caption_panel, self.right_caption_panel = None, None
-            self.photos_panel, self.left_photo_panel, self.right_photo_panel = None, None, None
+        # train mode
+        else:
+            self.m1_rep = None  # whenever m1_anchor has a value, m1_rep should also have a value
+            self.m2_rep = None  # representatives are actual image names
+            self.rep = None  # used only in binary search - m1_rep and m2_rep only used in robust checking
 
-            self.stat_panel = None
-            self.prev_button, self.fin_button = None, None
-            self.discard_button = None
+            self.bins_list = list(range(n_bins))  # e.g. [0, ..., 31], only indicates bin indices
+            self.current_index = 0
+            log(f'In Window [__init__]: init bins_list with len: {len(self.bins_list)}.')  # ony used for comparing indices
 
-            self.init_frames_and_photos(master)  # init and pack
-            self.init_stat_panel_and_buttons(master)  # init and pack
-            self.update_stat()  # put content
+            self.low = 0
+            self.high = len(self.bins_list) - 1
 
-            if self.ui_verbosity > 1:
-                self.init_caption_panels()
+        self.init_or_update_case_number()
+        log_current_index(self, called_from='__init__')
+        self.update_files()
+
+        # ======= define attributes and set to None. They will be initialized in different functions.
+        self.left_frame, self.right_frame = None, None
+        self.left_photo, self.right_photo = None, None
+
+        self.left_caption_panel, self.right_caption_panel = None, None
+        self.photos_panel, self.left_photo_panel, self.right_photo_panel = None, None, None
+
+        self.stat_panel = None
+        self.prev_button, self.fin_button = None, None
+        self.discard_button = None
+
+        self.init_frames_and_photos(master)  # init and pack
+        self.init_stat_panel_and_buttons(master)  # init and pack
+        self.update_stat()  # put content
+
+        if self.ui_verbosity > 1:
+            self.init_caption_panels()
 
     # ======================================== UI-level functions  ========================================
     # =====================================================================================================
@@ -297,8 +246,6 @@ class Window:
         self.curr_left_file = self.cases[self.current_index]  # left photo unchanged as reference
 
         if robust_checking_needed(self, print_details=False):
-            # log(f'In [update_files]: ROBUST CHECKING NEEDED...')
-            # init anchor and rep if None, otherwise use them
             _curr_anchor, _curr_rep = init_or_use_anchor_and_rep(self)
 
             # update right file for test mode
@@ -314,7 +261,6 @@ class Window:
                     f'show representative: "{pure_name(_curr_rep)}" of bin_{_curr_anchor}.txt\n')
 
         else:
-            # log(f'In [update_files]: NO ROBUST CHECKING NEEDED... \n')
             mid = (self.low + self.high) // 2
             if self.data_mode == 'test':
                 self.curr_right_file = self.sorted_list[mid]  # right photo changed to be compared against
@@ -373,56 +319,27 @@ class Window:
               aborted the case if one of them have been False.
         """
         if frame == 'final':
-            if self.show_mode == 'single':
-                self.photo_panel.pack_forget()
-                if globals.debug:
-                    self.caption_panel.pack_forget()
+            self.left_frame.configure(background="white")  # remove background on the final page
+            self.left_photo_panel.pack_forget()
+            self.right_photo_panel.pack_forget()
 
-            if self.show_mode == 'side_by_side':
-                self.left_frame.configure(background="white")  # remove background on the final page
-                self.left_photo_panel.pack_forget()
-                self.right_photo_panel.pack_forget()
-
-                if globals.debug:
-                    self.left_caption_panel.pack_forget()
-                    self.right_caption_panel.pack_forget()
+            if globals.debug:
+                self.left_caption_panel.pack_forget()
+                self.right_caption_panel.pack_forget()
 
         else:
-            if self.show_mode == 'single':
-                # ======== update current file
-                self.current_file = self.cases[self.current_index]  # next file path
-                logic.log(f'Image: "{pure_name(self.current_file)}"')
-                logic.log(f'Full path: "{self.current_file}" \n')
+            if not files_already_updated:
+                self.update_files()
 
-                # ======== update the image
-                self.photo = read_and_resize_imgs(self)  # resize next file
-                self.photo_panel.configure(image=self.photo)  # update the image
-                self.photo_panel.image = self.photo
-                self.photo_panel.pack(side=TOP)
+            # ======== update photos
+            self._load_images_into_panels()
 
-                # ======== update caption
-                if globals.debug:
-                    self.caption_panel.configure(text=pure_name(self.current_file))  # update the caption
-                    self.caption_panel.pack(side=TOP)
-
-            if self.show_mode == 'side_by_side':
-                if not files_already_updated:
-                    self.update_files()
-
-                # ======== update photos
-                self._load_images_into_panels()
-                # self.left_photo, self.right_photo = read_img_and_resize_if_needed(self)
-                # self.left_photo_panel.configure(image=self.left_photo)
-                # self.right_photo_panel.configure(image=self.right_photo)
-                # self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
-                # self.right_photo_panel.pack(side=RIGHT, padx=5, pady=5)
-
-                # ======== update captions (image names)
-                if self.ui_verbosity > 1:
-                    self.left_caption_panel.configure(text=shorten_file_name(pure_name(self.curr_left_file)))
-                    self.right_caption_panel.configure(text=shorten_file_name(pure_name(self.curr_right_file)))
-                    self.left_caption_panel.pack(side=LEFT)
-                    self.right_caption_panel.pack(side=RIGHT)
+            # ======== update captions (image names)
+            if self.ui_verbosity > 1:
+                self.left_caption_panel.configure(text=shorten_file_name(pure_name(self.curr_left_file)))
+                self.right_caption_panel.configure(text=shorten_file_name(pure_name(self.curr_right_file)))
+                self.left_caption_panel.pack(side=LEFT)
+                self.right_caption_panel.pack(side=RIGHT)
 
     def update_frame(self, files_already_updated=False):
         """
@@ -479,35 +396,28 @@ class Window:
             3. We decrement the index of the reference image (left image) if the index was increased the previous step.
             4. Once all the indices and the list have been reverted, we update the frame.
         """
-        if self.show_mode == 'side_by_side':
-            log(f'In [show_previous_case]: Clicked "show_previous_case".')
+        log(f'In [show_previous_case]: Clicked "show_previous_case".')
 
-            remove_last_rating()
+        remove_last_rating()
+        log(f'In [show_previous_case]: '
+            f'removed the last rate')
+
+        # remove if we have inserted
+        if 'insert_index' in self.prev_result.keys():
+            log(f'In [show_previous_case]: "insert_index" available in prev_result, '
+                f'should remove from list...')
+            remove_last_inserted(self)
+
+        if 'aborted' in self.prev_result.keys() and self.prev_result['aborted']:
             log(f'In [show_previous_case]: '
-                f'removed the last rate')
+                f'removed last aborted item from aborted file.')
+            remove_last_aborted()
 
-            # remove if we have inserted
-            if 'insert_index' in self.prev_result.keys():
-                log(f'In [show_previous_case]: "insert_index" available in prev_result, '
-                    f'should remove from list...')
-                remove_last_inserted(self)
+        # revert the window attributes
+        revert_attributes(self)
 
-            if 'aborted' in self.prev_result.keys() and self.prev_result['aborted']:
-                log(f'In [show_previous_case]: '
-                    f'removed last aborted item from aborted file.')
-                remove_last_aborted()
-
-            # revert the window attributes
-            revert_attributes(self)
-
-            self.prev_result = None  # because now we are in the previous window
-            log(f'In [show_previous_case]: set prev_result to None. Updating frame to show the previous case...')
-
-        else:
-            # previously_pressed = None
-            self.prev_result = None  # because now we are in the previous window
-            log(f'In [show_previous_case]: Clicked "show_previous_case" ==> prev_result set to None. '
-                f'Updating frame to show the previous case...')
+        self.prev_result = None  # because now we are in the previous window
+        log(f'In [show_previous_case]: set prev_result to None. Updating frame to show the previous case...')
 
         self.update_frame()
 
@@ -551,20 +461,6 @@ class Window:
             self.prev_result['m1_rep'] = self.m1_rep
             self.prev_result['m2_rep'] = self.m2_rep
             self.prev_result['rep'] = self.rep
-
-        # for binary search
-        elif self.search_type == 'binary' and robust_checking_needed(self):  # 'binary'
-            self.prev_result['low'] = self.low
-            self.prev_result['high'] = self.high
-            self.prev_result['low_consistency'] = self.low_consistency
-            self.prev_result['high_consistency'] = self.high_consistency
-            self.prev_result['rate'] = eval(pressed)
-            self.prev_result['aborted'] = False  # default, will set to True in the abort function
-
-            log(f'In [keep_current_state_in_prev_result]: updated prev_result - now prev_result is: \n'
-                f'{self.prev_result} \n')
-
-            raise NotImplementedError('Need to do consistency check here')
 
         log(f'In [keep_current_state_in_prev_result]: now prev_result is: \n{shorten(deepcopy(self.prev_result))}\n')
 
@@ -640,78 +536,73 @@ class Window:
             thread.start()
 
         # ======== take action if keystroke is valid (ie, prev_result is confirmed)
-        if keystroke_is_valid(self, pressed):
+        if keystroke_is_valid(pressed):
             save_rating(self.curr_left_file, self.curr_right_file, eval(pressed))
             log(f'In [keyboard_press]: saved the rating\n')
             files_already_updated = False
             insert_happened = False
             abort_happened = False
 
-            if self.show_mode == 'single':
-                # self.prev_result = (pure_name(self.current_file), eval(pressed))
-                self.prev_result = (self.current_file, eval(pressed))
-
-            if self.show_mode == 'side_by_side':
-                if robust_checking_needed(self):
-                    # showing for m1
-                    if showing_window_for(self) == 'm1':
-                        log(f'In [keyboard_press]: showing '
-                            f'window for: m1')
-                        self.prev_result = None  # init prev result from scratch
-                        self.keep_current_state_in_prev_result(pressed)
-                        self.m1_rate = eval(pressed)  # to be used in the next page
-
-                    # showing for m2
-                    else:
-                        log(f'In [keyboard_press]: showing '
-                            f'window for: m2')
-                        self.keep_current_state_in_prev_result(pressed)
-                        rule = calc_rule(self.m1_rate, eval(pressed))
-
-                        if 'update' in rule:
-                            update_ternary_indices(self, update_type=rule)
-                            reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
-                            log(f'In [keyboard_press]: Updated ternary indices according to "{rule}". '
-                                f'Now low = {self.low}, high = {self.high}.\n')
-
-                        elif rule == 'insert_m1':
-                            insert_with_ternary_inds(self, anchor=self.m1_anchor, item=self.curr_left_file)
-                            reset_attributes_and_increase_index(self)
-                            insert_happened = True
-                            log(f'In [keyboard_press]: inserted directly to "m1_anchor" and reset attributes - '
-                                f'current_index increased to {self.current_index}')
-
-                        elif rule == 'insert_m2':
-                            insert_with_ternary_inds(self, anchor=self.m2_anchor, item=self.curr_left_file)
-                            reset_attributes_and_increase_index(self)
-                            insert_happened = True
-                            log(f'In [keyboard_press]: inserted directly to "m2_anchor" and reset attributes - '
-                                f'current_index increased to {self.current_index}')
-
-                        else:  # abort
-                            self.prev_result['aborted'] = True
-                            reset_attributes_and_increase_index(self)
-                            abort_happened = True
-                            save_to_aborted_list(self.curr_left_file)
-                            log(f'In [keyboard_press]: rates are INCONSISTENT. Case aborted and reset attributes - '
-                                f'current_index increased to: {self.current_index}')
-
-                # normal binary mode
-                else:
+            if robust_checking_needed(self):
+                # showing for m1
+                if showing_window_for(self) == 'm1':
+                    log(f'In [keyboard_press]: showing '
+                        f'window for: m1')
+                    self.prev_result = None  # init prev result from scratch
                     self.keep_current_state_in_prev_result(pressed)
+                    self.m1_rate = eval(pressed)  # to be used in the next page
 
-                    # insert
-                    if matches_binary_insert_rule(self, eval(pressed)):
-                        insert_with_binary_inds(self, eval(pressed), self.curr_left_file)
+                # showing for m2
+                else:
+                    log(f'In [keyboard_press]: showing '
+                        f'window for: m2')
+                    self.keep_current_state_in_prev_result(pressed)
+                    rule = calc_rule(self.m1_rate, eval(pressed))
+
+                    if 'update' in rule:
+                        update_ternary_indices(self, update_type=rule)
+                        reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
+                        log(f'In [keyboard_press]: Updated ternary indices according to "{rule}". '
+                            f'Now low = {self.low}, high = {self.high}.\n')
+
+                    elif rule == 'insert_m1':
+                        insert_with_ternary_inds(self, anchor=self.m1_anchor, item=self.curr_left_file)
                         reset_attributes_and_increase_index(self)
                         insert_happened = True
-                        log(f'In [keyboard_press]: reset attributes after binary insert - '
-                            f'current_index increased to: {self.current_index}\n')
+                        log(f'In [keyboard_press]: inserted directly to "m1_anchor" and reset attributes - '
+                            f'current_index increased to {self.current_index}')
 
-                    # update indices
-                    else:
-                        update_binary_inds(self, eval(pressed))
-                        reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
+                    elif rule == 'insert_m2':
+                        insert_with_ternary_inds(self, anchor=self.m2_anchor, item=self.curr_left_file)
+                        reset_attributes_and_increase_index(self)
+                        insert_happened = True
+                        log(f'In [keyboard_press]: inserted directly to "m2_anchor" and reset attributes - '
+                            f'current_index increased to {self.current_index}')
+
+                    else:  # abort
+                        self.prev_result['aborted'] = True
+                        reset_attributes_and_increase_index(self)
+                        abort_happened = True
+                        save_to_aborted_list(self.curr_left_file)
+                        log(f'In [keyboard_press]: rates are INCONSISTENT. Case aborted and reset attributes - '
+                            f'current_index increased to: {self.current_index}')
+
+            # normal binary mode
+            else:
+                self.keep_current_state_in_prev_result(pressed)
+
+                # insert
+                if matches_binary_insert_rule(self, eval(pressed)):
+                    insert_with_binary_inds(self, eval(pressed), self.curr_left_file)
+                    reset_attributes_and_increase_index(self)
+                    insert_happened = True
+                    log(f'In [keyboard_press]: reset attributes after binary insert - '
+                        f'current_index increased to: {self.current_index}\n')
+
+                # update indices
+                else:
+                    update_binary_inds(self, eval(pressed))
+                    reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
 
             upload_results_regularly(self)
             # check automatically if the rate is available for the next page(s)

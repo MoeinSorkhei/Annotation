@@ -7,117 +7,8 @@ import globals
 
 
 # ========== functions for checking things/resetting
-def keystroke_is_valid(window, pressed):
-    # ======== only take action if it is a valid number, otherwise will be ignored
-    key_stroke_is_valid = \
-        (window.show_mode == 'single' and (eval(pressed) == '1' or eval(pressed) == '2' or eval(pressed) == '3')) \
-        or \
-        (window.show_mode == 'side_by_side' and (
-                eval(pressed) == '1' or eval(pressed) == '2' or eval(pressed) == '9'))
-    return key_stroke_is_valid
-
-
-def to_be_checked_for_consistency(window):  # checks with the current indices/indicators of the window
-    if window.low_consistency == 'unspecified' and window.high_consistency == 'unspecified':
-        return 'low'
-
-    elif window.low_consistency is True and window.high_consistency == 'unspecified':  # low already consistent
-        return 'high'
-
-    elif window.low_consistency is True and window.high_consistency is True:  # low and right consistent
-        return 'middle'
-
-    else:
-        raise NotImplementedError('The configuration is not implemented')
-
-
-def is_consistent(pressed, with_respect_to):
-    if with_respect_to == 'low' and (eval(pressed) == '1' or eval(pressed) == '9'):
-        return True
-    if with_respect_to == 'high' and (eval(pressed) == '2' or eval(pressed) == '9'):
-        return True
-    return False
-
-
-def prev_case_aborted(window):  # 'aborted' attribute exists only when getting rate for m2 is done
-    if 'aborted' in window.prev_result.keys() and window.prev_result['aborted'] is True:
-    # if 'status' in window.prev_result.keys() and window.prev_result['status'] == 'aborted':
-        return True
-    return False
-
-
-def indices_are_reset(window):
-    if window.data_mode == 'test':
-        return window.low == 0 and window.high == len(window.sorted_list) - 1
-    else:
-        return window.low == 0 and window.high == len(window.bins_list) - 1
-
-
-def index_should_be_changed(window, direction):
-    """
-    This function checks if the current image index should be change base on the current low and high indices.
-    :param window:
-    :param direction:
-    :return:
-
-    Notes:
-        - If the direction is 'next', we only check if low and high refer to the two ends of the list. They are set
-          to the two ends of the list if 1) the binary search has completed, or 2) 9 was pressed.
-
-        - If direction is 'previous', we check: 1) if 9 was previously pressed, the index has already been increased
-          and should be decreased now. Otherwise if low and high are equal, it means that we were on the last step
-          of the binary search, and the index has been increased, so it should be decreased now.
-        - In the case of abortion, the index is directly increased without checking this function.
-    """
-    if direction == 'next':
-        if window.data_mode == 'test':
-            return window.low == 0 and window.high == len(window.sorted_list) - 1
-        else:
-            return window.low == 0 and window.high == len(window.bins_list) - 1
-
-    else:  # direction = 'previous' - previously_pressed should be provided
-        # index should be decreased if we have aborted
-        if prev_case_aborted(window):
-        # if ternary_m1_m2_rates_exist_in_prev_result(window):
-        #    if showing_window_for(window) == 'm1' and prev_case_aborted(window):
-                log(f'In [index_should_be_changed]: prev case was aborted ==> index should be decreased')
-                return True
-
-        prev_low, prev_high = window.prev_result['low'], window.prev_result['high']
-        previously_pressed = window.prev_result['rate']  # if 9 was pressed previously, index has been already increased
-        # usual condition
-        return prev_low == prev_high or previously_pressed == '9'
-
-
-def current_index_has_changed(window):
-    return window.current_index != window.prev_result['current_index']
-
-
-def update_current_index_if_needed(window, direction):  # no difference whether search_mode is 'normal' or 'robust'
-    """
-    Increase in the index is always understood from whether the indices have been reset or not.
-    :param window:
-    :param direction:
-    :return:
-    """
-    if window.show_mode == 'side_by_side':
-        if direction == 'next' and index_should_be_changed(window, 'next'):
-            window.current_index += 1  # index of the next file
-            log('In [possibly_update_index]: Current index increased...')
-
-        elif direction == 'previous' and index_should_be_changed(window, 'previous'):
-            window.current_index -= 1
-            log('In [possibly_update_index]: Current index decreased...')
-
-        else:
-            log('In [possibly_update_index]: No need to increase/decrease current_index...')
-
-    else:
-        # ======== update current index
-        if direction == 'next':
-            window.current_index += 1  # index of the next file
-        else:
-            window.current_index -= 1  # index of the previous file
+def keystroke_is_valid(pressed):
+    return eval(pressed) == '1' or eval(pressed) == '2' or eval(pressed) == '9'
 
 
 def robust_checking_needed(window, print_details=False):
@@ -148,18 +39,6 @@ def robust_checking_needed(window, print_details=False):
     if print_details:
         log(f'In [robust_checking_needed]: length_match: {length_match}, level_match: {level_match}')
     return length_match and level_match
-
-
-def indicators_exist(window):
-    if window.prev_result is None:  # if discard button pressed
-        return False
-    return 'low_consistency' in window.prev_result.keys()  # if 'low_consistency' is among the keys
-
-
-def ternary_m1_m2_rates_exist_in_prev_result(window):
-    if window.prev_result is None:
-        return False
-    return 'm1_rate' in window.prev_result.keys()
 
 
 def showing_window_for(window):  # could possibly add input_type which says if it is window or m1_rate, m2_rate direclty
@@ -198,11 +77,6 @@ def matches_binary_insert_rule(window, rate):
 
 
 # ========== functions for changing window attributes
-def reset_consistency_indicators(window):
-    window.low_consistency = 'unspecified'
-    window.high_consistency = 'unspecified'
-
-
 def init_or_use_rep(window, mid):
     rep = window.rep
     if rep is None:
@@ -477,56 +351,6 @@ def remove_last_inserted(window):
         del_from_bin_and_save(which_bin, insert_pos)
 
 
-def _remove_if_index_has_changed(window):
-    # if index_should_be_changed(window, direction='previous'):
-    if current_index_has_changed(window):  # index has been increased
-        if window.data_mode == 'test':
-            # insertion_index = window.prev_result['mid_index']  # only in this case we have insertion index, otherwise it is None
-            insertion_index = window.prev_result['insert_index']  # only in this case we have insertion index, otherwise it is None
-            del window.sorted_list[insertion_index]  # delete the wrongly inserted element from the list
-            log(f'In [_remove_if_index_has_changed]: index should be decreased ==> '
-                f'removed index {insertion_index} from sorted_list - '
-                f'Now sorted_list has len: {len(window.sorted_list)}')
-
-            log(f'In [_remove_if_index_has_changed]: saving sorted_list with removed index...')
-            write_sorted_list_to_file(window.sorted_list)
-
-            if globals.debug:
-                print_list(window.sorted_list)
-
-        else:  # e.g. prev_result: (left_img, right_img, rate, bin, 'last')
-            which_bin, insert_pos = window.prev_result['mid_index'], window.prev_result['insert_pos']
-            log(f'In [_remove_if_index_has_changed]: removing the "{insert_pos}" element from bin {which_bin}')
-            del_from_bin_and_save(which_bin, insert_pos)
-
-    else:
-        log(f'In [_remove_if_index_has_changed]: index has not changed ==> No need to remove item from list...\n')
-
-
-def remove_item_from_list_if_needed(window):
-    """
-    The behavior of this function depends on whether we are dealing with test or train data.
-    :param window:
-    :return:
-    """
-
-    # no remove if we are getting m2_rate
-    if showing_window_for(window) == 'm2':
-        log(f'In [remove_item_from_list_if_needed]: no remove '
-            f'since since we are getting rate for m2\n')
-        return
-
-    # no remove if increase in index was due to abortion
-    # if prev_case_aborted(window):
-    if window.prev_result['aborted'] is True:
-        log(f'In [remove_item_from_list_if_needed]: no remove '
-            f'since the previous case had been aborted\n')
-        return
-
-    # now if index has changed, insertion has taken place
-    _remove_if_index_has_changed(window)
-
-
 # ========== very generic functions
 def window_attributes(window):
     as_dict = {
@@ -576,76 +400,29 @@ def rate_to_text(rate):
 
 
 def read_and_resize_imgs(window, threading=False):
-    if window.show_mode == 'single':
-        # return logic.read_dicom_image(self.current_file, self.img_size)
-        return logic.read_dicom_and_resize(window.current_file)
+    if threading:  # does not work at the moment
+        # left_thread = Thread(target=logic.read_dicom_and_resize, kwargs={'file': window.curr_left_file})
+        # right_thread = Thread(target=logic.read_dicom_and_resize, kwargs={'file': window.curr_right_file})
+        # left_thread.start()
+        # right_thread.start()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            left_thread = executor.submit(logic.read_dicom_and_resize, window.curr_left_file)
+            right_thread = executor.submit(logic.read_dicom_and_resize, window.curr_right_file)
+            left_photo, right_photo = left_thread.result(), right_thread.result()
 
-    if window.show_mode == 'side_by_side':
-        if threading:  # does not work at the moment
-            # left_thread = Thread(target=logic.read_dicom_and_resize, kwargs={'file': window.curr_left_file})
-            # right_thread = Thread(target=logic.read_dicom_and_resize, kwargs={'file': window.curr_right_file})
-            # left_thread.start()
-            # right_thread.start()
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                left_thread = executor.submit(logic.read_dicom_and_resize, window.curr_left_file)
-                right_thread = executor.submit(logic.read_dicom_and_resize, window.curr_right_file)
-                left_photo, right_photo = left_thread.result(), right_thread.result()
+    else:
+        left_photo = logic.read_dicom_and_resize(window.curr_left_file)
+        right_photo = logic.read_dicom_and_resize(window.curr_right_file)
 
-        else:
-            left_photo = logic.read_dicom_and_resize(window.curr_left_file)
-            right_photo = logic.read_dicom_and_resize(window.curr_right_file)
-
-        return left_photo, right_photo
+    return left_photo, right_photo
 
 
 def log_current_index(window, called_from):
     log(f"\n\n\n\n{'=' * 150} \nIn [{called_from}]: "
         f"Current index: {window.current_index} - Case number: {window.case_number}\n", no_time=True)
-    if window.show_mode != 'single' and window.data_mode != 'train':
+    if window.data_mode != 'train':
         log(f'In [{called_from}]: There are {len(window.sorted_list)} images in the sorted_list\n', no_time=True)
     log(f'Showing window with attributes: \n{window_attributes(window)}\n', no_time=True)
-    # log(f'Showing window with attributes: \n{window_attributes(window)}\n'
-    #     f'Prev_result is: {window.prev_result}\n', no_time=True)
-
-
-def get_prev_imgs_from_prev_result(window):
-    """
-    The way this function checks if the index has been changed or not is that is checks if index should would
-    changed if we wanted to go to the previous frame.
-    :return:
-
-    Notes:
-        - This function is called for saving the previous result once it is confirmed. Since the current indices
-          are changed based on the keyboard button pressed on the current window, it needs the prev_result to retrieve
-          the previous low and high indices and the rate. And since the sorted_list or the bin might have been updated
-          if the index was increased, it needs to do some calculation to get the previous indices.
-    """
-    if window.data_mode == 'test':
-        if index_should_be_changed(window, direction='previous'):
-            right_img = window.prev_result["mid_image"]  # mid_image, the last image compared to before inserting to the sorted list
-            left_img = window.cases[window.current_index - 1]  # the image that was newly inserted
-
-        else:
-            prev_mid = (window.prev_result["low"] + window.prev_result["high"]) // 2
-            right_img = window.sorted_list[prev_mid]  # finding mid_img index, sorted_list has not changed
-            left_img = window.cases[window.current_index]
-
-    else:
-        # prev_bin could always be specified by the mid index, no matter an image has been inserted or not
-        prev_bin = (window.prev_result['low'] + window.prev_result['high']) // 2
-
-        if index_should_be_changed(window, direction='previous'):
-            left_img = window.cases[window.current_index - 1]
-            prev_bin_imgs, insert_pos = read_imgs_from_bin(prev_bin), window.prev_result['insert_pos']
-            # in case item has been inserted: get the correct last item if a new item has been inserted into the bin
-            right_img = prev_bin_imgs[-1] if insert_pos == 'before_last' else prev_bin_imgs[-2]
-
-        else:  # index has not changed
-            left_img = window.cases[window.current_index]
-            # right_img = last_img_in_bin(prev_bin)
-            right_img = bin_representative(prev_bin)   # ABOSLUTELY WRONG; SHOULD READ IT FROM PREV_RESULT
-
-    return left_img, right_img
 
 
 def read_discarded_cases():
@@ -699,94 +476,6 @@ def remove_last_record(from_file):
     records = records[:-1]
     write_list_to_file(records, file)
     log(f'In [remove_last_record]: removed the last record from "{from_file}" and saved it. \n')
-
-
-def update_and_save_comparisons_list(window, left_img, right_img, rate):
-    """
-    NOTES: Comparisons are only with respect to the reference image, ie if left image: 4.dcm is harder than right
-    image: 2.dcm, since the left image is reference, only 2.dcm is added to the easier_list for 4.dcm and 4.dcm is
-    not added to the harder_list for 2.dcm. This is because we only want to keep track of the images that were rated
-    against the reference image (the image that is to be inserted into the list).
-
-    ASSUMPTION: we pay attention to the latest choice by the radiologist if two choices are not compatible.
-    :param window:
-    :param left_img:
-    :param right_img:
-    :param rate:
-    :return:
-    """
-
-    def append_item_not_exists(lst, item):
-        if item not in lst:
-            lst.append(item)
-
-    def add_to_ref_img_easier_list_and_save(ref_img, compared_to, comparisons):
-        easier_list, equal_list, harder_list = comparisons[ref_img]
-        if compared_to in harder_list:  # if right image in harder set, remove it
-            harder_list.remove(compared_to)
-
-        append_item_not_exists(easier_list, compared_to)
-        log(f'In [update_comparison_sets]: added image: "{pure_name(compared_to)}" to easier_list for image: "{pure_name(ref_img)}"')
-        return comparisons
-
-    def add_to_ref_img_harder_list_and_save(ref_img, compared_to, comparisons):
-        easier_list, equal_list, harder_list = comparisons[ref_img]
-        if compared_to in easier_list:
-            easier_list.remove(compared_to)
-
-        append_item_not_exists(harder_list, compared_to)
-        log(f'In [update_comparison_sets]: added image: "{pure_name(compared_to)}" to harder_list for image: "{pure_name(ref_img)}"')
-        return comparisons
-
-    def add_to_ref_img_equal_and_save(ref_img, compared_to, comparisons):
-        easier_list, equal_list, harder_list = comparisons[ref_img]
-        if compared_to in harder_list:
-            harder_list.remove(compared_to)
-
-        if compared_to in easier_list:
-            easier_list.remove(compared_to)
-
-        append_item_not_exists(equal_list, compared_to)
-        log(f'In [update_comparison_sets]: added image: "{pure_name(compared_to)}" to equal_list for image: "{pure_name(ref_img)}"')
-        return comparisons
-
-    # ======== add the images as the keys for the first time
-    if left_img not in window.comparisons.keys():
-        window.comparisons.update({left_img: [[], [], []]})
-    if right_img not in window.comparisons.keys():
-        window.comparisons.update({right_img: [[], [], []]})
-
-    if rate == '1':  # ref image is harder, should add right image to easier_list
-        # add right_img to easier_list for left img
-        window.comparisons = add_to_ref_img_easier_list_and_save(ref_img=left_img,
-                                                                 compared_to=right_img,
-                                                                 comparisons=window.comparisons)
-        # add left_img to harder_list for right img
-        window.comparisons = add_to_ref_img_harder_list_and_save(ref_img=right_img,
-                                                                 compared_to=left_img,
-                                                                 comparisons=window.comparisons)
-
-    elif rate == '9':
-        window.comparisons = add_to_ref_img_equal_and_save(ref_img=left_img,
-                                                           compared_to=right_img,
-                                                           comparisons=window.comparisons)
-        window.comparisons = add_to_ref_img_equal_and_save(ref_img=right_img,
-                                                           compared_to=left_img,
-                                                           comparisons=window.comparisons)
-
-    else:  # ref image is easier, should add right image to harder_list
-        window.comparisons = add_to_ref_img_harder_list_and_save(ref_img=left_img,
-                                                                 compared_to=right_img,
-                                                                 comparisons=window.comparisons)
-        window.comparisons = add_to_ref_img_easier_list_and_save(ref_img=right_img,
-                                                                 compared_to=left_img,
-                                                                 comparisons=window.comparisons)
-
-    if globals.debug:
-        print_comparisons_lists(window.comparisons)
-
-    save_comparisons_list(window.comparisons)
-    log(f'In [update_comparison_sets]: saved comparison_sets to file.\n')
 
 
 def upload_results_regularly(window):

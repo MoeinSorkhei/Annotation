@@ -64,16 +64,6 @@ def print_list(sorted_list):
     log('________________________________________________________________\n\n', no_time=True)
 
 
-def print_comparisons_lists(comparisons):
-    log('________________________________________________________________', no_time=True)
-    log(f'In [print_comparisons_dict]: comparisons:', no_time=True)
-    for img, lists in comparisons.items():
-        log(f'{img}', no_time=True)
-        for lst in lists:
-            log(lst, no_time=True)
-    log('________________________________________________________________', no_time=True)
-
-
 def read_file_to_list_if_exists(filename):
     lines = []
     if os.path.isfile(filename):
@@ -130,29 +120,6 @@ def rename_test_imgs(registry_file, test_imgs_folder, renamed_test_imgs_folder):
 
 
 # ========== functions for saving/reading results
-def read_comparison_lists():
-    output_file = globals.params['comparisons_structured']  # output/comparisons.json
-
-    comparison_lists = {}
-    if os.path.isfile(output_file):
-        with open(output_file, 'rb') as f:
-            comparison_lists = json.load(f)
-    return comparison_lists
-
-
-def save_comparisons_list(comparisons):
-    output_file = globals.params['comparisons_structured']  # output/comparisons.json
-
-    # merged_dict = comparisons
-    # merge with prev comparisons if they exist. If some values are in conflict, the new dict is given priority
-    '''if os.path.isfile(output_file):
-        prev_comparisons = read_comparison_lists()  # previous comparisons already in the json file
-        merged_dict = {**comparisons, **prev_comparisons}'''
-
-    with open(output_file, 'w') as f:
-        json.dump(comparisons, f, indent=2)
-
-
 def write_sorted_list_to_file(lst):
     sorted_filename = globals.params['sorted']
 
@@ -165,32 +132,11 @@ def write_sorted_list_to_file(lst):
         print_list(lst)
 
 
-def save_rating1(imgs, rate):
-    # ======= for phase 1: where rate specifies the output file
-    if len(imgs) == 1:
-        raise NotImplementedError
-        # filename = os.path.join(globals.params['output_path'], f'bin_{rate}')  # e.g., output/bin_1.txt
-        # filename, _ = compute_file_paths_for_bin(rate=rate)  # WILL NO LONGER BE USED
-        # result_as_str = imgs[0]
-
-    # ======= for phase 2: where all the comparisons will be written to the same raw file (.txt)
-    else:
-        result_as_str = f'{imgs[0]} - {imgs[1]} - {rate}'
-        filename = globals.params['comparisons']   # output/comparisons.txt
-
-    with open(filename, 'a') as file:
-        file.write(f'{result_as_str}\n')
-
-    log_lines = imgs + [rate]
-    log(f'In [save_rating]: case \n{split_to_lines(log_lines)} appended to "{filename}"\n')
-
-
 def save_rating(left_img, right_img, rate):
     rate_file = globals.params['ratings']
     with open(rate_file, 'a') as f:
         string = f'{left_img} - {right_img} - {rate}'
         f.write(f'{string}\n')
-    # log(f'In [save_rating]: saved the rate \n')
 
 
 def remove_last_rating():
