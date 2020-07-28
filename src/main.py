@@ -2,6 +2,7 @@ import argparse
 
 from gui import *
 from logic import *
+from logic import data_prep
 
 
 def read_args_and_adjust():
@@ -45,7 +46,8 @@ def read_args_and_adjust():
     return arguments
 
 
-def show_window_with_keyboard_input(not_already_sorted, already_sorted, data_mode, ui_verbosity, train_bins=None):
+def show_window_with_keyboard_input(not_already_sorted, already_sorted,
+                                    data_mode, ui_verbosity, train_bins=None):
 
     text = 'Which image is harder (even the slightest difference is important)? Press the corresponding button.'
 
@@ -140,42 +142,19 @@ def main():
 
     elif args.create_img_registry:
         registry_file = globals.params['registry_file']
-        create_img_registry(img_folder=globals.params['test_imgs_dir'],
-                            output_file=registry_file)
+        data_prep.create_img_registry(img_folder=globals.params['test_imgs_dir'],
+                                      output_file=registry_file)
 
     elif args.rename_test_imgs:
-        rename_test_imgs(globals.params['registry_file'],
-                         globals.params['test_imgs_dir'],
-                         globals.params['test_imgs_renamed_dir'])
+        data_prep.rename_test_imgs(globals.params['registry_file'],
+                                   globals.params['test_imgs_dir'],
+                                   globals.params['test_imgs_renamed_dir'])
 
     elif args.convert_test_imgs_to_png:
-        dicom_folder = globals.params['test_imgs_dir']
-        png_folder = globals.params['test_imgs_dir'] + '_png'
-        helper.make_dir_if_not_exists(png_folder)
-        convert_imgs_to_png(dicom_folder, png_folder)
-
-        # for renamed images if they exist
-        if os.path.exists(globals.params['test_imgs_renamed_dir']):
-            dicom_folder = globals.params['test_imgs_renamed_dir']
-            png_folder = globals.params['test_imgs_renamed_dir'] + '_png'
-            helper.make_dir_if_not_exists(png_folder)
-            convert_imgs_to_png(dicom_folder, png_folder)
+        data_prep.convert_test_imgs_to_png()
 
     elif args.make_seed_list:
-        # might have .DS_Store etc.file, so only choose .dcm ones
-        helper.make_dir_if_not_exists(globals.params['output_path'])
-        test_imgs = sorted([file for file in os.listdir(globals.params['test_imgs_dir']) if file.endswith('.dcm')])
-        print(f'Read test image names with len: {len(test_imgs)}')
-
-        seed_list = []
-        for filename in test_imgs:
-            number = int(filename.replace('.dcm', ''))
-            if number % 10 == 0:
-                path = os.path.join(os.path.abspath(globals.params['test_imgs_dir']), filename)
-                seed_list.append(path)
-
-        helper.write_list_to_file(seed_list, globals.params['sorted'])
-        print(f'Wrote seed list of len {len(seed_list)} to: "{globals.params["sorted"]}"')
+        data_prep.make_seed_list()
 
     else:
         if args.annotator is None:
@@ -198,7 +177,7 @@ if __name__ == '__main__':
 # python3 main.py --session sort --data_mode test --debug --resize_factor 10 --max_imgs_per_session 4 --email_interval 1
 
 
-# trial run
+# data preparation:
 # python3 main.py --make_seed_list
 
 # actual run
