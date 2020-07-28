@@ -400,11 +400,7 @@ def rate_to_text(rate):
 
 
 def read_and_resize_imgs(window, threading=False):
-    if threading:  # does not work at the moment
-        # left_thread = Thread(target=logic.read_dicom_and_resize, kwargs={'file': window.curr_left_file})
-        # right_thread = Thread(target=logic.read_dicom_and_resize, kwargs={'file': window.curr_right_file})
-        # left_thread.start()
-        # right_thread.start()
+    if threading:
         with concurrent.futures.ThreadPoolExecutor() as executor:
             left_thread = executor.submit(logic.read_dicom_and_resize, window.curr_left_file)
             right_thread = executor.submit(logic.read_dicom_and_resize, window.curr_right_file)

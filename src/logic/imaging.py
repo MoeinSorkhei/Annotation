@@ -20,7 +20,7 @@ def get_dicom_files_paths(imgs_dir):
     return paths
 
 
-def read_dicom_and_resize(file, only_save_to=None):
+def read_dicom_and_resize(file, save_to=None):
     dataset = pydicom.dcmread(file)
     pixels = dataset.pixel_array
     pixels = pixels / np.max(pixels)  # normalize to 0-1
@@ -38,12 +38,9 @@ def read_dicom_and_resize(file, only_save_to=None):
     if resize_factor is not None:
         image = image.resize((pixels.shape[1] // resize_factor, pixels.shape[0] // resize_factor))
 
-    if only_save_to:
-        image.save(only_save_to)
-        return
-
-    photo = ImageTk.PhotoImage(image)
-    return photo
+    if save_to:
+        image.save(save_to)
+    return image
 
 
 def all_dicoms_to_png(path, save=False):
@@ -65,6 +62,6 @@ def convert_imgs_to_png(source_dir, dest_dir):
 
         sub_folders = os.path.split(png_file)[0]
         helper.make_dir_if_not_exists(sub_folders, verbose=False)  # create all the sub-folders needed
-        read_dicom_and_resize(dicom_file, only_save_to=png_file)
+        read_dicom_and_resize(dicom_file, save_to=png_file)
 
     print('In [convert_imgs_to_png]: all done')

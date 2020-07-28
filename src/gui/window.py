@@ -45,7 +45,7 @@ class Window:
         self.start_time = int(time.time() // 60)  # used for stat panel
         self.case_number = None
 
-        self.prev_result = None  # 'single' show_mode will not be used ==>  no longer used
+        self.prev_result = None
 
         logic.log(f"{'_' * 150}\nIn Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
         master.bind("<Key>", self.keyboard_press)  # bind keyboard press to function
@@ -289,7 +289,13 @@ class Window:
             self.right_frame.after(500, self.reset_backgrounds)
 
     def _load_images_into_panels(self):
-        self.left_photo, self.right_photo = read_and_resize_imgs(self)
+        now = time.time()
+        left_image, right_image = read_and_resize_imgs(self, threading=True)
+        self.left_photo = ImageTk.PhotoImage(image=left_image)
+        self.right_photo = ImageTk.PhotoImage(image=right_image)
+        then = time.time()
+        log(f'%%%%%%%%%%%%% %%%%%%%%%%% PHOTOS LOADED - Took: {then - now}')
+
         self.left_photo_panel.configure(image=self.left_photo)
         self.right_photo_panel.configure(image=self.right_photo)
         self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
