@@ -126,9 +126,9 @@ class Window:
         self.right_frame = Frame(master=self.photos_panel)
         self.right_frame.pack(side=RIGHT)
 
-        self.rate_9_indicator = Label(master=self.photos_panel, text='9', bg='red', fg='white')
-        self.rate_1_indicator = Label(master=self.left_frame, text='1', bg='red', fg='white')
-        self.rate_2_indicator = Label(master=self.right_frame, text='2', bg='red', fg='white')
+        self.rate_9_indicator = Label(master=self.photos_panel, text='9', bg='red', fg='white', font='-size 18')
+        self.rate_1_indicator = Label(master=self.left_frame, text='1', bg='red', fg='white', font='-size 18')
+        self.rate_2_indicator = Label(master=self.right_frame, text='2', bg='red', fg='white', font='-size 18')
         self.rate_9_indicator.pack(side=TOP)
         self.rate_1_indicator.pack(side=TOP)
         self.rate_2_indicator.pack(side=TOP)
@@ -152,7 +152,7 @@ class Window:
 
     def init_text_panels_and_buttons(self, master):
         # says if the previous case was completed or aborted
-        self.result_panel = Label(master, text='', font='-size 12')
+        self.result_panel = Label(master, text='', font='-size 18')
         self.result_panel.pack(side=TOP)
 
         # stat panel for showing case number, buttons etc.
@@ -232,12 +232,12 @@ class Window:
 
     def update_stat(self):
         result_text, color = '', None
-        if self.prev_result is not None and globals.debug:
+        if self.prev_result is not None:
             if 'aborted' in self.prev_result.keys() and self.prev_result['aborted'] is True:
-                result_text = 'Previous case was aborted'
+                result_text = '--- Previous image was aborted ---'
                 color = 'blue'
-            elif 'insert_index' in self.prev_result.keys():
-                result_text = 'Previous case successfully completed'
+            elif 'insert_index' in self.prev_result.keys() and globals.debug:
+                result_text = 'Previous image successfully inserted'
                 color = 'green'
 
         self.result_panel.configure(text=result_text, fg=color)
