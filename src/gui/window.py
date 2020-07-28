@@ -89,7 +89,7 @@ class Window:
             self.low = 0
             self.high = len(self.bins_list) - 1
 
-        self.init_or_update_case_number()
+        self.compute_case_number()
         log_current_index(self, called_from='__init__')
         self.update_files()
 
@@ -166,7 +166,7 @@ class Window:
         else:  # direction = 'previous: hide the prev_button again if we are in the previous window
             self.prev_button.pack_forget()
 
-    def init_or_update_case_number(self):
+    def compute_case_number(self):
         self.case_number = f'{self.start_time}-{self.current_index}-{int(time.time() % 1000)}'
 
     def create_verbose_stat(self):
@@ -347,28 +347,23 @@ class Window:
             - ALl the logical changes e.g. changing the indexes etc. should be done before calling this function. This
               only changes the stuff related to UI.
         """
-        # ======== print the current index (except for the final page)
-        if self.current_index < len(self.cases):
-            self.init_or_update_case_number()
-            log_current_index(self, called_from='update_frame')
-
-        # ======== update the prev_button
-        self.update_prev_button()
-
-        # ======== update the image and caption for finalize page - hide image(s)
+        # ======== final page
         if self.current_index == len(self.cases):
             log(f"\n\n\n{'=' * 150}\nON THE FINAL PAGE", no_time=True)
             self.update_photos(frame='final', files_already_updated=files_already_updated)
             self.fin_button.pack(side=TOP)  # show finalize button
             self.discard_button.pack_forget()
 
-        # ======== update the image and caption for other pages - show image(s)
+        # ======== other pages
         if self.current_index != len(self.cases):
+            self.compute_case_number()
+            log_current_index(self, called_from='update_frame')
             self.update_photos(frame='others', files_already_updated=files_already_updated)
             self.fin_button.pack_forget()  # hide finalize button
             self.discard_button.pack(side=BOTTOM)
 
         # ======== update stat panel
+        self.update_prev_button()
         self.update_stat()
 
     # ======================================== logical functions  ========================================
