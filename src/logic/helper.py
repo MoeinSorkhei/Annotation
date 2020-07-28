@@ -96,6 +96,10 @@ def shorten_file_name(filename):
         return '...' + filename[-15:]
 
 
+def get_all_dicom_files(img_folder):
+    return glob.glob(f'{img_folder}/**/*.dcm', recursive=True)  # it assumes '/' path separator
+
+
 # ========== functions for saving/reading results
 def write_sorted_list_to_file(lst):
     sorted_filename = globals.params['sorted']

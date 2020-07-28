@@ -231,20 +231,16 @@ class Window:
         return verbose_text
 
     def update_stat(self):
-        self.result_panel.configure(bg='white')  # default
-        result_text, text_color = '', None
+        self.result_panel.pack_forget()  # do not show
 
         if self.prev_result is not None:
             if 'aborted' in self.prev_result.keys() and self.prev_result['aborted'] is True:
-                result_text = '--- Previous image was aborted ---'
-                text_color = 'blue'
-                self.result_panel.configure(bg='orange')  # default
+                self.result_panel.pack(side=TOP)
+                self.result_panel.configure(text='--- Previous image was aborted ---', fg='blue', bg='orange')
 
-            elif 'insert_index' in self.prev_result.keys() and globals.debug:
-                result_text = 'Previous image successfully inserted'
-                text_color = 'green'
-
-        self.result_panel.configure(text=result_text, fg=text_color)
+            elif 'insert_index' in self.prev_result.keys():
+                self.result_panel.pack(side=TOP)
+                self.result_panel.configure(text='--- Previous image successfully inserted ---', fg='green', bg='white')
 
         # final page
         if self.current_index == len(self.cases):
@@ -369,16 +365,16 @@ class Window:
     def update_photos_async(self, rate, frame, files_already_updated):
         if rate == '1':  # draw left border
             self.left_frame.configure(bg='red')
-            self.left_frame.after(50, self._delayed_update_photos, frame, files_already_updated)
+            self.left_frame.after(500, self._delayed_update_photos, frame, files_already_updated)
 
         elif rate == '2':  # draw right border
             self.right_frame.configure(bg='red')
-            self.right_frame.after(50, self._delayed_update_photos, frame, files_already_updated)
+            self.right_frame.after(500, self._delayed_update_photos, frame, files_already_updated)
 
         elif rate == '9':  # if 9 is pressed, or showing previous case
             self.left_frame.configure(bg='blue')
             self.right_frame.configure(bg='blue')
-            self.right_frame.after(50, self._delayed_update_photos, frame, files_already_updated)
+            self.right_frame.after(500, self._delayed_update_photos, frame, files_already_updated)
 
         else:
             self.update_photos_and_stats(frame, files_already_updated)

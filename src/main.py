@@ -25,6 +25,8 @@ def read_args_and_adjust():
     parser.add_argument('--rename_test_imgs', action='store_true')
     parser.add_argument('--convert_test_imgs_to_png', action='store_true')
     parser.add_argument('--make_seed_list', action='store_true')
+    parser.add_argument('--resize_data', action='store_true')
+    parser.add_argument('--get_size_stats', action='store_true')
 
     arguments = parser.parse_args()
 
@@ -156,6 +158,28 @@ def main():
     elif args.make_seed_list:
         data_prep.make_seed_list()
 
+    elif args.resize_data:
+        print('Resizing data...')
+        resize_factor = 4
+        mean_width, mean_height = 3219, 5400  # taken from some 50 ddsm images
+        resize_width, resize_height = mean_width // resize_factor, mean_height // resize_factor
+
+        # for test data
+        image_dir = globals.params['test_imgs_dir']
+        save_dir = os.path.join(globals.params['data_path'], 'test_imgs_resized')
+        data_prep.resize_data(image_dir, save_dir, resize_width, resize_height)
+        print('\nResizing for test data: done\n')
+
+        # for train data
+        image_dir = globals.params['train_imgs_dir']
+        save_dir = os.path.join(globals.params['data_path'], 'train_imgs_resized')
+        data_prep.resize_data(image_dir, save_dir, resize_width, resize_height)
+        print('Resizing for train data: done')
+
+    elif args.get_size_stats:
+        data_prep.get_size_stats(globals.params['test_imgs_dir'])
+        data_prep.get_size_stats(globals.params['train_imgs_dir'])
+
     else:
         if args.annotator is None:
             print('Please provide annotator name using the --annotator argument')
@@ -179,6 +203,7 @@ if __name__ == '__main__':
 
 # data preparation:
 # python3 main.py --make_seed_list
+# python3 main.py --resize_data
 
 # actual run
 # use --email_interval option

@@ -20,6 +20,24 @@ def get_dicom_files_paths(imgs_dir):
     return paths
 
 
+def dicom_as_dataset(dicom_file):
+    return pydicom.dcmread(dicom_file)
+
+
+def resize_pixel_array(dicom_file, resize_width, resize_height, save_dir):
+    dataset = pydicom.dcmread(dicom_file)
+    pixel_array = dataset.pixel_array
+    resized_pixel_array = np.array(Image.fromarray(pixel_array).resize(size=(resize_width, resize_height)))
+
+    dataset.PixelData = resized_pixel_array.tobytes()  # copy the data back to the original data set
+    dataset.Rows, dataset.Columns = resized_pixel_array.shape  # update the information about the shape of the data array
+
+    save_path = os.path.join(save_dir, helper.pure_name(dicom_file))  # in save_dir with the same filename
+    helper.make_dir_if_not_exists(save_dir)
+    dataset.save_as(save_path)
+    log(f'In [resize_pixel_array]: saved resized file to: "{save_path}"')
+
+
 def read_dicom_and_resize(file, save_to=None):
     dataset = pydicom.dcmread(file)
     pixels = dataset.pixel_array

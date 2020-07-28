@@ -8,8 +8,9 @@ params = {
     "test_imgs_renamed_dir": os.path.join('..', 'data', 'test_imgs_renamed'),
 
     "test_imgs_dir": os.path.join('..', 'data', 'test_imgs'),  # for test data
-    # "test_imgs_dir": os.path.join('..', 'data', 'all_dicoms', 'dicoms'),  # for test data
+    # "test_imgs_dir": os.path.join('..', 'data', 'test_imgs_resized'),  # for test data
     "train_imgs_dir": os.path.join('..', 'data', 'train_imgs'),  # for train data
+    # "train_imgs_dir": os.path.join('..', 'data', 'train_imgs_resized'),  # for train data
 
     "ks_csv_file": os.path.join('..', 'data', 'csv_files', 'data_ks_all_200630.csv'),
     "nonKS_csv_file": os.path.join('..', 'data', 'csv_files', 'data_nonks_all_200630.csv'),
@@ -21,6 +22,7 @@ params = {
     "db_path": os.path.join('..', 'data', 'database.sqlite'),
 
     "output_path": os.path.join('..', 'output'),
+    "data_path": os.path.join('..', 'data'),
     "sorted": os.path.join('..', 'output', 'sorted.txt'),
     "discarded": os.path.join('..', 'output', 'discarded.txt'),
     "aborted": os.path.join('..', 'output', 'aborted.txt'),
@@ -31,6 +33,6 @@ params = {
     "bin_rep_type": 'random',  # or 'last': specifies how the bin representative should be chosen
 
     "max_imgs_per_session": 10,
-    "resize_factor": 7,
+    "resize_factor": 3,
     "email_interval": None
 }

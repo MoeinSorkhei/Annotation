@@ -55,3 +55,21 @@ def make_seed_list():
 
     helper.write_list_to_file(seed_list, globals.params['sorted'])
     print(f'Wrote seed list of len {len(seed_list)} to: "{globals.params["sorted"]}"')
+
+
+def resize_data(image_dir, save_dir, new_width, new_height):
+    all_dicoms = get_all_dicom_files(image_dir)
+    for dicom in all_dicoms:
+        resize_pixel_array(dicom, new_width, new_height, save_dir)
+
+
+def get_size_stats(image_dir):
+    all_dicoms = get_all_dicom_files(image_dir)
+    all_widths, all_heights = [], []
+
+    for dicom_file in all_dicoms:
+        pixel_array_shape = dicom_as_dataset(dicom_file).pixel_array
+        all_heights.append(pixel_array_shape.shape[0])
+        all_widths.append(pixel_array_shape.shape[1])
+
+    print(f'Mean width: {np.mean(np.array(all_widths))} - mean height: {np.mean(np.array(all_heights))}')
