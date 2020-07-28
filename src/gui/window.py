@@ -96,6 +96,7 @@ class Window:
         # ======= define attributes and set to None. They will be initialized in different functions.
         self.left_frame, self.right_frame = None, None
         self.left_photo, self.right_photo = None, None
+        self.rate_1_indicator, self.rate_2_indicator, self.rate_9_indicator = None, None, None
 
         self.left_caption_panel, self.right_caption_panel = None, None
         self.photos_panel, self.left_photo_panel, self.right_photo_panel = None, None, None
@@ -123,6 +124,13 @@ class Window:
 
         self.right_frame = Frame(master=self.photos_panel)
         self.right_frame.pack(side=RIGHT)
+
+        self.rate_9_indicator = Label(master=self.photos_panel, text='9', bg='red', fg='white')
+        self.rate_1_indicator = Label(master=self.left_frame, text='1', bg='red', fg='white')
+        self.rate_2_indicator = Label(master=self.right_frame, text='2', bg='red', fg='white')
+        self.rate_9_indicator.pack(side=TOP)
+        self.rate_1_indicator.pack(side=TOP)
+        self.rate_2_indicator.pack(side=TOP)
 
         # ======== show left and right images with caption
         self.left_photo_panel = Label(self.left_frame)
@@ -275,18 +283,18 @@ class Window:
         logic.log(f'In [update_files]: Left file: "{pure_name(self.curr_left_file)}"')
         logic.log(f'In [update_files]: Right file: "{pure_name(self.curr_right_file)}"\n\n')
 
-    def reset_backgrounds(self):
+    def _reset_backgrounds(self):
         self.left_frame.configure(bg="white")
         self.right_frame.configure(bg="white")
 
     def draw_boarder(self, pressed):
         if eval(pressed) == '1':
             self.left_frame.configure(bg='red')
-            self.left_frame.after(500, self.reset_backgrounds)
+            self.left_frame.after(500, self._reset_backgrounds)
 
         elif eval(pressed) == '2':
             self.right_frame.configure(bg='red')
-            self.right_frame.after(500, self.reset_backgrounds)
+            self.right_frame.after(500, self._reset_backgrounds)
 
     def _load_images_into_panels(self):
         now = time.time()
@@ -325,7 +333,6 @@ class Window:
               aborted the case if one of them have been False.
         """
         if frame == 'final':
-            self.left_frame.configure(background="white")  # remove background on the final page
             self.left_photo_panel.pack_forget()
             self.right_photo_panel.pack_forget()
 
@@ -359,11 +366,17 @@ class Window:
             self.update_photos(frame='final', files_already_updated=files_already_updated)
             self.fin_button.pack(side=TOP)  # show finalize button
             self.discard_button.pack_forget()
+            self.rate_9_indicator.pack_forget()
+            self.rate_1_indicator.pack_forget()
+            self.rate_2_indicator.pack_forget()
 
         # ======== other pages
         if self.current_index != len(self.cases):
             self.compute_case_number()
             log_current_index(self, called_from='update_frame')
+            self.rate_9_indicator.pack(side=TOP)
+            self.rate_1_indicator.pack(side=TOP)
+            self.rate_2_indicator.pack(side=TOP)
             self.update_photos(frame='others', files_already_updated=files_already_updated)
             self.fin_button.pack_forget()  # hide finalize button
             self.discard_button.pack(side=BOTTOM)

@@ -47,8 +47,7 @@ def read_args_and_adjust():
 
 def show_window_with_keyboard_input(not_already_sorted, already_sorted, data_mode, ui_verbosity, train_bins=None):
 
-    text = 'Which image is harder? 1: Left - 2: Right - 9: No difference ' \
-               '(Note: Even the slightest difference is important).'
+    text = 'Which image is harder (even the slightest difference is important)? Press the corresponding button.'
 
     root = Tk()  # creates a blank window (or main window)
     title = Label(root, text=text, bg='light blue', font='-size 20')
