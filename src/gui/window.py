@@ -283,19 +283,6 @@ class Window:
         logic.log(f'In [update_files]: Left file: "{pure_name(self.curr_left_file)}"')
         logic.log(f'In [update_files]: Right file: "{pure_name(self.curr_right_file)}"\n\n')
 
-    def _reset_backgrounds(self):
-        self.left_frame.configure(bg="white")
-        self.right_frame.configure(bg="white")
-
-    def draw_boarder(self, pressed):
-        if eval(pressed) == '1':
-            self.left_frame.configure(bg='red')
-            self.left_frame.after(500, self._reset_backgrounds)
-
-        elif eval(pressed) == '2':
-            self.right_frame.configure(bg='red')
-            self.right_frame.after(500, self._reset_backgrounds)
-
     def _load_images_into_panels(self):
         now = time.time()
         left_image, right_image = read_and_resize_imgs(self, threading=True)
@@ -354,7 +341,24 @@ class Window:
                 self.left_caption_panel.pack(side=LEFT)
                 self.right_caption_panel.pack(side=RIGHT)
 
-    def update_frame(self, files_already_updated=False):
+    def _delayed_update_photos(self, frame, files_already_updated):
+        self.left_frame.configure(bg="white")
+        self.right_frame.configure(bg="white")
+        self.update_photos(frame, files_already_updated)
+
+    def update_photos_async(self, rate, frame, files_already_updated):
+        if rate == '1':  # draw left border
+            self.left_frame.configure(bg='red')
+            self.left_frame.after(100, self._delayed_update_photos, frame, files_already_updated)
+
+        elif rate == '2':  # draw right border
+            self.right_frame.configure(bg='red')
+            self.right_frame.after(100, self._delayed_update_photos, frame, files_already_updated)
+
+        else:  # if 9 is pressed, or showing previous case
+            self.update_photos(frame, files_already_updated)
+
+    def update_frame(self, rate=None, files_already_updated=False):
         """
         Important:
             - ALl the logical changes e.g. changing the indexes etc. should be done before calling this function. This
@@ -363,12 +367,13 @@ class Window:
         # ======== final page
         if self.current_index == len(self.cases):
             log(f"\n\n\n{'=' * 150}\nON THE FINAL PAGE", no_time=True)
-            self.update_photos(frame='final', files_already_updated=files_already_updated)
             self.fin_button.pack(side=TOP)  # show finalize button
             self.discard_button.pack_forget()
             self.rate_9_indicator.pack_forget()
             self.rate_1_indicator.pack_forget()
             self.rate_2_indicator.pack_forget()
+            self.update_photos_async(rate, 'final', files_already_updated)
+            # self.update_photos(frame='final', files_already_updated=files_already_updated)
 
         # ======== other pages
         if self.current_index != len(self.cases):
@@ -377,7 +382,8 @@ class Window:
             self.rate_9_indicator.pack(side=TOP)
             self.rate_1_indicator.pack(side=TOP)
             self.rate_2_indicator.pack(side=TOP)
-            self.update_photos(frame='others', files_already_updated=files_already_updated)
+            self.update_photos_async(rate, 'others', files_already_updated)
+            # self.update_photos(frame='others', files_already_updated=files_already_updated)
             self.fin_button.pack_forget()  # hide finalize button
             self.discard_button.pack(side=BOTTOM)
 
@@ -544,11 +550,6 @@ class Window:
         pressed = repr(event.char)
         logic.log(f'In [keyboard_press]: pressed {pressed}')
 
-        # draw boarder asynchronously
-        if eval(pressed) == '1' or eval(pressed) == '2':
-            thread = Thread(target=self.draw_boarder, kwargs={'pressed': pressed})
-            thread.start()
-
         # ======== take action if keystroke is valid (ie, prev_result is confirmed)
         if keystroke_is_valid(pressed):
             save_rating(self.curr_left_file, self.curr_right_file, eval(pressed))
@@ -623,6 +624,4 @@ class Window:
             if not insert_happened and not abort_happened and not robust_checking_needed(self):
                 files_already_updated = _rate_automatically()
 
-            # asynchronously update the frame and photos based in the new low and high indices
-            thread = Thread(target=self.update_frame, kwargs={'files_already_updated': files_already_updated})
-            thread.start()
+            self.update_frame(eval(pressed), files_already_updated)
