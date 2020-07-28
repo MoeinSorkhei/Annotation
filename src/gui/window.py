@@ -102,11 +102,12 @@ class Window:
         self.photos_panel, self.left_photo_panel, self.right_photo_panel = None, None, None
 
         self.stat_panel = None
+        self.result_panel = None
         self.prev_button, self.fin_button = None, None
         self.discard_button = None
 
         self.init_frames_and_photos(master)  # init and pack
-        self.init_stat_panel_and_buttons(master)  # init and pack
+        self.init_text_panels_and_buttons(master)  # init and pack
         self.update_stat()  # put content
 
         if self.ui_verbosity > 1:
@@ -149,7 +150,11 @@ class Window:
                                          font='-size 10')
         self.right_caption_panel.pack(side=RIGHT)
 
-    def init_stat_panel_and_buttons(self, master):
+    def init_text_panels_and_buttons(self, master):
+        # says if the previous case was completed or aborted
+        self.result_panel = Label(master, text='', font='-size 12')
+        self.result_panel.pack(side=TOP)
+
         # stat panel for showing case number, buttons etc.
         self.stat_panel = Label(master, text='', font='-size 15')
         self.stat_panel.pack(side=TOP)
@@ -226,6 +231,17 @@ class Window:
         return verbose_text
 
     def update_stat(self):
+        result_text, color = '', None
+        if self.prev_result is not None and globals.debug:
+            if 'aborted' in self.prev_result.keys() and self.prev_result['aborted'] is True:
+                result_text = 'Previous case was aborted'
+                color = 'blue'
+            elif 'insert_index' in self.prev_result.keys():
+                result_text = 'Previous case successfully completed'
+                color = 'green'
+
+        self.result_panel.configure(text=result_text, fg=color)
+
         # final page
         if self.current_index == len(self.cases):
             stat_text = ''
