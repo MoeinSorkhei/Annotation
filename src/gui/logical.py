@@ -575,7 +575,7 @@ def rate_to_text(rate):
         return 'equal'
 
 
-def read_img_and_resize_if_needed(window, threading=False):
+def read_and_resize_imgs(window, threading=False):
     if window.show_mode == 'single':
         # return logic.read_dicom_image(self.current_file, self.img_size)
         return logic.read_dicom_and_resize(window.current_file)

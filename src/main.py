@@ -208,7 +208,7 @@ if __name__ == '__main__':
 
 # SCRIPTS:
 # =========  On my mac:
-# python3 main.py --annotator Moein --session_name sort --data_mode test --debug
+# python3 main.py --annotator Moein --session_name sort --data_mode test --resize_factor 15 --debug
 # python3 main.py --annotator Moein --session_name sort --data_mode test --ui_verbosity 2
 # python3 main.py --annotator Moein --session_name sort --data_mode train --debug
 # python3 main.py --annotator Moein --session_name split --n_bins 2 --debug

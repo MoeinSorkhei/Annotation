@@ -75,7 +75,7 @@ class Window:
             self.frame.pack(side=TOP)
 
             # ======== show image with caption, if caption enabled
-            self.photo = read_img_and_resize_if_needed(self)
+            self.photo = read_and_resize_imgs(self)
 
             # ==== load the photo in a tkinter label
             self.photo_panel = Label(master, image=self.photo)
@@ -169,34 +169,31 @@ class Window:
         self.photos_panel = Frame(master)
         self.photos_panel.pack(side=TOP)
 
-        # self.left_frame = Frame(master=self.photos_panel, background="red")
         self.left_frame = Frame(master=self.photos_panel)
-        # self.left_frame.pack(side=LEFT, padx=10, pady=10)
         self.left_frame.pack(side=LEFT)
 
         self.right_frame = Frame(master=self.photos_panel)
-        # self.right_frame.pack(side=RIGHT, padx=10, pady=10)
         self.right_frame.pack(side=RIGHT)
 
-        # ======== show left and right images with caption, if caption enabled
-        self.left_photo, self.right_photo = read_img_and_resize_if_needed(self)
-
-        self.left_photo_panel = Label(self.left_frame, image=self.left_photo)  # left photo panel inside left frame
-        self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
-
-        self.right_photo_panel = Label(self.right_frame, image=self.right_photo)
-        self.right_photo_panel.pack(side=RIGHT, padx=5, pady=5)
+        # ======== show left and right images with caption
+        self.left_photo_panel = Label(self.left_frame)
+        self.right_photo_panel = Label(self.right_frame)
+        self._load_images_into_panels()
 
     def init_caption_panels(self):
-        self.left_caption_panel = Label(self.photos_panel, text=shorten_file_name(pure_name(self.curr_left_file)),
+        # caption for showing image names
+        self.left_caption_panel = Label(self.photos_panel,
+                                        text=shorten_file_name(pure_name(self.curr_left_file)),
                                         font='-size 10')
         self.left_caption_panel.pack(side=LEFT)
 
-        self.right_caption_panel = Label(self.photos_panel, text=shorten_file_name(pure_name(self.curr_right_file)),
+        self.right_caption_panel = Label(self.photos_panel,
+                                         text=shorten_file_name(pure_name(self.curr_right_file)),
                                          font='-size 10')
         self.right_caption_panel.pack(side=RIGHT)
 
     def init_stat_panel_and_buttons(self, master):
+        # stat panel for showing case number, buttons etc.
         self.stat_panel = Label(master, text='', font='-size 15')
         self.stat_panel.pack(side=TOP)
 
@@ -345,6 +342,13 @@ class Window:
             self.right_frame.configure(bg='red')
             self.right_frame.after(500, self.reset_backgrounds)
 
+    def _load_images_into_panels(self):
+        self.left_photo, self.right_photo = read_and_resize_imgs(self)
+        self.left_photo_panel.configure(image=self.left_photo)
+        self.right_photo_panel.configure(image=self.right_photo)
+        self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
+        self.right_photo_panel.pack(side=RIGHT, padx=5, pady=5)
+
     def update_photos(self, frame, files_already_updated):
         """
         :param files_already_updated:
@@ -391,7 +395,7 @@ class Window:
                 logic.log(f'Full path: "{self.current_file}" \n')
 
                 # ======== update the image
-                self.photo = read_img_and_resize_if_needed(self)  # resize next file
+                self.photo = read_and_resize_imgs(self)  # resize next file
                 self.photo_panel.configure(image=self.photo)  # update the image
                 self.photo_panel.image = self.photo
                 self.photo_panel.pack(side=TOP)
@@ -406,11 +410,12 @@ class Window:
                     self.update_files()
 
                 # ======== update photos
-                self.left_photo, self.right_photo = read_img_and_resize_if_needed(self)
-                self.left_photo_panel.configure(image=self.left_photo)
-                self.right_photo_panel.configure(image=self.right_photo)
-                self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
-                self.right_photo_panel.pack(side=RIGHT, padx=5, pady=5)
+                self._load_images_into_panels()
+                # self.left_photo, self.right_photo = read_img_and_resize_if_needed(self)
+                # self.left_photo_panel.configure(image=self.left_photo)
+                # self.right_photo_panel.configure(image=self.right_photo)
+                # self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
+                # self.right_photo_panel.pack(side=RIGHT, padx=5, pady=5)
 
                 # ======== update captions (image names)
                 if self.ui_verbosity > 1:
@@ -584,7 +589,7 @@ class Window:
             6. Now that the indices are updated, update_frame function updates the window in a UI-level based on the
                updated low and high indices.
         """
-        def _check_rates_automatically():
+        def _rate_automatically():
             log(f'\n{"*" * 100}', no_time=True)
             log('In [keyboard_press] - automatic rate: Checking if '
                 'rate is already available for the next case.\n')
@@ -711,7 +716,7 @@ class Window:
             upload_results_regularly(self)
             # check automatically if the rate is available for the next page(s)
             if not insert_happened and not abort_happened and not robust_checking_needed(self):
-                files_already_updated = _check_rates_automatically()
+                files_already_updated = _rate_automatically()
 
             # asynchronously update the frame and photos based in the new low and high indices
             thread = Thread(target=self.update_frame, kwargs={'files_already_updated': files_already_updated})
