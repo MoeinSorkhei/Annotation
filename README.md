@@ -8,8 +8,8 @@
 ___
 ### Data
 - Create a folder named `data` in the project folder (beside the `src` folder)
-- Download the test images and put the test images (the ones that are going to be perfectly sorted) in the `data/test` folder
-- Download the train images and put the train images in the `data/train` folder
+- Download the test images and put the test images (the ones that are going to be perfectly sorted) in the `data/test_imgs` folder
+- Download the train images and put the train images in the `data/train_imgs` folder
 
 ### Links
 * Test images: https://www.dropbox.com/sh/hrz6stxczlzl95q/AAD9ZuMplzJYGbMHmsh7QyRVa?dl=0
@@ -28,7 +28,7 @@ All the commands should be run from inside the `src` folder.
 
 * Splitting the sorted list to bins needed for sorting train data:  
 `python main.py --annotator [YourName] --session_name split --n_bins [NumBins]`  
- After running this command, you should see the files containing images in different bins. The file are named like `bin_1.txt`, `bin_2.txt` etc. and are located in
+ After running this command, you should see the files containing images in different bins. The files are named like `bin_0.txt`, `bin_1.txt` etc. and are located in
  the `output` folder.
 
 * Starting a session for rating train images:  
