@@ -94,12 +94,12 @@ class Window:
         self.update_files()
 
         # ======= define attributes and set to None. They will be initialized in different functions.
-        self.left_frame, self.right_frame = None, None
-        self.left_photo, self.right_photo = None, None
-        self.rate_1_indicator, self.rate_2_indicator, self.rate_9_indicator = None, None, None
+        self.main_frame, self.left_frame, self.right_frame = None, None, None
+        self.left_photo_panel, self.right_photo_panel = None, None
 
+        self.left_photo, self.right_photo = None, None
         self.left_caption_panel, self.right_caption_panel = None, None
-        self.photos_panel, self.left_photo_panel, self.right_photo_panel = None, None, None
+        self.rate_1_indicator, self.rate_2_indicator, self.rate_9_indicator = None, None, None
 
         self.stat_panel = None
         self.result_panel = None
@@ -117,16 +117,16 @@ class Window:
     # =====================================================================================================
     def init_frames_and_photos(self, master):
         # ======== frame for putting things into it
-        self.photos_panel = Frame(master)
-        self.photos_panel.pack(side=TOP)
+        self.main_frame = Frame(master)
+        self.main_frame.pack(side=TOP)
 
-        self.left_frame = Frame(master=self.photos_panel)
+        self.left_frame = Frame(master=self.main_frame)
         self.left_frame.pack(side=LEFT)
 
-        self.right_frame = Frame(master=self.photos_panel)
+        self.right_frame = Frame(master=self.main_frame)
         self.right_frame.pack(side=RIGHT)
 
-        self.rate_9_indicator = Label(master=self.photos_panel, text='9', bg='red', fg='white', font='-size 18')
+        self.rate_9_indicator = Label(master=self.main_frame, text='9 (equal)', bg='blue', fg='white', font='-size 18')
         self.rate_1_indicator = Label(master=self.left_frame, text='1', bg='red', fg='white', font='-size 18')
         self.rate_2_indicator = Label(master=self.right_frame, text='2', bg='red', fg='white', font='-size 18')
         self.rate_9_indicator.pack(side=TOP)
@@ -140,12 +140,12 @@ class Window:
 
     def init_caption_panels(self):
         # caption for showing image names
-        self.left_caption_panel = Label(self.photos_panel,
+        self.left_caption_panel = Label(self.main_frame,
                                         text=shorten_file_name(pure_name(self.curr_left_file)),
                                         font='-size 10')
         self.left_caption_panel.pack(side=LEFT)
 
-        self.right_caption_panel = Label(self.photos_panel,
+        self.right_caption_panel = Label(self.main_frame,
                                          text=shorten_file_name(pure_name(self.curr_right_file)),
                                          font='-size 10')
         self.right_caption_panel.pack(side=RIGHT)
@@ -231,16 +231,20 @@ class Window:
         return verbose_text
 
     def update_stat(self):
-        result_text, color = '', None
+        self.result_panel.configure(bg='white')  # default
+        result_text, text_color = '', None
+
         if self.prev_result is not None:
             if 'aborted' in self.prev_result.keys() and self.prev_result['aborted'] is True:
                 result_text = '--- Previous image was aborted ---'
-                color = 'blue'
+                text_color = 'blue'
+                self.result_panel.configure(bg='orange')  # default
+
             elif 'insert_index' in self.prev_result.keys() and globals.debug:
                 result_text = 'Previous image successfully inserted'
-                color = 'green'
+                text_color = 'green'
 
-        self.result_panel.configure(text=result_text, fg=color)
+        self.result_panel.configure(text=result_text, fg=text_color)
 
         # final page
         if self.current_index == len(self.cases):
@@ -312,7 +316,7 @@ class Window:
         self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
         self.right_photo_panel.pack(side=RIGHT, padx=5, pady=5)
 
-    def update_photos(self, frame, files_already_updated):
+    def update_photos_and_stats(self, frame, files_already_updated):
         """
         :param files_already_updated:
         :param frame:
@@ -338,7 +342,6 @@ class Window:
         if frame == 'final':
             self.left_photo_panel.pack_forget()
             self.right_photo_panel.pack_forget()
-
             if globals.debug:
                 self.left_caption_panel.pack_forget()
                 self.right_caption_panel.pack_forget()
@@ -346,33 +349,39 @@ class Window:
         else:
             if not files_already_updated:
                 self.update_files()
-
-            # ======== update photos
             self._load_images_into_panels()
-
-            # ======== update captions (image names)
+            # update captions (image names)
             if self.ui_verbosity > 1:
                 self.left_caption_panel.configure(text=shorten_file_name(pure_name(self.curr_left_file)))
                 self.right_caption_panel.configure(text=shorten_file_name(pure_name(self.curr_right_file)))
                 self.left_caption_panel.pack(side=LEFT)
                 self.right_caption_panel.pack(side=RIGHT)
 
+        # ======== update stat panel
+        self.update_prev_button()
+        self.update_stat()
+
     def _delayed_update_photos(self, frame, files_already_updated):
         self.left_frame.configure(bg="white")
         self.right_frame.configure(bg="white")
-        self.update_photos(frame, files_already_updated)
+        self.update_photos_and_stats(frame, files_already_updated)
 
     def update_photos_async(self, rate, frame, files_already_updated):
         if rate == '1':  # draw left border
             self.left_frame.configure(bg='red')
-            self.left_frame.after(100, self._delayed_update_photos, frame, files_already_updated)
+            self.left_frame.after(50, self._delayed_update_photos, frame, files_already_updated)
 
         elif rate == '2':  # draw right border
             self.right_frame.configure(bg='red')
-            self.right_frame.after(100, self._delayed_update_photos, frame, files_already_updated)
+            self.right_frame.after(50, self._delayed_update_photos, frame, files_already_updated)
 
-        else:  # if 9 is pressed, or showing previous case
-            self.update_photos(frame, files_already_updated)
+        elif rate == '9':  # if 9 is pressed, or showing previous case
+            self.left_frame.configure(bg='blue')
+            self.right_frame.configure(bg='blue')
+            self.right_frame.after(50, self._delayed_update_photos, frame, files_already_updated)
+
+        else:
+            self.update_photos_and_stats(frame, files_already_updated)
 
     def update_frame(self, rate=None, files_already_updated=False):
         """
@@ -402,10 +411,6 @@ class Window:
             # self.update_photos(frame='others', files_already_updated=files_already_updated)
             self.fin_button.pack_forget()  # hide finalize button
             self.discard_button.pack(side=BOTTOM)
-
-        # ======== update stat panel
-        self.update_prev_button()
-        self.update_stat()
 
     # ======================================== logical functions  ========================================
     # ====================================================================================================
