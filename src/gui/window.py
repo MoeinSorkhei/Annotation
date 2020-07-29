@@ -389,6 +389,7 @@ class Window:
         # ======== final page
         if self.current_index == len(self.cases):
             log(f"\n\n\n{'=' * 150}\nON THE FINAL PAGE", no_time=True)
+            self.update_photos_async(rate, 'final', files_already_updated)
             self.left_caption_panel.pack_forget()
             self.right_caption_panel.pack_forget()
             self.fin_button.pack(side=TOP)  # show finalize button
@@ -396,12 +397,12 @@ class Window:
             self.rate_9_indicator.pack_forget()
             self.rate_1_indicator.pack_forget()
             self.rate_2_indicator.pack_forget()
-            self.update_photos_async(rate, 'final', files_already_updated)
 
         # ======== other pages
         if self.current_index != len(self.cases):
             self.compute_case_number()
             log_current_index(self, called_from='update_frame')
+            self.update_photos_async(rate, 'others', files_already_updated)
             self.left_caption_panel.pack(side=LEFT)
             self.right_caption_panel.pack(side=RIGHT)
             self.fin_button.pack_forget()  # hide finalize button
@@ -409,7 +410,6 @@ class Window:
             self.rate_9_indicator.pack(side=TOP)
             self.rate_1_indicator.pack(side=TOP)
             self.rate_2_indicator.pack(side=TOP)
-            self.update_photos_async(rate, 'others', files_already_updated)
 
     # ======================================== logical functions  ========================================
     # ====================================================================================================
