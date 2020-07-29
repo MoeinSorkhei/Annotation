@@ -11,7 +11,7 @@ def read_args_and_adjust():
     parser.add_argument('--session_name', type=str)
     parser.add_argument('--data_mode', type=str)
     parser.add_argument('--n_bins', type=int)
-    parser.add_argument('--resize_factor', type=int)
+    parser.add_argument('--resize_factor', type=float)
     parser.add_argument('--max_imgs_per_session', type=int)
     parser.add_argument('--email_interval', type=int)
     parser.add_argument('--ui_verbosity', type=int)   # set be set to 2 for moderate verbosity
