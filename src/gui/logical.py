@@ -74,7 +74,7 @@ def matches_binary_insert_rule(window, rate):
     if rate == '9' or window.high == window.low or (window.high - window.low == 1 and rate == '2'):
         return True
     # special insertion rule for tran data with random representatives
-    if window.data_mode == 'tran' and globals.params['bin_rep_type'] == 'random' \
+    if window.data_mode == 'train' and globals.params['bin_rep_type'] == 'random' \
             and (window.high - window.low == 1 and rate == '1'):
         return True
     return False
