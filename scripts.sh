@@ -24,3 +24,7 @@ python3 main.py --make_seed_list
 # ===================== On annotation laptop:
 # test data
 python main.py --annotator Moein --session_name sort --data_mode test --debug
+# split
+python main.py --annotator Moein --session_name split --n_bins 10 --debug
+# train data
+python main.py --annotator Moein --session_name sort --data_mode train --debug
