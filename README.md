@@ -8,12 +8,12 @@
 ___
 ### Data
 - Create a folder named `data` in the project folder (beside the `src` folder)
-- Download the test images and put the test images (the ones that are going to be perfectly sorted) in the `data/test_imgs` folder
-- Download the train images and put the train images in the `data/train_imgs` folder
+- Download the test images and put them in the `data/test_imgs` folder
+- Download the train images and put them in the `data/train_imgs` folder
 
 ### Links
-* Test images: https://www.dropbox.com/sh/hrz6stxczlzl95q/AAD9ZuMplzJYGbMHmsh7QyRVa?dl=0
-* Train images: https://drive.google.com/file/d/1T-8oRoG2i1wUJrPv1RTDM2pVqBkNqvfl/view?usp=sharing
+* Test images: https://drive.google.com/file/d/1fdqnqGMJdGCttU_S2ud2aV4LR08P47tb/view?usp=sharing
+* Train images: https://drive.google.com/file/d/1mFo5qyN0FyvecA1YMmem2ptZkUBIShkK/view?usp=sharing
 
 ___
 ### Example commands
