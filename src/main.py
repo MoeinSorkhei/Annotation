@@ -190,22 +190,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-# SCRIPTS:
-# =========  On my mac:
-# python3 main.py --annotator Moein --session_name sort --data_mode test --resize_factor 15 --debug
-# python3 main.py --annotator Moein --session_name sort --data_mode train --resize_factor 15 --debug
-# python3 main.py --annotator Moein --session_name split --n_bins 2 --debug
-
-# python3 main.py --session sort --data_mode test --debug --resize_factor 10 --max_imgs_per_session 4 --email_interval 1
-
-
-# data preparation:
-# python3 main.py --make_seed_list
-# python3 main.py --resize_data
-
-# actual run
-# use --email_interval option
-# use --max_imgs_per_session option
-# use --resize_factor option

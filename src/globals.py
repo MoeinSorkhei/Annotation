@@ -28,6 +28,7 @@ params = {
     "aborted": os.path.join('..', 'output', 'aborted.txt'),
     "ratings": os.path.join('..', 'output', 'ratings.txt'),
 
+    "show_border_time": 300,  # in seconds
     "robust_levels": 2,
     "robust_min_length": 4,  # minimum length of sorted list/number of bins valid for doing ternary
     "bin_rep_type": 'random',  # or 'last': specifies how the bin representative should be chosen

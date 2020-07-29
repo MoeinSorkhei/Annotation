@@ -240,7 +240,7 @@ class Window:
 
             elif 'insert_index' in self.prev_result.keys():
                 self.result_panel.pack(side=TOP)
-                self.result_panel.configure(text='--- Previous image successfully inserted ---', fg='green', bg='white')
+                self.result_panel.configure(text='--- Previous image successfully inserted ---', fg='green', bg='pale green')
 
         # final page
         if self.current_index == len(self.cases):
@@ -363,18 +363,19 @@ class Window:
         self.update_photos_and_stats(frame, files_already_updated)
 
     def update_photos_async(self, rate, frame, files_already_updated):
+        seconds = globals.params['show_border_time']
         if rate == '1':  # draw left border
             self.left_frame.configure(bg='red')
-            self.left_frame.after(500, self._delayed_update_photos, frame, files_already_updated)
+            self.left_frame.after(seconds, self._delayed_update_photos, frame, files_already_updated)
 
         elif rate == '2':  # draw right border
             self.right_frame.configure(bg='red')
-            self.right_frame.after(500, self._delayed_update_photos, frame, files_already_updated)
+            self.right_frame.after(seconds, self._delayed_update_photos, frame, files_already_updated)
 
         elif rate == '9':  # if 9 is pressed, or showing previous case
             self.left_frame.configure(bg='blue')
             self.right_frame.configure(bg='blue')
-            self.right_frame.after(500, self._delayed_update_photos, frame, files_already_updated)
+            self.right_frame.after(seconds, self._delayed_update_photos, frame, files_already_updated)
 
         else:
             self.update_photos_and_stats(frame, files_already_updated)
