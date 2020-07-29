@@ -539,7 +539,8 @@ class Window:
 
             while rate is not None:  # rate already exists
                 log(f'In [keyboard_press] - automatic rate: rate ALREADY AVAILABLE '
-                    f'for the the next case and is: {rate}')
+                    f'for the the next case: ({pure_name(self.curr_left_file)}, {pure_name(self.curr_right_file)}) '
+                    f'and is: {rate}')
                 if matches_binary_insert_rule(self, rate):
                     log(f'In [keyboard_press] - automatic rate: matches with insertion rule. Inserting...')
                     insert_with_binary_inds(self, rate, self.curr_left_file)
