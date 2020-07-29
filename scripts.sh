@@ -22,3 +22,5 @@ python3 main.py --make_seed_list
 
 
 # ===================== On annotation laptop:
+# test data
+python main.py --annotator Moein --session_name sort --data_mode test --debug
