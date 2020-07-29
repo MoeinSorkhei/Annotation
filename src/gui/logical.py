@@ -73,6 +73,10 @@ def calc_rule(m1_rate, m2_rate):
 def matches_binary_insert_rule(window, rate):
     if rate == '9' or window.high == window.low or (window.high - window.low == 1 and rate == '2'):
         return True
+    # special insertion rule for tran data with random representatives
+    if window.data_mode == 'tran' and globals.params['bin_rep_type'] == 'random' \
+            and (window.high - window.low == 1 and rate == '1'):
+        return True
     return False
 
 
@@ -315,7 +319,11 @@ def insert_with_binary_inds(window, rate, item):
 
     # for train data
     else:
-        which_bin = mid  # bin number to insert to
+        # the first condition applies only to random representative, already checked in insertion rule
+        if (window.high - window.low == 1) and rate == '1':
+            which_bin = mid + 1  # special additional insertion rule for train data with random representatives
+        else:
+            which_bin = mid  # bin number to insert to
         bin_rep_type = globals.params['bin_rep_type']
 
         if bin_rep_type == 'random':
