@@ -163,6 +163,8 @@ def main():
                 print(f'Doing for: {image_folder}')
                 convert_imgs_to_png(source_dir=globals.params[image_folder],
                                     dest_dir=f'{globals.params[image_folder]}_png')
+        elif args.image_source == 'results':
+            pass
 
     elif args.make_seed_list:
         data_prep.make_seed_list()

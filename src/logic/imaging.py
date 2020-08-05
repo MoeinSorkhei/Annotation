@@ -61,14 +61,10 @@ def read_dicom_and_resize(file, save_to=None):
     return image
 
 
-def all_dicoms_to_png(path, save=False):
-    dicoms_list = list((Path(path).rglob("*.dcm")))
-    dicoms_list = [str(dicom_path) for dicom_path in dicoms_list]
-
-    if save:
-        for dicom in dicoms_list:
-            read_dicom_and_resize(dicom, dicom.replace('.dcm', '.png'))
-    return dicoms_list
+def image_list_to_png(image_list, save_path):
+    for filepath in image_list:
+        png_filepath = helper.pure_name(filepath).replace('.dcm', '.png')
+        read_dicom_and_resize(filepath, os.path.join(save_path, png_filepath))
 
 
 def convert_imgs_to_png(source_dir, dest_dir):
