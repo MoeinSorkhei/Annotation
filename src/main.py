@@ -24,6 +24,8 @@ def read_args_and_adjust():
     parser.add_argument('--create_img_registry', action='store_true')
     parser.add_argument('--rename_test_imgs', action='store_true')
     parser.add_argument('--convert_test_imgs_to_png', action='store_true')
+    parser.add_argument('--convert_to_ong', action='store_true')
+    parser.add_argument('--image_source', type=str)
     parser.add_argument('--make_seed_list', action='store_true')
     parser.add_argument('--resize_data', action='store_true')
     parser.add_argument('--get_size_stats', action='store_true')
@@ -152,8 +154,15 @@ def main():
                                    globals.params['test_imgs_dir'],
                                    globals.params['test_imgs_renamed_dir'])
 
-    elif args.convert_test_imgs_to_png:
+    elif args.convert_test_imgs_to_png:  # will probably no longer be used
         data_prep.convert_test_imgs_to_png()
+
+    elif args.convert_to_ong:
+        if args.image_source == 'data':
+            for image_folder in ['test_imgs_dir', 'train_imgs_dir']:
+                print(f'Doing for: {image_folder}')
+                convert_imgs_to_png(source_dir=globals.params[image_folder],
+                                    dest_dir=f'{globals.params[image_folder]}_png')
 
     elif args.make_seed_list:
         data_prep.make_seed_list()
