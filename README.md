@@ -19,6 +19,9 @@ ___
 ### Example commands
 
 All the commands should be run from inside the `src` folder.
+* Make sure the conda environment is active:  
+`conda activate annotation2`
+
 * Creating the seed list (the initial sorted list):  
 `python main.py --make_seed_list`
 
