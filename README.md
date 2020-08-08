@@ -14,6 +14,7 @@ ___
 ### Links
 * Test images: https://drive.google.com/file/d/1fdqnqGMJdGCttU_S2ud2aV4LR08P47tb/view?usp=sharing
 * Train images: https://drive.google.com/file/d/1mFo5qyN0FyvecA1YMmem2ptZkUBIShkK/view?usp=sharing
+* If one is interested to actually see the images, the PNG version of the test images could be downloaded from [here](https://drive.google.com/file/d/1UhQdmzNjKxiou5HqE_GEEXqvgpzXJ9Qp/view?usp=sharing) and train images from [here](https://drive.google.com/file/d/1Yu8a6VhhkohwV7fjdDqJK06cAZKFsZfg/view?usp=sharing).
 
 ___
 ### Instructions
