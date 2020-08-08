@@ -16,7 +16,7 @@ ___
 * Train images: https://drive.google.com/file/d/1mFo5qyN0FyvecA1YMmem2ptZkUBIShkK/view?usp=sharing
 
 ___
-### Example commands
+### Instructions
 
 All the commands should be run from inside the `src` folder.
 * Make sure the conda environment is active:  
