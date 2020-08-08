@@ -14,7 +14,7 @@ def create_img_registry(img_folder, output_file):
 
 
 def rename_test_imgs(registry_file, test_imgs_folder, renamed_test_imgs_folder):
-    img_registry = read_file_to_list_if_exists(registry_file)
+    img_registry = read_file_to_list(registry_file)
     make_dir_if_not_exists(renamed_test_imgs_folder)
 
     for i in range(len(img_registry)):

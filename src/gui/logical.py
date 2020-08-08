@@ -431,13 +431,13 @@ def log_current_index(window, called_from):
 
 def read_discarded_cases():
     discarded_file = globals.params['discarded']
-    discarded_list = read_file_to_list_if_exists(discarded_file)
+    discarded_list = read_file_to_list(discarded_file)
     return discarded_list
 
 
 def read_aborted_cases():
     aborted_file = globals.params['aborted']
-    aborted_list = read_file_to_list_if_exists(aborted_file)
+    aborted_list = read_file_to_list(aborted_file)
     return aborted_list
 
 
@@ -476,7 +476,7 @@ def remove_last_record(from_file):
     else:
         raise NotImplementedError
 
-    records = read_file_to_list_if_exists(file)
+    records = read_file_to_list(file)
     records = records[:-1]
     write_list_to_file(records, file)
     log(f'In [remove_last_record]: removed the last record from "{from_file}" and saved it. \n')

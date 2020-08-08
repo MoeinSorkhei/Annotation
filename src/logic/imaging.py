@@ -62,9 +62,9 @@ def read_dicom_and_resize(file, save_to=None):
 
 
 def image_list_to_png(image_list, save_path):
-    for filepath in image_list:
-        png_filepath = helper.pure_name(filepath).replace('.dcm', '.png')
-        read_dicom_and_resize(filepath, os.path.join(save_path, png_filepath))
+    for filepath in image_list:  # image_list should have absolute file paths
+        png_filename = helper.pure_name(filepath).replace('.dcm', '.png')
+        read_dicom_and_resize(filepath, save_to=os.path.join(save_path, png_filename))
 
 
 def convert_imgs_to_png(source_dir, dest_dir):

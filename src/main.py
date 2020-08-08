@@ -24,8 +24,8 @@ def read_args_and_adjust():
     parser.add_argument('--create_img_registry', action='store_true')
     parser.add_argument('--rename_test_imgs', action='store_true')
     parser.add_argument('--convert_test_imgs_to_png', action='store_true')
-    parser.add_argument('--convert_to_ong', action='store_true')
-    parser.add_argument('--image_source', type=str)
+    parser.add_argument('--convert_to_png', action='store_true')
+    parser.add_argument('--image_list', type=str)
     parser.add_argument('--make_seed_list', action='store_true')
     parser.add_argument('--resize_data', action='store_true')
     parser.add_argument('--get_size_stats', action='store_true')
@@ -157,14 +157,19 @@ def main():
     elif args.convert_test_imgs_to_png:  # will probably no longer be used
         data_prep.convert_test_imgs_to_png()
 
-    elif args.convert_to_ong:
-        if args.image_source == 'data':
+    elif args.convert_to_png:
+        if args.image_list == 'data':
             for image_folder in ['test_imgs_dir', 'train_imgs_dir']:
                 print(f'Doing for: {image_folder}')
                 convert_imgs_to_png(source_dir=globals.params[image_folder],
                                     dest_dir=f'{globals.params[image_folder]}_png')
-        elif args.image_source == 'results':
-            pass
+
+        elif args.image_list == 'results':  # only supports the perfectly sorted list for now
+            image_list = helper.read_file_to_list(globals.params['sorted'])
+            print('read list:', image_list)
+            save_path = os.path.join('..', 'output_visualized', 'sorted_imgs_png')
+            helper.make_dir_if_not_exists(save_path)
+            image_list_to_png(image_list, save_path=save_path)
 
     elif args.make_seed_list:
         data_prep.make_seed_list()

@@ -64,7 +64,7 @@ def print_list(sorted_list):
     log('________________________________________________________________\n\n', no_time=True)
 
 
-def read_file_to_list_if_exists(filename):
+def read_file_to_list(filename):
     lines = []
     if os.path.isfile(filename):
         with open(filename) as f:
@@ -135,14 +135,14 @@ def remove_last_aborted():
 
 
 def remove_last_line_from_file(filename):
-    lines = read_file_to_list_if_exists(filename)
+    lines = read_file_to_list(filename)
     lines = lines[:-1]
     write_list_to_file(lines, filename)
 
 
 def _parse_ratings():
     ratings_file = globals.params['ratings']
-    ratings = read_file_to_list_if_exists(ratings_file)
+    ratings = read_file_to_list(ratings_file)
 
     parsed_ratings = []
     for rating in ratings:
