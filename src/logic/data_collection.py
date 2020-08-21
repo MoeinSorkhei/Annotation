@@ -4,6 +4,7 @@ import sqlite3
 import os
 import pandas as pd
 import globals
+from . import helper
 
 
 # CSV files attributes - the nonKS data does not have basename
@@ -150,59 +151,76 @@ def extract_stats():
 
 
 def csv_to_db(data_source):
-    if data_source == 'KS':
-        csv_file = globals.params['ks_csv_file']
-        columns = ['patient', 'x_case', 'x_diadate', 'split']
+    if data_source == 'KS_diagnosis':
+        csv_file = globals.params['ks_csv_file']['diagnosis']
+        db_path = globals.params['ks_db_path']['diagnosis']
+        columns = ['patient', 'split', 'x_case', 'dicom_viewposition', 'dicom_imagelaterality', 'dicom_manufacturer', 'x_diadate', 'dicom_studydate']
         sep = ';'
 
-        db_path = globals.params['ks_db_path']
+        # read the csv file
+        df = pd.read_csv(csv_file, sep=sep, engine='python', usecols=columns)[columns]  # data frame, columns specified order
 
-        db_string = 'CREATE TABLE "KS" ("patient" varchar, "x_case" integer, "x_diadate" varchar, "split" varchar);'
-        insert_command = 'INSERT INTO patients VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        # add new column for converting exact study dates to study years
+        diag_dates = df['x_diadate'].tolist()
+        diag_years = [str(date)[-4:] if str(date) != 'nan' else str(date) for date in diag_dates]
 
-    elif data_source == 'nonKS':
-        # csv_file = globals.params['nonKS_csv_file']
-        # columns = None
-        raise NotImplementedError
+        study_dates = df['dicom_studydate'].tolist()
+        study_years = [str(year)[:4] for year in study_dates]
 
-    elif data_source == 'ddsm_mass' or 'ddsm_calc':
-        db_path = f'../data/ddsm/databases/{data_source}.sqlite'
-        csv_file = globals.params[data_source]
-        sep = ','
+        df['diag_year'] = diag_years
+        df['study_year'] = study_years  # add column to data frame
 
-        # different names
-        if data_source == 'ddsm_mass':
-            columns = ['patient_id', 'breast_density', 'left or right breast', 'image view', 'subtlety']
-            db_string = 'CREATE TABLE "DDSM_MASS" ' \
-                        '("patient_id" varchar, ' \
-                        '"breast_density" integer, ' \
-                        '"left or right breast" varchar, ' \
-                        '"image view" varchar, ' \
-                        '"subtlety" integer);'
-            insert_command = 'INSERT INTO DDSM_MASS VALUES (?, ?, ?, ?, ?)'
+        del df['dicom_studydate']  # delete unneeded columns
+        del df['x_diadate']
 
-        if data_source == 'ddsm_calc':
-            columns = ['patient_id', 'breast density', 'left or right breast', 'image view', 'subtlety']
-            db_string = 'CREATE TABLE "DDSM_CALC" ' \
-                        '("patient_id" varchar, ' \
-                        '"breast_density" integer, ' \
-                        '"left or right breast" varchar, ' \
-                        '"image view" varchar, ' \
-                        '"subtlety" integer);'
-            insert_command = 'INSERT INTO DDSM_CALC VALUES (?, ?, ?, ?, ?)'
+        df_as_list = df.values.tolist()
+
+        db_string = 'CREATE TABLE "KS_diagnosis" ' \
+                    '("patient" varchar, "split" varchar, "x_case" integer, "view" varchar, "laterality" varchar, "manufacturer" varchar, ' \
+                    '"diag_year" varchar, "study_year" varchar);'
+        insert_command = 'INSERT INTO KS_diagnosis VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+
     else:
-        raise NotImplementedError
+        raise NotImplementedError('Need code refactoring')
+    # elif data_source == 'ddsm_mass' or 'ddsm_calc':
+    #     db_path = f'../data/ddsm/databases/{data_source}.sqlite'
+    #     csv_file = globals.params[data_source]
+    #     sep = ','
+    #
+    #     # different names
+    #     if data_source == 'ddsm_mass':
+    #         columns = ['patient_id', 'breast_density', 'left or right breast', 'image view', 'subtlety']
+    #         db_string = 'CREATE TABLE "DDSM_MASS" ' \
+    #                     '("patient_id" varchar, ' \
+    #                     '"breast_density" integer, ' \
+    #                     '"left or right breast" varchar, ' \
+    #                     '"image view" varchar, ' \
+    #                     '"subtlety" integer);'
+    #         insert_command = 'INSERT INTO DDSM_MASS VALUES (?, ?, ?, ?, ?)'
+    #
+    #     if data_source == 'ddsm_calc':
+    #         columns = ['patient_id', 'breast density', 'left or right breast', 'image view', 'subtlety']
+    #         db_string = 'CREATE TABLE "DDSM_CALC" ' \
+    #                     '("patient_id" varchar, ' \
+    #                     '"breast_density" integer, ' \
+    #                     '"left or right breast" varchar, ' \
+    #                     '"image view" varchar, ' \
+    #                     '"subtlety" integer);'
+    #         insert_command = 'INSERT INTO DDSM_CALC VALUES (?, ?, ?, ?, ?)'
+    #
+    # else:
+    #     raise NotImplementedError
 
-    # read the csv file
-    df = pd.read_csv(csv_file, sep=sep, engine='python', usecols=columns)  # data frame
-    # print(df)
-    df_as_list = df.values.tolist()
-    # print(df_as_list[:3])
+    # # read the csv file
+    # df = pd.read_csv(csv_file, sep=sep, engine='python', usecols=columns)  # data frame
+    # df_as_list = df.values.tolist()
 
     # delete db file if exists
+
     if os.path.exists(db_path):
         os.remove(db_path)
         print('Previous database destroyed')
+    helper.make_dir_if_not_exists(os.path.split(db_path)[0])  # make the directory
 
     con = sqlite3.Connection(db_path)
     cur = con.cursor()
@@ -212,7 +230,6 @@ def csv_to_db(data_source):
     print('Database created successfully')
 
     # insert items
-    # for item in df_as_list:
     cur.executemany(insert_command, df_as_list)
     print('Inserted into database successfully')
 

@@ -12,14 +12,24 @@ params = {
     "train_imgs_dir": os.path.join('..', 'data', 'train_imgs'),  # for train data
     # "train_imgs_dir": os.path.join('..', 'data', 'train_imgs_resized'),  # for train data
 
-    "ks_csv_file": os.path.join('..', 'data', 'csv_files', 'data_ks_all_200630.csv'),
-    "nonKS_csv_file": os.path.join('..', 'data', 'csv_files', 'data_nonks_all_200630.csv'),
+    "ks_csv_file": {
+        'density': os.path.join('..', 'data', 'csv_files', 'density', 'density_combined.csv'),
+        'diagnosis': os.path.join('..', 'data', 'csv_files', 'diagnosis', 'data_ks_all_200630.csv')
+    },
+
+    "nonKS_csv_file": {
+        'density': os.path.join('..', 'data', 'csv_files', 'density', 'nonKS_BFT_RCC_FirstCancer_Images_20190702_merged'),
+        'diagnosis': os.path.join('..', 'data', 'csv_files', 'diagnosis', 'data_nonks_all_200630.csv')
+    },
 
     "ddsm_mass": os.path.join('..', 'data', 'ddsm', 'mass_case_description_train_set.csv'),
     "ddsm_calc": os.path.join('..', 'data', 'ddsm', 'calc_case_description_train_set.csv'),
 
-    "ks_db_path": os.path.join('..', 'data', 'ks_db.sqlite'),
-    "db_path": os.path.join('..', 'data', 'database.sqlite'),
+    # "db_path": os.path.join('..', 'data', 'databases'),
+    "ks_db_path": {
+        'density': os.path.join('..', 'data', 'databases', 'ks_density.sqlite'),
+        'diagnosis': os.path.join('..', 'data', 'databases', 'ks_diagnosis.sqlite')
+    },
 
     "output_path": os.path.join('..', 'output'),
     "data_path": os.path.join('..', 'data'),
