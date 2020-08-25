@@ -38,6 +38,11 @@ All the commands should be run from inside the `src` folder.
 * Starting a session for rating train images:  
 `python main.py --annotator [YourName] --session_name sort --data_mode train --ui_verbosity 2`
 
+* In order to visualize the sorted list, you can run the following commans:  
+`python main.py --convert_to_png --image_list results`  
+This will put the png version of the sorted images in the `output_visualized/sorted_imgs_png` folder. Note that the images will most likely appear to be sorted by name (default by the OS). You need to change the the View option to be sorted by "Date Created" so they match the order of the sorted list.
+
+
 
 ___
 ### Important running arguments
