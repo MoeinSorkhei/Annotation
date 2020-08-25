@@ -43,16 +43,8 @@ def convert_test_imgs_to_png():
 def make_seed_list():
     # might have .DS_Store etc.file, so only choose .dcm ones
     helper.make_dir_if_not_exists(globals.params['output_path'])
-    test_imgs = sorted([file for file in os.listdir(globals.params['test_imgs_dir']) if file.endswith('.dcm')])
-    print(f'Read test image names with len: {len(test_imgs)}')
-
-    seed_list = []
-    for filename in test_imgs:
-        number = int(filename.replace('.dcm', ''))
-        if number % 10 == 0:
-            path = os.path.join(os.path.abspath(globals.params['test_imgs_dir']), filename)
-            seed_list.append(path)
-
+    filename_list = ['10.dcm', '28.dcm', '33.dcm', '50.dcm', '78.dcm', '84.dcm']  # manually selected
+    seed_list = [os.path.join(os.path.abspath(globals.params['test_imgs_dir']), filename) for filename in filename_list]
     helper.write_list_to_file(seed_list, globals.params['sorted'])
     print(f'Wrote seed list of len {len(seed_list)} to: "{globals.params["sorted"]}"')
 

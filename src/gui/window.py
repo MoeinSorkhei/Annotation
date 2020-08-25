@@ -300,13 +300,9 @@ class Window:
         logic.log(f'In [update_files]: Right file: "{pure_name(self.curr_right_file)}"\n\n')
 
     def _load_images_into_panels(self):
-        now = time.time()
         left_image, right_image = read_and_resize_imgs(self, threading=True)
         self.left_photo = ImageTk.PhotoImage(image=left_image)
         self.right_photo = ImageTk.PhotoImage(image=right_image)
-        then = time.time()
-        log(f'%%%%%%%%%%%%% %%%%%%%%%%% PHOTOS LOADED - Took: {then - now}')
-
         self.left_photo_panel.configure(image=self.left_photo)
         self.right_photo_panel.configure(image=self.right_photo)
         self.left_photo_panel.pack(side=LEFT, padx=5, pady=5)
