@@ -166,7 +166,7 @@ def main():
 
         elif args.image_list == 'results':  # only supports the perfectly sorted list for now
             image_list = helper.read_file_to_list(globals.params['sorted'])
-            print('read list:', image_list)
+            # print('read list:', image_list)
             save_path = os.path.join('..', 'output_visualized', 'sorted_imgs_png')
             helper.make_dir_if_not_exists(save_path)
             image_list_to_png(image_list, save_path=save_path)
