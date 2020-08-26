@@ -23,19 +23,19 @@ All the commands should be run from inside the `src` folder.
 * Make sure the conda environment is active:  
 `conda activate annotation2`
 
-* Creating the seed list (the initial sorted list):  
+* Creating the seed list (this is done only the first time you are using the tool):  
 `python main.py --make_seed_list`
 
 * Starting a session for rating the test images:  
 `python main.py --annotator [YourName] --session_name sort --data_mode test --ui_verbosity 2`  
  As soon as you start the first session, the `output` folder will be created.
 
-* Splitting the sorted list to bins needed for sorting train data:  
+* Splitting the sorted list to bins needed for sorting train data (once rating the test images is done):  
 `python main.py --annotator [YourName] --session_name split --n_bins 12`  
  After running this command, you should see the files containing image names in 12 bins. The files are named like `bin_0.txt`, `bin_1.txt` etc. and are located in
  the `output` folder.
 
-* Starting a session for rating train images:  
+* Starting a session for rating train images (once the bins are created):  
 `python main.py --annotator [YourName] --session_name sort --data_mode train --ui_verbosity 2`
 
 * (Optional) In order to visualize the sorted list, you can run the following command:  
@@ -54,3 +54,8 @@ ___
 * `--resize_factor`: Determines how much the DICOM high resolution images should be resized (default: 7).
 
 Note that the default values of all the parameters could be found in the `globals.py` file.
+
+___
+### Additional notes:
+* It is OK if for any reason a session is not ended successfully, or if you decide to close a session (close the UI window) in the middle of the process. All the ratings are saved while you are using the tool and nothing will be lost. You can simply run a new session again by running the corresponding command.
+* The UI will show a success message when an image is successfully inserted into the perfectly sorted list or bins. It could also show a message denoting that a case (the image that is being rated) is aborted due to inconsistency in rating. These are shown only to inform the rater, you can continue rating regardless of the message.
