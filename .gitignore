@@ -13,4 +13,5 @@ __pycache__/
 **/.DS_Scleartore
 scripts.sh
 output_visualized
+trial_results/
 
