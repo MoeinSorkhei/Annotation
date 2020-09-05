@@ -35,7 +35,7 @@ All the commands should be run from inside the `src` folder.
  After running this command, you should see the files containing image names in 12 bins. The files are named like `bin_0.txt`, `bin_1.txt` etc. and are located in
  the `output` folder.
 
-* Starting a session for rating train images (once the bins are created) - __5 complete sessions should be run in total to get the whol train data sorted__:  
+* Starting a session for rating train images (once the bins are created) - __5 complete sessions should be run in total to get the whole train data sorted__:  
 `python main.py --annotator [YourName] --session_name sort --data_mode train --ui_verbosity 2`
 
 * (Optional) In order to visualize the sorted list, you can run the following command:  
