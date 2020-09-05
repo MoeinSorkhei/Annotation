@@ -30,12 +30,12 @@ All the commands should be run from inside the `src` folder.
 `python main.py --annotator [YourName] --session_name sort --data_mode test --ui_verbosity 2`  
  As soon as you start the first session, the `output` folder will be created.
 
-* Splitting the sorted list to bins needed for sorting train data (once rating the test images is done):  
+* Splitting the sorted list to bins needed for sorting train data (__once rating all the test images is done, i.e. after 5 complete sessions__):  
 `python main.py --annotator [YourName] --session_name split --n_bins 12`  
  After running this command, you should see the files containing image names in 12 bins. The files are named like `bin_0.txt`, `bin_1.txt` etc. and are located in
  the `output` folder.
 
-* Starting a session for rating train images (once the bins are created):  
+* Starting a session for rating train images (once the bins are created) - __5 complete sessions should be run in total to get the whol train data sorted__:  
 `python main.py --annotator [YourName] --session_name sort --data_mode train --ui_verbosity 2`
 
 * (Optional) In order to visualize the sorted list, you can run the following command:  
