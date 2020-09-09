@@ -23,7 +23,7 @@ All the commands should be run from inside the `src` folder.
 * Make sure the conda environment is active:  
 `conda activate annotation2`
 
-* Creating the seed list (this is done only the first time you are using the tool):  
+* Creating the seed list (this is done only the first time you are using the tool), __please make sure the output folder is deleted if you already have it__:  
 `python main.py --make_seed_list`
 
 * Starting a session for rating the test images:  
