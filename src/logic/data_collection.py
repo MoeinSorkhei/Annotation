@@ -4,6 +4,7 @@ import sqlite3
 import os
 import pandas as pd
 import globals
+import random
 from . import helper
 
 
@@ -152,19 +153,28 @@ def extract_stats():
 
 def prepare_for_db(data_source):
     csv_file = globals.params['ks_csv_file']['diagnosis']
-    common_columns = ['patient', 'split', 'x_case', 'dicom_viewposition', 'dicom_imagelaterality', 'dicom_manufacturer',
-                      'x_diadate', 'dicom_studydate']
+    common_columns = ['patient', 'split', 'x_case',
+                      'dicom_viewposition', 'x_cancer_laterality', 'dicom_imagelaterality',
+                      'dicom_manufacturer', 'full_path_clio', 'x_diadate', 'dicom_studydate']
 
     if data_source == 'KS_diagnosis':
         db_path = globals.params['ks_db_path']['diagnosis']
         columns = common_columns
-    else:
+    else:  # not used
         db_path = os.path.join('..', 'data', 'databases', 'ks_diagnosis_complete.sqlite')
         columns = common_columns + ['x_cancer_laterality']
 
     # read the csv file
     sep = ';'
     df = pd.read_csv(csv_file, sep=sep, engine='python', usecols=columns)[columns]  # data frame, columns specified order
+
+    # get contra-lateral for cancer
+    df['x_cancer_laterality'] = [item[0] if (item == 'Left' or item == 'Right') else item for item in df['x_cancer_laterality']]  # convert Left -> L and Right -> R
+
+    # get random side for healthy
+    random.seed(0)  # to get the same sequence every time
+    rand_sides = [random.choice(['L', 'R']) if df['x_case'][i] == 0 else '_' for i in range(len(df['patient']))]  # rand side for healthy
+    df.insert(loc=df.columns.get_loc('dicom_imagelaterality') + 1, column='rand_side', value=rand_sides)  # insert after image laterality
 
     # add new column for converting exact study dates to study years
     diag_dates = df['x_diadate'].tolist()
@@ -174,7 +184,7 @@ def prepare_for_db(data_source):
     study_years = [str(year)[:4] for year in study_dates]
 
     df['diag_year'] = diag_years
-    df['study_year'] = study_years  # add column to data frame
+    df['study_year'] = study_years  # add column to data frame (at last column index)
 
     del df['dicom_studydate']  # delete unneeded columns
     del df['x_diadate']
@@ -183,11 +193,12 @@ def prepare_for_db(data_source):
 
     if data_source == 'KS_diagnosis':
         db_string = 'CREATE TABLE "KS_diagnosis" ' \
-                '("patient" varchar, "split" varchar, "x_case" integer, "view" varchar, "laterality" varchar, "manufacturer" varchar, ' \
-                '"diag_year" varchar, "study_year" varchar);'
-        insert_command = 'INSERT INTO KS_diagnosis VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+                '("patient" varchar, "split" varchar, "x_case" integer, ' \
+                '"view" varchar, "cancer_laterality" varchar, "image_laterality" varchar, "rand_side" varchar,' \
+                '"manufacturer" varchar, "full_path_clio" varchar, "diag_year" varchar, "study_year" varchar);'
+        insert_command = 'INSERT INTO KS_diagnosis VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 
-    else:
+    else:  # not used
         db_string = 'CREATE TABLE "KS_diagnosis_complete" ' \
                 '("patient" varchar, "split" varchar, "x_case" integer, "view" varchar, "laterality" varchar, "manufacturer" varchar, ' \
                 '"cancer_laterality" varchar, "diag_year" varchar, "study_year" varchar);'
