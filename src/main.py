@@ -53,7 +53,7 @@ def read_args_and_adjust():
 def show_window_with_keyboard_input(not_already_sorted, already_sorted,
                                     data_mode, ui_verbosity, train_bins=None):
 
-    text = 'Which image is harder (even the slightest difference is important)? Press the corresponding button.'
+    text = 'Which image is harder (even the slightest difference is important)? Press the corresponding button on the keyboard.'
 
     root = Tk()  # creates a blank window (or main window)
     title = Label(root, text=text, bg='light blue', font='-size 20')
@@ -74,11 +74,13 @@ def retrieve_not_already_sorted_files(data_mode):
         img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['test_imgs_dir'])  # the dicom files
         already_sorted = read_sorted_imgs()
         n_bins = None
+        text = 'sorted list len'
 
     # create lists of images for train data
     else:
         img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['train_imgs_dir'])
         n_bins, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
+        text = 'total images in the bins'
 
     aborted_cases = read_aborted_cases()
     discarded_cases = read_discarded_cases()
@@ -88,10 +90,10 @@ def retrieve_not_already_sorted_files(data_mode):
 
     log(f'In [retrieve_not_already_sorted_files]: \n'
         f'read img_list of len: {len(img_lst)} \n'
-        f'already_sorted (or entered into bins) images are of len: {len(already_sorted)} \n'
-        f'aborted cases are of len: {len(aborted_cases)} \n'
-        f'discarded cases are of len: {len(discarded_cases)} \n'
-        f'there are {len(not_already_sorted)} images that are not already sorted and not aborted \n')
+        f'{text}: {len(already_sorted)} \n'
+        f'aborted cases: {len(aborted_cases)} \n'
+        f'discarded cases: {len(discarded_cases)} \n'
+        f'images left to be rated: {len(not_already_sorted)} \n')
 
     return not_already_sorted, already_sorted, n_bins
 
@@ -118,10 +120,17 @@ def manage_sessions_and_run(args):
         ui_verbosity = args.ui_verbosity
 
     log(f"\n\n\n\n{'*' * 150} \n{'*' * 150} \n{'*' * 150} \n{'*' * 150}", no_time=True)
+    log(f'Session started in {get_datetime()}')
     log(f'In [manage_sessions]: session_name: "{session_name}" - data_mode: {data_mode} - annotator: {args.annotator}')
 
     assert session_name == 'sort' or session_name == 'split'
     if session_name == 'sort':
+        # adding current date and time to the ratings file
+        with open(globals.params['ratings'], 'a') as rate_file:
+            string = f'{"#" * 20} Ratings for session in {get_datetime()} - Data: {data_mode} - Annotator: {args.annotator}'
+            rate_file.write(f'{string}\n')
+            log('In [manage_sessions]: current session date time and the annotator written to the ratings file.\n')
+
         not_already_sorted, already_sorted, n_bins = retrieve_not_already_sorted_files(data_mode)
         if len(not_already_sorted) == 0:
             log(f'In [main]: not_already_sorted images are of len: 0 ==> Session is already complete. Terminating...')

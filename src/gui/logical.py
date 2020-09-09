@@ -468,6 +468,21 @@ def save_to_aborted_list(case):
     log(f'In [save_to_aborted_list]: saved case "{case}" to aborted list.')
 
 
+def to_be_rated(mode):
+    if mode == 'test':
+        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['test_imgs_dir'])  # the dicom files
+        already_sorted = read_sorted_imgs()
+    else:
+        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['train_imgs_dir'])
+        _, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
+
+    aborted_cases = read_aborted_cases()
+    discarded_cases = read_discarded_cases()
+    not_already_sorted = [img for img in img_lst if
+                          (img not in already_sorted and img not in aborted_cases and img not in discarded_cases)]
+    return not_already_sorted
+
+
 def remove_last_record(from_file):
     if from_file == 'comparisons':
         file = globals.params['comparisons']

@@ -4,6 +4,25 @@ from copy import deepcopy
 
 from .logical import *
 
+import traceback
+from tkinter import messagebox
+import tkinter
+
+
+def set_tk_error_func():
+    def show_error(self, *args):
+        err = traceback.format_exception(*args)
+        messagebox.showerror(title='Exception',
+                             message='An exception occurred during the running of the program. Please check "errors.txt" in the output folder')
+        log(f'An exception occurred during the running of the program in {get_datetime()}. Please check "errors.txt" in the output folder. '
+            '\nTerminating the program....')
+        # write error to file
+        with open(os.path.join(globals.params['output_path'], 'errors.txt'), 'a') as f:
+            f.write(f'{"=" * 20} Exception occurred in {get_datetime()}\n')
+            f.write("".join(err) + '\n\n\n')
+            sys.exit(1)
+    tkinter.Tk.report_callback_exception = show_error
+
 
 class Window:
     def __init__(self, master, cases, already_sorted, data_mode, ui_verbosity, n_bins=None):
@@ -44,8 +63,10 @@ class Window:
         self.ui_verbosity = ui_verbosity
         self.start_time = int(time.time() // 60)  # used for stat panel
         self.case_number = None
-
         self.prev_result = None
+
+        # set the function for tk to show errors
+        set_tk_error_func()
 
         logic.log(f"{'_' * 150}\nIn Window [__init__]: init with case list of len: {len(cases)}", no_time=True)
         master.bind("<Key>", self.keyboard_press)  # bind keyboard press to function
@@ -109,9 +130,7 @@ class Window:
         self.init_frames_and_photos(master)  # init and pack
         self.init_text_panels_and_buttons(master)  # init and pack
         self.update_stat()  # put content
-
-        if self.ui_verbosity > 1:
-            self.init_caption_panels()
+        self.init_caption_panels()
 
     # ======================================== UI-level functions  ========================================
     # =====================================================================================================
@@ -140,13 +159,15 @@ class Window:
 
     def init_caption_panels(self):
         # caption for showing image names
+        left_text = '' if self.ui_verbosity == 1 else shorten_file_name(pure_name(self.curr_left_file))
+        right_text = '' if self.ui_verbosity == 1 else shorten_file_name(pure_name(self.curr_right_file))
         self.left_caption_panel = Label(self.main_frame,
-                                        text=shorten_file_name(pure_name(self.curr_left_file)),
+                                        text=left_text,
                                         font='-size 10')
         self.left_caption_panel.pack(side=LEFT)
 
         self.right_caption_panel = Label(self.main_frame,
-                                         text=shorten_file_name(pure_name(self.curr_right_file)),
+                                         text=right_text,
                                          font='-size 10')
         self.right_caption_panel.pack(side=RIGHT)
 
@@ -235,12 +256,14 @@ class Window:
 
         if self.prev_result is not None:
             if 'aborted' in self.prev_result.keys() and self.prev_result['aborted'] is True:
+                abort_message, bg_color = ('', 'white') if self.ui_verbosity == 1 else ('--- Previous image was aborted ---', 'orange')
                 self.result_panel.pack(side=TOP)
-                self.result_panel.configure(text='--- Previous image was aborted ---', fg='blue', bg='orange')
+                self.result_panel.configure(text=abort_message, fg='blue', bg=bg_color)
 
             elif 'insert_index' in self.prev_result.keys():
+                success_message, bg_color = ('', 'white') if self.ui_verbosity == 1 else ('--- Previous image successfully inserted ---', 'pale green')
                 self.result_panel.pack(side=TOP)
-                self.result_panel.configure(text='--- Previous image successfully inserted ---', fg='green', bg='pale green')
+                self.result_panel.configure(text=success_message, fg='green', bg=bg_color)
 
         # final page
         if self.current_index == len(self.cases):
@@ -248,7 +271,7 @@ class Window:
         # other pages
         else:
             stat_text = f'Rating for image {self.current_index + 1} of {len(self.cases)} - ' \
-                        f'Case number: {self.case_number}'
+                        f'Case number: {self.case_number} - Total images left: {len(to_be_rated(self.data_mode))}'
 
             if self.prev_result is not None:
                 rate_text = f'Previous rate: ' \

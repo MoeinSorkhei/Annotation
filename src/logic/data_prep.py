@@ -41,7 +41,6 @@ def convert_test_imgs_to_png():
 
 
 def make_seed_list():
-    # might have .DS_Store etc.file, so only choose .dcm ones
     helper.make_dir_if_not_exists(globals.params['output_path'])
     filename_list = ['10.dcm', '28.dcm', '33.dcm', '50.dcm', '78.dcm', '84.dcm']  # manually selected
     seed_list = [os.path.join(os.path.abspath(globals.params['test_imgs_dir']), filename) for filename in filename_list]

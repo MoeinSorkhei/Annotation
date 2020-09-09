@@ -7,6 +7,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import glob
+import datetime
 from shutil import copyfile
 
 import globals
@@ -36,7 +37,7 @@ def log(string, no_time=False):
     make_dir_if_not_exists(output_path)
     print(string)
     # append string to the file with date and time
-    line = f'{string}\n' if no_time else f'[{strftime("%Y-%m-%d %H:%M:%S", gmtime())}] $ {string}\n'
+    line = f'{string}\n' if no_time else f'[{get_datetime(raw=True)}] $ {string}\n'
     log_file = os.path.join(output_path, 'log.txt')
     with open(log_file, 'a') as file:
         file.write(line)
@@ -100,6 +101,12 @@ def get_all_dicom_files(img_folder):
     return glob.glob(f'{img_folder}/**/*.dcm', recursive=True)  # it assumes '/' path separator
 
 
+def get_datetime(raw=False):
+    if raw:
+        return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S")
+
+
 # ========== functions for saving/reading results
 def write_sorted_list_to_file(lst):
     sorted_filename = globals.params['sorted']
@@ -116,17 +123,13 @@ def write_sorted_list_to_file(lst):
 def save_rating(left_img, right_img, rate):
     rate_file = globals.params['ratings']
     with open(rate_file, 'a') as f:
-        string = f'{left_img} - {right_img} - {rate}'
+        string = f'{left_img} $ {right_img} $ {rate}'
         f.write(f'{string}\n')
 
 
 def remove_last_rating():
     rate_file = globals.params['ratings']
     remove_last_line_from_file(rate_file)
-    # lines = read_file_to_list_if_exists(rate_file)
-    # lines = lines[:-1]
-    # write_list_to_file(lines, rate_file)
-    # log(f'In [remove_last_rating]: removed tha last rate\n')
 
 
 def remove_last_aborted():
@@ -146,7 +149,9 @@ def _parse_ratings():
 
     parsed_ratings = []
     for rating in ratings:
-        left_file, right_file, rate = rating.split('-')
+        if rating.startswith('#'):  # this is separator between sessions
+            continue
+        left_file, right_file, rate = rating.split('$')
         parsed_ratings.append((left_file.strip(), right_file.strip(), rate.strip()))
     return parsed_ratings
 
