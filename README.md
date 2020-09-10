@@ -18,7 +18,7 @@ ___
 
 ___
 ### Instructions
-__`THE CODE HAS BEEN UPDATE. PLEASE PULL/DOWNLOAD THE LATEST VERSION OF THE CODE.`__
+__`THE CODE HAS BEEN UPDATED. PLEASE PULL/DOWNLOAD THE LATEST VERSION OF THE CODE.`__
 
 All the commands should be run from inside the `src` folder.
 * Make sure the conda environment is active:  
