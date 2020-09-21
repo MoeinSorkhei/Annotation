@@ -101,8 +101,10 @@ def get_all_dicom_files(img_folder):
     return glob.glob(f'{img_folder}/**/*.dcm', recursive=True)  # it assumes '/' path separator
 
 
-def get_datetime(raw=False):
-    if raw:
+def get_datetime(raw=False, underscored=False):
+    if underscored:
+        return datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    elif raw:
         return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S")
 
@@ -120,10 +122,10 @@ def write_sorted_list_to_file(lst):
         print_list(lst)
 
 
-def save_rating(left_img, right_img, rate):
+def save_rating(left_img, right_img, rate, annotator, timestamp):
     rate_file = globals.params['ratings']
     with open(rate_file, 'a') as f:
-        string = f'{left_img} $ {right_img} $ {rate}'
+        string = f'{left_img} $ {right_img} $ {rate} $ {annotator} $ {timestamp}'
         f.write(f'{string}\n')
 
 
@@ -151,9 +153,13 @@ def _parse_ratings():
     for rating in ratings:
         if rating.startswith('#'):  # this is separator between sessions
             continue
-        left_file, right_file, rate = rating.split('$')
-        parsed_ratings.append((left_file.strip(), right_file.strip(), rate.strip()))
+        left_file, right_file, rate, annotator, timestamp = rating.split('$')
+        parsed_ratings.append((left_file.strip(), right_file.strip(), rate.strip(), annotator.strip(), timestamp.strip()))
     return parsed_ratings
+
+
+def parsed(string, character):
+    return [item.strip() for item in string.split(character)]
 
 
 def get_rate_if_already_exists(left_file, right_file):

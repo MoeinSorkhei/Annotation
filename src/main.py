@@ -8,6 +8,8 @@ from logic import data_prep
 def read_args_and_adjust():
     parser = argparse.ArgumentParser(description='Annotation tool')
     parser.add_argument('--annotator', type=str)
+    parser.add_argument('--new', action='store_true')
+    parser.add_argument('--already', action='store_true')
     parser.add_argument('--session_name', type=str)
     parser.add_argument('--data_mode', type=str)
     parser.add_argument('--n_bins', type=int)
@@ -51,7 +53,7 @@ def read_args_and_adjust():
 
 
 def show_window_with_keyboard_input(not_already_sorted, already_sorted,
-                                    data_mode, ui_verbosity, train_bins=None):
+                                    data_mode, annotator, ui_verbosity, train_bins=None):
 
     text = 'Which image is harder (even the slightest difference is important)? Press the corresponding button on the keyboard.'
 
@@ -63,6 +65,7 @@ def show_window_with_keyboard_input(not_already_sorted, already_sorted,
                    cases=not_already_sorted,
                    already_sorted=already_sorted,
                    data_mode=data_mode,
+                   annotator=annotator,
                    ui_verbosity=ui_verbosity,
                    n_bins=train_bins)
     root.mainloop()  # run the main window continuously
@@ -70,15 +73,17 @@ def show_window_with_keyboard_input(not_already_sorted, already_sorted,
 
 def retrieve_not_already_sorted_files(data_mode):
     # create lists of images for test data
+    img_lst = helper.read_file_to_list(os.path.join(globals.params['data_path'], f'{data_mode}_img_registry.txt'))
+
     if data_mode == 'test':
-        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['test_imgs_dir'])  # the dicom files
+        # img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['test_imgs_dir'])  # the dicom files
         already_sorted = read_sorted_imgs()
         n_bins = None
         text = 'sorted list len'
 
     # create lists of images for train data
     else:
-        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['train_imgs_dir'])
+        # img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['train_imgs_dir'])
         n_bins, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
         text = 'total images in the bins'
 
@@ -106,12 +111,9 @@ def manage_sessions_and_run(args):
     Notes on output files:
         - Comparisons.txt and comparisons.json are updated only once the decision is confirmed.
     """
-    # creating output path if not exists
-    output_path = globals.params['output_path']
-    make_dir_if_not_exists(output_path)
-
     session_name = args.session_name
     data_mode = args.data_mode
+    annotator = args.annotator
 
     ui_verbosity = 1  # default, least verbose
     if globals.debug:
@@ -121,7 +123,7 @@ def manage_sessions_and_run(args):
 
     log(f"\n\n\n\n{'*' * 150} \n{'*' * 150} \n{'*' * 150} \n{'*' * 150}", no_time=True)
     log(f'Session started in {get_datetime()}')
-    log(f'In [manage_sessions]: session_name: "{session_name}" - data_mode: {data_mode} - annotator: {args.annotator}')
+    log(f'In [manage_sessions]: session_name: "{session_name}" - data_mode: {data_mode} - annotator: {annotator}')
 
     assert session_name == 'sort' or session_name == 'split'
     if session_name == 'sort':
@@ -140,7 +142,7 @@ def manage_sessions_and_run(args):
         max_imgs_per_session = globals.params['max_imgs_per_session']
         not_already_sorted = not_already_sorted[:max_imgs_per_session]
         log(f'In [manage_sessions]: not_already_sorted reduced to have len: {len(not_already_sorted)} in this session.')
-        show_window_with_keyboard_input(not_already_sorted, already_sorted, data_mode, ui_verbosity, n_bins)
+        show_window_with_keyboard_input(not_already_sorted, already_sorted, data_mode, annotator, ui_verbosity, n_bins)
 
     else:
         split_sorted_list_to_bins(args.n_bins)
@@ -205,11 +207,68 @@ def main():
         data_prep.get_size_stats(globals.params['test_imgs_dir'])
         data_prep.get_size_stats(globals.params['train_imgs_dir'])
 
-    else:
-        if args.annotator is None:
-            print('Please provide annotator name using the --annotator argument')
+    else:   # sort and split sessions
+        if args.session_name == 'sort' and args.annotator is None:
+            message = 'Please provide annotator name using the --annotator argument'
+            show_visual_error("Arguments specified incorrectly", message)
             exit(1)  # unsuccessful exit
 
+        # special checks for sessions for rating test images
+        if args.session_name == 'sort' and args.data_mode == 'test':
+            if not args.new and not args.already:  # one of the arguments should be specified
+                message = 'Please use argument --new if it is the first time you are rating the images, or --already if you have already rated some images.'
+                show_visual_error("Arguments specified incorrectly", message)
+                exit(1)
+
+            annotator_out_path = globals.params['output_path'] + f'_{args.annotator}'
+            print(f'Checking output path for annotator: {args.annotator} and output path: "{annotator_out_path}" with respect to --new or --already')
+
+            if args.new and os.path.exists(annotator_out_path):
+                message = f'Another annotator with name {args.annotator} exists. Please choose a different name when using --annotator.'
+                show_visual_error("Arguments specified incorrectly", message)
+                exit(1)
+
+            if args.already and not os.path.exists(annotator_out_path):
+                message = f'No annotator with name: {args.annotator} found. Are you specifying your name correctly?'
+                show_visual_error("Arguments specified incorrectly", message)
+                exit(1)
+
+            # arguments specified correctly - set path for rating test images (for train images we use the usual output path specified in globals)
+            globals.params['output_path'] = annotator_out_path
+            globals.params['sorted'] = os.path.join(annotator_out_path, 'sorted.txt')
+            globals.params['discarded'] = os.path.join(annotator_out_path, 'discarded.txt')
+            globals.params['aborted'] = os.path.join(annotator_out_path, 'aborted.txt')
+            globals.params['ratings'] = os.path.join(annotator_out_path, 'ratings.txt')
+
+            # log(f"\n\n\n\n{'#' * 150}", no_time=True)
+            # log(f'In [main]: Checking paths for annotator: {args.annotator} and output_path: "{annotator_out_path}" was successful. Starting the session with paths:\n'
+            #     f"output_path: {globals.params['output_path']}\n"
+            #     f"sorted: {globals.params['sorted']}\n"
+            #     f"discarded: {globals.params['discarded']}\n"
+            #     f"aborted: {globals.params['aborted']}\n"
+            #     f"ratings: {globals.params['ratings']}")
+            # log(f"{'#' * 150}", no_time=True)
+
+            # make seed list
+            # if args.new:
+            #     data_prep.make_seed_list()
+
+        # creating output path if not exists (generic for all the sessions)
+        log(f"\n\n\n\n{'#' * 150}", no_time=True)
+        log(f'In [main]: Checking paths for annotator: {args.annotator} and output_path: "{globals.params["output_path"]}" done.\n'
+            f"output_path: {globals.params['output_path']}\n"
+            f"sorted: {globals.params['sorted']}\n"
+            f"discarded: {globals.params['discarded']}\n"
+            f"aborted: {globals.params['aborted']}\n"
+            f"ratings: {globals.params['ratings']}")
+        log(f"{'#' * 150}", no_time=True)
+
+        # make seed list for annotator if this is the first time
+        if args.session_name == 'sort' and args.data_mode == 'test' and args.new:
+            log('In [main]: Creating the seed list for the annotator...')
+            data_prep.make_seed_list()
+
+        make_dir_if_not_exists(globals.params['output_path'])
         manage_sessions_and_run(args)
 
 

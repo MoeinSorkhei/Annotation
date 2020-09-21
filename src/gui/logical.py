@@ -432,48 +432,53 @@ def log_current_index(window, called_from):
 def read_discarded_cases():
     discarded_file = globals.params['discarded']
     discarded_list = read_file_to_list(discarded_file)
+    discarded_list = [parsed(discarded, '$')[0] for discarded in discarded_list]
     return discarded_list
 
 
 def read_aborted_cases():
     aborted_file = globals.params['aborted']
     aborted_list = read_file_to_list(aborted_file)
+    aborted_list = [parsed(aborted, '$')[0] for aborted in aborted_list]  # only the filename
     return aborted_list
 
 
-def save_aborted_cases(window):
-    if window.data_mode == 'test':
-        successful_cases = read_sorted_imgs()
-    else:
-        _, successful_cases = all_imgs_in_all_bins()
+# def save_aborted_cases(window):
+#     if window.data_mode == 'test':
+#         successful_cases = read_sorted_imgs()
+#     else:
+#         _, successful_cases = all_imgs_in_all_bins()
+#
+#     discarded_cases = read_discarded_cases()
+#     aborted_cases = [case for case in window.cases if (case not in successful_cases and case not in discarded_cases)]
+#
+#     for aborted in aborted_cases:
+#         save_to_aborted_list(aborted)
+#     log(f'In [save_aborted_cases]: saved {len(aborted_cases)} aborted cases...\n')
 
-    discarded_cases = read_discarded_cases()
-    aborted_cases = [case for case in window.cases if (case not in successful_cases and case not in discarded_cases)]
 
-    for aborted in aborted_cases:
-        save_to_aborted_list(aborted)
-    log(f'In [save_aborted_cases]: saved {len(aborted_cases)} aborted cases...\n')
-
-
-def save_to_discarded_list(case):
+def save_to_discarded_list(case, annotator, timestamp):
     filename = globals.params['discarded']
-    append_to_file(filename, case)
+    string = f'{case} $ {annotator} $ {timestamp}'
+    append_to_file(filename, string)
     log(f'In [save_to_discarded_list]: saved case "{case}" to discarded list.')
 
 
-def save_to_aborted_list(case):
+def save_to_aborted_list(case, annotator, timestamp):
     filename = globals.params['aborted']
     with open(filename, 'a') as file:
-        file.write(f'{case}\n')
+        string = f'{case} $ {annotator} $ {timestamp}'
+        file.write(f'{string}\n')
     log(f'In [save_to_aborted_list]: saved case "{case}" to aborted list.')
 
 
 def to_be_rated(mode):
+    img_lst = helper.read_file_to_list(os.path.join(globals.params['data_path'], f'{mode}_img_registry.txt'))
     if mode == 'test':
-        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['test_imgs_dir'])  # the dicom files
+        # img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['test_imgs_dir'])  # the dicom files
         already_sorted = read_sorted_imgs()
     else:
-        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['train_imgs_dir'])
+        # img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['train_imgs_dir'])
         _, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
 
     aborted_cases = read_aborted_cases()

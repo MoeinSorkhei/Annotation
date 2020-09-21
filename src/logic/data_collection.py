@@ -6,6 +6,7 @@ import pandas as pd
 import globals
 import random
 from . import helper
+import numpy as np
 
 
 # CSV files attributes - the nonKS data does not have basename
@@ -60,11 +61,88 @@ def draw_hist_from_csv(csv_file, features, main_att, sep, plot_labels, save_path
     draw_hist(df.to_numpy(), plot_labels, save_path)
 
 
+def dict_val_lens(dictionary):
+    return np.array([len(v) for k, v in dictionary.items()])
+
+
+def merge_densities(cancer_csv, healthy_csv, density_csv, config, x_labels, save_path=None):
+    cancer_orig_dict, cancer_uniform_dict = sample_from_densities(cancer_csv, density_csv, n_samples=config['cancer_samples'], density_threshold=config['cancer_threshold'])
+    cancer_orig_lens, cancer_uniform_lens = dict_val_lens(cancer_orig_dict), dict_val_lens(cancer_uniform_dict)
+    # draw_hist(values=cancer_orig_lens, labels={'x_label': f'{x_labels["cancer"]} - Original Density', 'y_label': 'Count'}, save_path=save_path)  # original densities
+    # draw_hist(values=cancer_uniform_lens, labels={'x_label': f'{x_labels["cancer"]} - Sampled density', 'y_label': 'Count'}, save_path=save_path)  # sampled densities
+
+    healthy_orig_dict, healthy_uniform_dict = sample_from_densities(healthy_csv, density_csv, n_samples=config['healthy_samples'], density_threshold=config['healthy_threshold'])
+    healthy_orig_lens, healthy_uniform_lens = dict_val_lens(healthy_orig_dict), dict_val_lens(healthy_uniform_dict)
+    # draw_hist(values=healthy_orig_lens, labels={'x_label': f'{x_labels["healthy"]} - Original Density', 'y_label': 'Count'}, save_path=save_path)  # sampled densities
+    # draw_hist(values=healthy_uniform_lens, labels={'x_label': f'{x_labels["healthy"]} - Original Density', 'y_label': 'Count'}, save_path=save_path)  # sampled densities
+    # input()
+    cancer_uniform_count, healthy_uniform_count = np.sum(cancer_uniform_lens), np.sum(healthy_uniform_lens)
+
+    merged_dict = {key: [] for key in cancer_uniform_dict.keys()}
+    for key, value in merged_dict.items():
+        merged_dict[key] = cancer_uniform_dict[key] + healthy_uniform_dict[key]
+
+    merged_dict_lens = dict_val_lens(merged_dict)
+    total_count = np.sum(merged_dict_lens)
+    print('Total count:', total_count, f'cancer count: {cancer_uniform_count}, healthy count: {healthy_uniform_count}  - '
+                                       f'cancer/healthy: {round(cancer_uniform_count / total_count, 2)}/{round(healthy_uniform_count / total_count, 2)}')
+    # print(merged_dict_lens)
+    draw_hist(values=merged_dict_lens, labels={'x_label': f'{x_labels["merged"]} - Density', 'y_label': 'Count'}, save_path=save_path)
+
+
+def sample_from_densities(query_csv, density_csv, n_samples, density_threshold, x_label=None, save_path=None):
+    query_df = pd.read_csv(query_csv, sep=',', engine='python')
+    files = [file.split('/')[-1] for file in query_df['full_path_clio']]
+    print('files len:', len(files))
+
+    density_df = pd.read_csv(density_csv, sep=';', engine='python')
+    density_df = density_df[density_df['basename'].isin(files)]  # the ones whose basenames are in files
+    print('density df len', len(density_df))
+
+    original_dict, uniform_dict = {}, {}
+    for i in range(101):
+        original_dict.update({str(i): []})
+        uniform_dict.update({str(i): []})
+
+    for i, filename in enumerate(files):
+        density_as_series = density_df[density_df['basename'] == filename]['BreastDensity___']
+        if len(density_as_series) != 1:  # ignore the file if density not available
+            continue
+
+        # density = int(round(density_df[density_df['basename'] == filename]['BreastDensity___']))  # round density values to nearest int
+        density = int(round(density_as_series))  # round density values to nearest int
+        for key, value in original_dict.items():
+            if key == str(density):  # insert into the corresponding list
+                value.append(filename)
+
+    orig_counts = dict_val_lens(original_dict)
+    print('orig_counts:', orig_counts)
+
+    random.seed(0)  # to get the same sequence every time
+    for key, value in original_dict.items():
+        if density_threshold[0] <= int(key) <= density_threshold[1]:  # exclude densities over and below thresholds (to ensure uniformity of distribution)
+            if n_samples is None:  # include all the samples
+                uniform_dict[key] = original_dict[key]
+            else:
+                sample_list = random.sample(value, n_samples) if len(value) > n_samples else value  # take random samples from each density list
+                uniform_dict[key] = sample_list
+
+    final_samples = []  # final samples
+    for k, v in uniform_dict.items():
+        final_samples.extend(v)
+    print('final samples len', len(final_samples))
+
+    samples_counts = dict_val_lens(uniform_dict)
+    print('samples_counts:', samples_counts, '\n')
+    return original_dict, uniform_dict
+
+
 def draw_hist(values, labels, save_path, count_or_prob='count', logscale=False):
     plt.clf()
 
-    vertical_is_prob = count_or_prob == 'prob'
-    plt.hist(values, density=vertical_is_prob, bins=100)  # `density=False` would make counts
+    # vertical_is_prob = count_or_prob == 'prob'
+    # plt.hist(values, density=vertical_is_prob, bins='auto')  # `density=False` would make counts
+    plt.bar(np.arange(101), values)
 
     if logscale:
         plt.xscale('log')
@@ -72,6 +150,7 @@ def draw_hist(values, labels, save_path, count_or_prob='count', logscale=False):
     # x label and y label and save to
     plt.xlabel(labels['x_label'])
     plt.ylabel(labels['y_label'])
+    plt.xticks(range(0, 101, 10))
 
     if save_path:
         plt.savefig(save_path)
@@ -79,7 +158,7 @@ def draw_hist(values, labels, save_path, count_or_prob='count', logscale=False):
         plt.show()
 
 
-def density_hist(densities, view, filename):
+def density_hist_prev(densities, view, filename):
     plt.clf()
     count_or_prob = 'Count'
     logscale = True
@@ -125,8 +204,8 @@ def read_breast_densities(view=None, limit_to=None, plot=True):
         non_ks_densities = non_ks_densities[:limit_to]
 
     if plot:
-        density_hist(ks_densities, view, filename='KS')
-        density_hist(non_ks_densities, view, filename='nonKS')
+        density_hist_prev(ks_densities, view, filename='KS')
+        density_hist_prev(non_ks_densities, view, filename='nonKS')
 
 
 def extract_stats():

@@ -2,6 +2,7 @@ src/test.py
 commit_msg.txt
 tmp/
 output/
+output_*/
 data/
 figs/
 

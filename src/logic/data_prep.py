@@ -1,6 +1,7 @@
 from .helper import *
 from .imaging import *
 from . import helper
+import logic
 
 
 def create_img_registry(img_folder, output_file):
@@ -45,7 +46,19 @@ def make_seed_list():
     filename_list = ['10.dcm', '28.dcm', '33.dcm', '50.dcm', '78.dcm', '84.dcm']  # manually selected
     seed_list = [os.path.join(os.path.abspath(globals.params['test_imgs_dir']), filename) for filename in filename_list]
     helper.write_list_to_file(seed_list, globals.params['sorted'])
-    print(f'Wrote seed list of len {len(seed_list)} to: "{globals.params["sorted"]}"')
+    log(f'Wrote seed list of len {len(seed_list)} to: "{globals.params["sorted"]}"')
+
+
+def create_image_registry(data_mode):
+    print('Creating image registry for data_mode:', data_mode)
+    if data_mode == 'test':
+        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['test_imgs_dir'])  # the dicom files
+    else:
+        img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['train_imgs_dir'])
+    path = os.path.join(globals.params['data_path'], f'{data_mode}_img_registry.txt')
+
+    write_list_to_file(img_lst, path)
+    print(f'Saved image registry of len: {len(img_lst)} to: "{path}"')
 
 
 def resize_data(image_dir, save_dir, new_width, new_height):

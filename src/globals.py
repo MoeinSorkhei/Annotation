@@ -31,8 +31,10 @@ params = {
         'diagnosis': os.path.join('..', 'data', 'databases', 'ks_diagnosis.sqlite')
     },
 
-    "output_path": os.path.join('..', 'output'),
     "data_path": os.path.join('..', 'data'),
+
+    # these are the basic paths, could be modified in the program
+    "output_path": os.path.join('..', 'output'),
     "sorted": os.path.join('..', 'output', 'sorted.txt'),
     "discarded": os.path.join('..', 'output', 'discarded.txt'),
     "aborted": os.path.join('..', 'output', 'aborted.txt'),

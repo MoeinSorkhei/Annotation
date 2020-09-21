@@ -9,6 +9,13 @@ from tkinter import messagebox
 import tkinter
 
 
+def show_visual_error(title, message):
+    print(message)
+    root = Tk()
+    root.withdraw()  # for not showing an extra window
+    messagebox.showerror(title, message)
+
+
 def set_tk_error_func():
     def show_error(self, *args):
         err = traceback.format_exception(*args)
@@ -25,7 +32,7 @@ def set_tk_error_func():
 
 
 class Window:
-    def __init__(self, master, cases, already_sorted, data_mode, ui_verbosity, n_bins=None):
+    def __init__(self, master, cases, already_sorted, data_mode, annotator, ui_verbosity, n_bins=None):
         """
         :param master:
         :param cases:
@@ -60,6 +67,7 @@ class Window:
         self.master = master
         self.cases = cases
         self.data_mode = data_mode  # test or train
+        self.annotator = annotator
         self.ui_verbosity = ui_verbosity
         self.start_time = int(time.time() // 60)  # used for stat panel
         self.case_number = None
@@ -482,7 +490,7 @@ class Window:
 
     def discard_case(self, event):
         log(f'In [discard_case]: Pushed the Discard button. Discarding the case...')
-        save_to_discarded_list(self.curr_left_file)  # save current left file to discarded.txt
+        save_to_discarded_list(self.curr_left_file, self.annotator, helper.get_datetime(underscored=True))  # save current left file to discarded.txt
 
         self.current_index += 1
         reset_attributes(self)
@@ -594,7 +602,7 @@ class Window:
 
         # ======== take action if keystroke is valid (ie, prev_result is confirmed)
         if keystroke_is_valid(pressed):
-            save_rating(self.curr_left_file, self.curr_right_file, eval(pressed))
+            save_rating(self.curr_left_file, self.curr_right_file, eval(pressed), self.annotator, helper.get_datetime(underscored=True))
             log(f'In [keyboard_press]: saved the rating\n')
             files_already_updated = False
             insert_happened = False
@@ -640,7 +648,7 @@ class Window:
                         self.prev_result['aborted'] = True
                         reset_attributes_and_increase_index(self)
                         abort_happened = True
-                        save_to_aborted_list(self.curr_left_file)
+                        save_to_aborted_list(self.curr_left_file, self.annotator, helper.get_datetime(underscored=True))
                         log(f'In [keyboard_press]: rates are INCONSISTENT. Case aborted and reset attributes - '
                             f'current_index increased to: {self.current_index}')
 
