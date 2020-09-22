@@ -22,16 +22,16 @@ All the commands should be run from inside the `src` folder.
 * Make sure the conda environment is active:  
 `conda activate annotation2`
 
-* Starting a session for rating the test images:  
+* Starting a session for rating the __test__ images:  
 `python main.py --annotator Moein --new --session_name sort --data_mode test --ui_verbosity 2`
 
-* Splitting the sorted list to bins needed for sorting train data:
+* Splitting the sorted list to bins needed for sorting train data:  
 `python main.py --session_name split --n_bins 12`  
 
-* Starting a session for rating train images (once the bins are created):
+* Starting a session for rating __train__ images:  
 `python main.py --annotator Moein --new --session_name sort --data_mode train --ui_verbosity 2`
 
-* Variability:  
+* For __variability__:  
 `python main.py --annotator Moein --already --session_name variability_intra --data_mode test --ui_verbosity 2`
 
 * (Optional) In order to visualize the sorted list, you can run the following command:  
