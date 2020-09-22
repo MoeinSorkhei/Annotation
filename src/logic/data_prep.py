@@ -2,6 +2,7 @@ from .helper import *
 from .imaging import *
 from . import helper
 import logic
+import random
 
 
 def create_img_registry(img_folder, output_file):

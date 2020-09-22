@@ -52,7 +52,7 @@ def read_args_and_adjust():
     return arguments
 
 
-def show_window_with_keyboard_input(not_already_sorted, already_sorted,
+def show_window_with_keyboard_input(not_already_sorted, already_sorted, session_name,
                                     data_mode, annotator, ui_verbosity, train_bins=None):
 
     text = 'Which image is harder (even the slightest difference is important)? Press the corresponding button on the keyboard.'
@@ -65,52 +65,44 @@ def show_window_with_keyboard_input(not_already_sorted, already_sorted,
                    cases=not_already_sorted,
                    already_sorted=already_sorted,
                    data_mode=data_mode,
+                   session_name=session_name,
                    annotator=annotator,
                    ui_verbosity=ui_verbosity,
                    n_bins=train_bins)
     root.mainloop()  # run the main window continuously
 
 
-def retrieve_not_already_sorted_files(data_mode):
-    # create lists of images for test data
-    img_lst = helper.read_file_to_list(os.path.join(globals.params['data_path'], f'{data_mode}_img_registry.txt'))
-
-    if data_mode == 'test':
-        # img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['test_imgs_dir'])  # the dicom files
-        already_sorted = read_sorted_imgs()
-        n_bins = None
-        text = 'sorted list len'
-
-    # create lists of images for train data
-    else:
-        # img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['train_imgs_dir'])
-        n_bins, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
-        text = 'total images in the bins'
-
-    aborted_cases = read_aborted_cases()
-    discarded_cases = read_discarded_cases()
-
-    not_already_sorted = [img for img in img_lst if
-                          (img not in already_sorted and img not in aborted_cases and img not in discarded_cases)]
-
-    log(f'In [retrieve_not_already_sorted_files]: \n'
-        f'read img_list of len: {len(img_lst)} \n'
-        f'{text}: {len(already_sorted)} \n'
-        f'aborted cases: {len(aborted_cases)} \n'
-        f'discarded cases: {len(discarded_cases)} \n'
-        f'images left to be rated: {len(not_already_sorted)} \n')
-
-    return not_already_sorted, already_sorted, n_bins
+# def retrieve_not_already_sorted_files(session_name, data_mode):
+#     # img_lst = helper.read_file_to_list(globals.params['img_registry'])
+#     # if session_name == 'sort':
+#     #     if data_mode == 'test':
+#     #         already_sorted = read_sorted_imgs()
+#     #         n_bins = None
+#     #         text = 'sorted list len'
+#     #     else:
+#     #         n_bins, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
+#     #         text = 'total images in the bins'
+#     #     aborted_cases = read_aborted_cases()
+#     #     discarded_cases = read_discarded_cases()
+#     # else:
+#     #     already_sorted, n_bins, text = read_file_to_list(globals.params['rating']), None, f'total {session_name} rated images'
+#     #     aborted_cases = discarded_cases = []
+#     #
+#     # not_already_sorted = [img for img in img_lst if
+#     #                       (img not in already_sorted and img not in aborted_cases and img not in discarded_cases)]
+#     img_lst, not_already_sorted, already_sorted, aborted_cases, discarded_cases, n_bins, text = to_be_rated(session_name, data_mode)
+#
+#     log(f'In [retrieve_not_already_sorted_files]: \n'
+#         f'read img_list of len: {len(img_lst)} \n'
+#         f'{text}: {len(already_sorted)} \n'
+#         f'aborted cases: {len(aborted_cases)} \n'
+#         f'discarded cases: {len(discarded_cases)} \n'
+#         f'images left to be rated: {len(not_already_sorted)} \n')
+#
+#     return not_already_sorted, already_sorted, n_bins
 
 
 def manage_sessions_and_run(args):
-    """
-    :param args:
-    :return:
-
-    Notes on output files:
-        - Comparisons.txt and comparisons.json are updated only once the decision is confirmed.
-    """
     session_name = args.session_name
     data_mode = args.data_mode
     annotator = args.annotator
@@ -121,31 +113,42 @@ def manage_sessions_and_run(args):
     elif args.ui_verbosity is not None:
         ui_verbosity = args.ui_verbosity
 
+    # make seed list for annotator if this is the first time
+    if args.session_name == 'sort' and args.data_mode == 'test' and args.new:
+        log('In [main]: Creating the seed list for the annotator...')
+        data_prep.make_seed_list()
+
+    # log indicating start of a session
     log(f"\n\n\n\n{'*' * 150} \n{'*' * 150} \n{'*' * 150} \n{'*' * 150}", no_time=True)
     log(f'Session started in {get_datetime()}')
     log(f'In [manage_sessions]: session_name: "{session_name}" - data_mode: {data_mode} - annotator: {annotator}')
 
-    assert session_name == 'sort' or session_name == 'split'
+    # adding current date and time to the ratings file, only for sort sessions
     if session_name == 'sort':
-        # adding current date and time to the ratings file
         with open(globals.params['ratings'], 'a') as rate_file:
             string = f'{"#" * 20} Ratings for session in {get_datetime()} - Data: {data_mode} - Annotator: {args.annotator}'
             rate_file.write(f'{string}\n')
             log('In [manage_sessions]: current session date time and the annotator written to the ratings file.\n')
 
-        not_already_sorted, already_sorted, n_bins = retrieve_not_already_sorted_files(data_mode)
-        if len(not_already_sorted) == 0:
-            log(f'In [main]: not_already_sorted images are of len: 0 ==> Session is already complete. Terminating...')
-            exit(0)
+    # not_already_sorted, already_sorted, n_bins = retrieve_not_already_sorted_files(session_name, data_mode)
+    img_lst, not_already_sorted, already_sorted, aborted_cases, discarded_cases, n_bins, text = to_be_rated(session_name, data_mode)
 
-        # reduce the number of images for a session to a ore-defined number
-        max_imgs_per_session = globals.params['max_imgs_per_session']
-        not_already_sorted = not_already_sorted[:max_imgs_per_session]
-        log(f'In [manage_sessions]: not_already_sorted reduced to have len: {len(not_already_sorted)} in this session.')
-        show_window_with_keyboard_input(not_already_sorted, already_sorted, data_mode, annotator, ui_verbosity, n_bins)
+    log(f'In [manage_sessions]: \n'
+        f'read img_list of len: {len(img_lst)} \n'
+        f'{text}: {len(already_sorted)} \n'
+        f'aborted cases: {len(aborted_cases)} \n'
+        f'discarded cases: {len(discarded_cases)} \n'
+        f'images left to be rated: {len(not_already_sorted)} \n')
 
-    else:
-        split_sorted_list_to_bins(args.n_bins)
+    if len(not_already_sorted) == 0:
+        log(f'In [main]: not_already_sorted images are of len: 0 ==> Session is already complete. Terminating...')
+        exit(0)
+
+    # reduce the number of images for a session to a ore-defined number
+    max_imgs_per_session = globals.params['max_imgs_per_session']
+    not_already_sorted = not_already_sorted[:max_imgs_per_session]
+    log(f'In [manage_sessions]: not_already_sorted reduced to have len: {len(not_already_sorted)} in this session.')
+    show_window_with_keyboard_input(not_already_sorted, already_sorted, session_name, data_mode, annotator, ui_verbosity, n_bins)
 
 
 def main():
@@ -207,27 +210,44 @@ def main():
         data_prep.get_size_stats(globals.params['test_imgs_dir'])
         data_prep.get_size_stats(globals.params['train_imgs_dir'])
 
-    else:   # sort and split sessions
-        if args.session_name == 'sort' and args.annotator is None:
+    # elif args.session_name == 'split':
+    #     split_sorted_list_to_bins(args.n_bins)  # no need to indicate annotator
+
+    else:  # sort, variability, and split
+        # requiring annotator name except for splitting
+        if args.session_name != 'split' and args.annotator is None:
             message = 'Please provide annotator name using the --annotator argument'
             show_visual_error("Arguments specified incorrectly", message)
             exit(1)  # unsuccessful exit
 
-        # special checks for sessions for rating test images
-        if args.session_name == 'sort' and args.data_mode == 'test':
+        # set paths for train data
+        if args.data_mode == 'train' or args.session_name == 'split':
+            globals.params['img_registry'] = os.path.join('..', 'data', 'train_img_registry.txt')
+            train_out_path = os.path.join(globals.params['output_path'], 'output_train')  # outputs/output_train
+            globals.params['output_path'] = train_out_path
+            globals.params['sorted'] = os.path.join(train_out_path, 'sorted.txt')
+            globals.params['discarded'] = os.path.join(train_out_path, 'discarded.txt')
+            globals.params['aborted'] = os.path.join(train_out_path, 'aborted.txt')
+            globals.params['error'] = os.path.join(train_out_path, 'error.txt')
+            globals.params['ratings'] = os.path.join(train_out_path, 'ratings.txt')
+
+        # special checks and set paths for test data and variability check
+        if args.data_mode == 'test':
             if not args.new and not args.already:  # one of the arguments should be specified
                 message = 'Please use argument --new if it is the first time you are rating the images, or --already if you have already rated some images.'
                 show_visual_error("Arguments specified incorrectly", message)
                 exit(1)
 
-            annotator_out_path = globals.params['output_path'] + f'_{args.annotator}'
+            annotator_out_path = os.path.join(globals.params['output_path'], f'output_{args.annotator}')  # outputs/output_Moein
             print(f'Checking output path for annotator: {args.annotator} and output path: "{annotator_out_path}" with respect to --new or --already')
 
+            # checking for new annotator
             if args.new and os.path.exists(annotator_out_path):
                 message = f'Another annotator with name {args.annotator} exists. Please choose a different name when using --annotator.'
                 show_visual_error("Arguments specified incorrectly", message)
                 exit(1)
 
+            # checking for already annotator
             if args.already and not os.path.exists(annotator_out_path):
                 message = f'No annotator with name: {args.annotator} found. Are you specifying your name correctly?'
                 show_visual_error("Arguments specified incorrectly", message)
@@ -238,38 +258,40 @@ def main():
             globals.params['sorted'] = os.path.join(annotator_out_path, 'sorted.txt')
             globals.params['discarded'] = os.path.join(annotator_out_path, 'discarded.txt')
             globals.params['aborted'] = os.path.join(annotator_out_path, 'aborted.txt')
-            globals.params['ratings'] = os.path.join(annotator_out_path, 'ratings.txt')
+            globals.params['error'] = os.path.join(annotator_out_path, 'error.txt')
 
-            # log(f"\n\n\n\n{'#' * 150}", no_time=True)
-            # log(f'In [main]: Checking paths for annotator: {args.annotator} and output_path: "{annotator_out_path}" was successful. Starting the session with paths:\n'
-            #     f"output_path: {globals.params['output_path']}\n"
-            #     f"sorted: {globals.params['sorted']}\n"
-            #     f"discarded: {globals.params['discarded']}\n"
-            #     f"aborted: {globals.params['aborted']}\n"
-            #     f"ratings: {globals.params['ratings']}")
-            # log(f"{'#' * 150}", no_time=True)
+            if args.session_name == 'sort':  # sort test
+                globals.params['img_registry'] = os.path.join('..', 'data', 'test_img_registry.txt')
+                globals.params['ratings'] = os.path.join(annotator_out_path, 'ratings.txt')
 
-            # make seed list
-            # if args.new:
-            #     data_prep.make_seed_list()
+            elif args.session_name == 'variability_intra':  # variability
+                globals.params['img_registry'] = os.path.join(annotator_out_path, 'variability_intra_registry.txt')
+                globals.params['ratings'] = os.path.join(annotator_out_path, 'variability_intra_ratings.txt')
 
-        # creating output path if not exists (generic for all the sessions)
+            elif args.session_name == 'variability_inter':
+                globals.params['img_registry'] = os.path.join(annotator_out_path, 'variability_inter_registry.txt')
+                globals.params['ratings'] = os.path.join(annotator_out_path, 'variability_inter_ratings.txt')
+
+            else:
+                raise NotImplementedError(f'In [main]: session_name not implemented.')
+
         log(f"\n\n\n\n{'#' * 150}", no_time=True)
         log(f'In [main]: Checking paths for annotator: {args.annotator} and output_path: "{globals.params["output_path"]}" done.\n'
+            f"registry {globals.params['img_registry']}\n"
             f"output_path: {globals.params['output_path']}\n"
             f"sorted: {globals.params['sorted']}\n"
             f"discarded: {globals.params['discarded']}\n"
             f"aborted: {globals.params['aborted']}\n"
+            f"error: {globals.params['error']}\n"
             f"ratings: {globals.params['ratings']}")
         log(f"{'#' * 150}", no_time=True)
 
-        # make seed list for annotator if this is the first time
-        if args.session_name == 'sort' and args.data_mode == 'test' and args.new:
-            log('In [main]: Creating the seed list for the annotator...')
-            data_prep.make_seed_list()
-
         make_dir_if_not_exists(globals.params['output_path'])
-        manage_sessions_and_run(args)
+
+        if args.session_name == 'split':  # splitting - no need to indicate annotator
+            split_sorted_list_to_bins(args.n_bins)
+        else:  # session for sorting/variability
+            manage_sessions_and_run(args)
 
 
 if __name__ == '__main__':

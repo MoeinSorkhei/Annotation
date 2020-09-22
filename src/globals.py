@@ -32,19 +32,27 @@ params = {
     },
 
     "data_path": os.path.join('..', 'data'),
+    "output_path": os.path.join('..', 'outputs'),  # generic output_path, will be modified in the program
+    # default paths for sort train, modified in main for other modes
+    # "registry": os.path.join('..', 'data', 'train_img_registry.txt'),
+    # "sorted": os.path.join('..', 'output', 'sorted.txt'),
+    # "discarded": os.path.join('..', 'output', 'discarded.txt'),
+    # "aborted": os.path.join('..', 'output', 'aborted.txt'),
+    # "ratings": os.path.join('..', 'output', 'ratings.txt'),
+    # "error": os.path.join('..', 'output', 'error.txt'),
+    # "output_path": os.path.join('..', 'output'),
+    #     "sorted": os.path.join('..', 'output', 'sorted.txt'),
+    #     "discarded": os.path.join('..', 'output', 'discarded.txt'),
+    #     "aborted": os.path.join('..', 'output', 'aborted.txt'),
+    #     "ratings": os.path.join('..', 'output', 'ratings.txt'),
+    #     "error": os.path.join('..', 'output', 'error.txt'),
 
-    # these are the basic paths, could be modified in the program
-    "output_path": os.path.join('..', 'output'),
-    "sorted": os.path.join('..', 'output', 'sorted.txt'),
-    "discarded": os.path.join('..', 'output', 'discarded.txt'),
-    "aborted": os.path.join('..', 'output', 'aborted.txt'),
-    "ratings": os.path.join('..', 'output', 'ratings.txt'),
-
-    "show_border_time": 300,  # in seconds
+    "show_border_time": 300,  # in milliseconds
     "robust_levels": 2,
     "robust_min_length": 4,  # minimum length of sorted list/number of bins valid for doing ternary
     "bin_rep_type": 'random',  # or 'last': specifies how the bin representative should be chosen
 
+    "variability_samples_percentage": 10,
     "max_imgs_per_session": 10,
     "resize_factor": 3,
     "email_interval": None

@@ -9,6 +9,8 @@ from email import encoders
 import glob
 import datetime
 from shutil import copyfile
+import random
+import shutil
 
 import globals
 
@@ -158,6 +160,47 @@ def _parse_ratings():
     return parsed_ratings
 
 
+def calc_variability_acc(variability_registry_file, variability_ratings_file):
+    variability_ratings = read_file_to_list(variability_ratings_file)
+    original_ratings = read_file_to_list(variability_registry_file)
+    consistent_rates = 0
+    for var_rating in variability_ratings:
+        # get the original rating for the same "left $ right" file
+        orig_rating = [item for item in original_ratings if item.startswith(left_right_substr(var_rating))][0]
+        if parsed(var_rating, '$')[2] == parsed(orig_rating, '$')[2]:
+            consistent_rates += 1
+    acc = consistent_rates / len(variability_ratings)
+    print(f'In [calc_variability_acc]: consistent_rates: {consistent_rates} of {len(variability_ratings)} ==> accuracy:', acc)
+    return acc
+
+
+def sample_ratings(orig_rating_file, variability_registry_file):
+    ratings_list = read_file_to_list(orig_rating_file)
+    ratings_list = [rating for rating in ratings_list if not rating.startswith('#')]  # remove session the separators
+    print(f'In [sample_ratings]: original ratings list of file: "{orig_rating_file}" has len: {len(ratings_list)}')
+
+    unique_extracted = []
+    for rating in ratings_list:
+        left_and_right = left_right_substr(rating)
+        if not any([left_and_right in item for item in unique_extracted]):
+            unique_extracted.append(rating)
+
+    print(f'In [sample_ratings]: unique ratings list has len: {len(unique_extracted)}')
+    n_samples = int((globals.params['variability_samples_percentage'] / 100) * len(ratings_list))
+
+    print('In [sample_ratings]: Number of ratings to be sampled:', n_samples)
+    samples = random.sample(unique_extracted, n_samples)
+
+    write_list_to_file(samples, variability_registry_file)
+    print(f'In [sample_ratings]: wrote sample ratings to: "{variability_registry_file}"')
+
+
+def left_right_substr(string):
+    # given a string like "2.dcm $ 33.dcm $ 9 $ Moein $ 2020-09-22_09:23:22", it returns "2.dcm $ 33.dcm"
+    left, right = parsed(string, '$')[:2]
+    return f'{left} $ {right}'
+
+
 def parsed(string, character):
     return [item.strip() for item in string.split(character)]
 
@@ -171,9 +214,11 @@ def get_rate_if_already_exists(left_file, right_file):
 
 
 def email_results():
-    output_path = globals.params['output_path']
-    fromaddr = "m.moein.sorkhei@gmail.com"
-    toaddr = "m.moein.sorkhei@gmail.com"
+    # output_path = globals.params['output_path']
+    # fromaddr = "m.moein.sorkhei@gmail.com"
+    # toaddr = "m.moein.sorkhei@gmail.com"
+    fromaddr = "kthannotation@gmail.com"
+    toaddr = "kthannotation@gmail.com"
 
     # instance of MIMEMultipart
     msg = MIMEMultipart()
@@ -188,29 +233,37 @@ def email_results():
     # attach the body with the msg instance
     msg.attach(MIMEText(body, 'plain'))
 
-    for file_name in os.listdir(output_path):
-        file_path = os.path.join(output_path, file_name)
-        attachment = open(file_path, "rb")
+    # creating zip file from output folder
+    dirname = os.path.join('..', 'outputs')  # static address, the whole output folder
+    zipped = os.path.join('..', 'outputs')  # it adds the .zip extension
+    shutil.make_archive(zipped, 'zip', dirname)
 
-        part = MIMEBase('application', "octet-stream")
-        part.set_payload(attachment.read())
-        encoders.encode_base64(part)
-        part.add_header('Content-Disposition', 'attachment', filename=file_name)
-        msg.attach(part)
+    # for file_name in os.listdir(output_path):
+    #     file_path = os.path.join(output_path, file_name)
+
+    zipped_filepath = f'{zipped}.zip'
+    attachment = open(zipped_filepath, "rb")
+    part = MIMEBase('application', "octet-stream")
+    part.set_payload(attachment.read())
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition', 'attachment', filename='outputs.zip')
+    msg.attach(part)
 
     # creates SMTP session
     s = smtplib.SMTP('smtp.gmail.com', 587)
     # start TLS for security
     s.starttls()
     # Authentication
-    s.login(fromaddr, "13747576")
+    # s.login(fromaddr, "13747576")
+    s.login(fromaddr, "eByte10Tonj##")
     # Converts the Multipart msg into a string
     text = msg.as_string()
     # sending the mail
     s.sendmail(fromaddr, toaddr, text)
     # terminating the session
     s.quit()
-    log(f'In [email_results]: emailed all the results\n')
+    # log(f'In [email_results]: emailed all the results\n')
+    log(f'In [email_results]: creating zip file at: {zipped_filepath} and emailing: done.\n')
 
 
 
