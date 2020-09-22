@@ -18,26 +18,21 @@ ___
 
 ___
 ### Instructions
-__`THE CODE HAS BEEN UPDATED. PLEASE PULL/DOWNLOAD THE LATEST VERSION OF THE CODE.`__
-
 All the commands should be run from inside the `src` folder.
 * Make sure the conda environment is active:  
 `conda activate annotation2`
 
-* Creating the seed list (this is done only the first time you are using the tool), __please make sure the output folder is deleted if you already have it__:  
-`python main.py --make_seed_list`
-
 * Starting a session for rating the test images:  
-`python main.py --annotator [YourName] --session_name sort --data_mode test --ui_verbosity 2`  
- As soon as you start the first session, the `output` folder will be created.
+`python main.py --annotator Moein --new --session_name sort --data_mode test --ui_verbosity 2`
 
-* Splitting the sorted list to bins needed for sorting train data (__once rating all the test images is done, i.e. after 5 complete sessions__):  
-`python main.py --annotator [YourName] --session_name split --n_bins 12`  
- After running this command, you should see the files containing image names in 12 bins. The files are named like `bin_0.txt`, `bin_1.txt` etc. and are located in
- the `output` folder.
+* Splitting the sorted list to bins needed for sorting train data:
+`python main.py --session_name split --n_bins 12`  
 
-* Starting a session for rating train images (once the bins are created) - __5 complete sessions should be run in total to get the whole train data sorted__:  
-`python main.py --annotator [YourName] --session_name sort --data_mode train --ui_verbosity 2`
+* Starting a session for rating train images (once the bins are created):
+`python main.py --annotator Moein --new --session_name sort --data_mode train --ui_verbosity 2`
+
+* Variability:  
+`python main.py --annotator Moein --already --session_name variability_intra --data_mode test --ui_verbosity 2`
 
 * (Optional) In order to visualize the sorted list, you can run the following command:  
 `python main.py --convert_to_png --image_list results`  
