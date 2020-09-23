@@ -26,7 +26,7 @@ def make_dir_if_not_exists(directory, verbose=True):
     if not os.path.isdir(directory):
         os.makedirs(directory)
         if verbose:
-            print(f'In [make_dir_if_not_exists]: created path "{directory}"')
+            log(f'In [make_dir_if_not_exists]: created path "{directory}"')
 
 
 def multi_log(to_be_logged):
@@ -111,6 +111,22 @@ def get_datetime(raw=False, underscored=False):
     return datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S")
 
 
+def print_global_paths(annotator=None):
+    orig_rating_str = f'\norig_ratings: {globals.params["orig_ratings"]}' if 'orig_ratings' in globals.params.keys() else ''
+    log(f"\n\n\n\n{'#' * 150}", no_time=True)
+    log(
+        f'In [main]: Checking paths for annotator: {annotator} and output_path: "{globals.params["output_path"]}" done.\n'
+        f"registry {globals.params['img_registry']}\n"
+        f"output_path: {globals.params['output_path']}\n"
+        f"sorted: {globals.params['sorted']}\n"
+        f"discarded: {globals.params['discarded']}\n"
+        f"aborted: {globals.params['aborted']}\n"
+        f"error: {globals.params['error']}\n"
+        f"ratings: {globals.params['ratings']}"
+        f"{orig_rating_str}")
+    log(f"{'#' * 150}", no_time=True)
+
+
 # ========== functions for saving/reading results
 def write_sorted_list_to_file(lst):
     sorted_filename = globals.params['sorted']
@@ -170,14 +186,14 @@ def calc_variability_acc(variability_registry_file, variability_ratings_file):
         if parsed(var_rating, '$')[2] == parsed(orig_rating, '$')[2]:
             consistent_rates += 1
     acc = consistent_rates / len(variability_ratings)
-    print(f'In [calc_variability_acc]: consistent_rates: {consistent_rates} of {len(variability_ratings)} ==> accuracy:', acc)
+    log(f'In [calc_variability_acc]: consistent_rates: {consistent_rates} of {len(variability_ratings)} ==> accuracy: {acc}\n')
     return acc
 
 
 def sample_ratings(orig_rating_file, variability_registry_file):
     ratings_list = read_file_to_list(orig_rating_file)
     ratings_list = [rating for rating in ratings_list if not rating.startswith('#')]  # remove session the separators
-    print(f'In [sample_ratings]: original ratings list of file: "{orig_rating_file}" has len: {len(ratings_list)}')
+    log(f'In [sample_ratings]: original ratings list of file: "{orig_rating_file}" has len: {len(ratings_list)}')
 
     unique_extracted = []
     for rating in ratings_list:
@@ -185,14 +201,14 @@ def sample_ratings(orig_rating_file, variability_registry_file):
         if not any([left_and_right in item for item in unique_extracted]):
             unique_extracted.append(rating)
 
-    print(f'In [sample_ratings]: unique ratings list has len: {len(unique_extracted)}')
+    log(f'In [sample_ratings]: unique ratings list has len: {len(unique_extracted)}')
     n_samples = int((globals.params['variability_samples_percentage'] / 100) * len(ratings_list))
 
-    print('In [sample_ratings]: Number of ratings to be sampled:', n_samples)
+    log(f'In [sample_ratings]: Number of ratings to be sampled: {n_samples}')
     samples = random.sample(unique_extracted, n_samples)
 
     write_list_to_file(samples, variability_registry_file)
-    print(f'In [sample_ratings]: wrote sample ratings to: "{variability_registry_file}"')
+    log(f'In [sample_ratings]: wrote sample ratings to: "{variability_registry_file}"')
 
 
 def left_right_substr(string):

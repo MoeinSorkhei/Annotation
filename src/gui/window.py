@@ -276,11 +276,11 @@ class Window:
         # other pages
         else:
             not_already_sorted, already_sorted = to_be_rated(self.session_name, self.data_mode)[1:3]
-            total_sorted_str = f'Total sorted: {len(already_sorted):,}' if self.session_name == 'sort' else ''
+            total_sorted_str = f' - Total sorted: {len(already_sorted):,}' if self.session_name == 'sort' else ''
 
             stat_text = f'Rating for image {self.current_index + 1} of {len(self.cases)} - ' \
                         f'Case number: {self.case_number} - ' \
-                        f'Total left: {len(not_already_sorted):,} - {total_sorted_str}'
+                        f'Total left: {len(not_already_sorted):,}{total_sorted_str}'
 
             if self.prev_result is not None:
                 rate_text = f'Previous rate: ' \

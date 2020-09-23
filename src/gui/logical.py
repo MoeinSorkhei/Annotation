@@ -445,20 +445,6 @@ def read_aborted_cases():
     return aborted_list
 
 
-# def save_aborted_cases(window):
-#     if window.data_mode == 'test':
-#         successful_cases = read_sorted_imgs()
-#     else:
-#         _, successful_cases = all_imgs_in_all_bins()
-#
-#     discarded_cases = read_discarded_cases()
-#     aborted_cases = [case for case in window.cases if (case not in successful_cases and case not in discarded_cases)]
-#
-#     for aborted in aborted_cases:
-#         save_to_aborted_list(aborted)
-#     log(f'In [save_aborted_cases]: saved {len(aborted_cases)} aborted cases...\n')
-
-
 def save_to_discarded_list(case, annotator, timestamp):
     filename = globals.params['discarded']
     string = f'{case} $ {annotator} $ {timestamp}'
@@ -488,7 +474,7 @@ def to_be_rated(session_name, data_mode):
         discarded_cases = read_discarded_cases()
         not_already_sorted = [img for img in img_lst if
                               (img not in already_sorted and img not in aborted_cases and img not in discarded_cases)]
-    else:
+    else:  # variability
         already_sorted, n_bins, text = read_file_to_list(globals.params['ratings']), None, f'total {session_name} rated images'
         aborted_cases = discarded_cases = []
         not_already_sorted = []
@@ -497,30 +483,7 @@ def to_be_rated(session_name, data_mode):
             left, right = parsed(rating_record, '$')[:2]
             if not any([f'{left} $ {right}' in item for item in already_sorted]):
                 not_already_sorted.append(rating_record)
-            # else:
-            #     print('rating_record exist:', rating_record)
-
-    # not_already_sorted = [img for img in img_lst if
-    #                       (img not in already_sorted and img not in aborted_cases and img not in discarded_cases)]
     return img_lst, not_already_sorted, already_sorted, aborted_cases, discarded_cases, n_bins, text
-
-
-# def to_be_rated_prev(session_name, data_mode):
-#     img_lst = helper.read_file_to_list(globals.params['img_registry'])
-#     if session_name == 'sort':
-#         # img_lst = helper.read_file_to_list(os.path.join(globals.params['data_path'], f'{data_mode}_img_registry.txt'))
-#         if data_mode == 'test':
-#             already_sorted = read_sorted_imgs()
-#         else:
-#             _, already_sorted = all_imgs_in_all_bins()  # images that are already entered to bins
-#
-#         aborted_cases = read_aborted_cases()
-#         discarded_cases = read_discarded_cases()
-#         not_already_sorted = [img for img in img_lst if
-#                               (img not in already_sorted and img not in aborted_cases and img not in discarded_cases)]
-#         return not_already_sorted
-#     else:
-#         return []
 
 
 def remove_last_record(from_file):
