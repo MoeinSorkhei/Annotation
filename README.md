@@ -28,8 +28,12 @@ All the commands should be run from inside the `src` folder.
 * Splitting the sorted list to bins needed for sorting train data:  
 `python main.py --session_name split --n_bins 12`  
 
-* Starting a session for rating __train__ images:  
-`python main.py --annotator Moein --new --session_name sort --data_mode train --ui_verbosity 2`
+* Starting a session for rating __train__ images (no need to specify new or already):  
+`python main.py --annotator Moein --session_name sort --data_mode train --ui_verbosity 2`
+
+* Creating __image registries__ for variability:  
+`python main.py --create_img_registry --session_name variability_intra --annotator Moein`  
+`python main.py --create_img_registry --session_name variability_inter --annotator Moein --other_annotator Kevin`
 
 * For __variability__:  
 `python main.py --annotator Moein --already --session_name variability_intra --data_mode test --ui_verbosity 2`
