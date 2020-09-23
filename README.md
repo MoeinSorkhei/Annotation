@@ -36,7 +36,7 @@ All the commands should be run from inside the `src` folder.
 `python main.py --create_img_registry --session_name variability_inter --annotator Moein --other_annotator Kevin`
 
 * For __variability__:  
-`python main.py --annotator Moein --already --session_name variability_intra --data_mode test --ui_verbosity 2`
+`python main.py --annotator Moein --already --session_name variability_intra --ui_verbosity 2`
 
 * (Optional) In order to visualize the sorted list, you can run the following command:  
 `python main.py --convert_to_png --image_list results`  
