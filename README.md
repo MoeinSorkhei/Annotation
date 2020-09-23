@@ -38,11 +38,6 @@ All the commands should be run from inside the `src` folder.
 * For __variability__:  
 `python main.py --annotator Moein --already --session_name variability_intra --ui_verbosity 2`
 
-* (Optional) In order to visualize the sorted list, you can run the following command:  
-`python main.py --convert_to_png --image_list results`  
-This will put the png version of the sorted images in the `output_visualized/sorted_imgs_png` folder. Note that the images will most likely appear to be sorted by name (default by the OS). You need to change the the View option to be sorted by "Date Created" so they match the order of the sorted list.
-
-
 
 ___
 ### Important running arguments
@@ -52,7 +47,9 @@ ___
 * `--ui_verbosity`: Determines how much the UI should be verbose (default: 1). Use a value of 2 to also see the image names, a value of 3 to also see the search intervals and other details in the UI. A value of 4 is used for debugging (automatically set when using `--debug`).
 * `--max_imgs_per_session`: The number images that one should rate in each session (default: 10).
 * `--resize_factor`: Determines how much the DICOM high resolution images should be resized (default: 7).
-
+* (Optional) In order to visualize the sorted list, you can run the following command:  
+`python main.py --convert_to_png --image_list results`  
+This will put the png version of the sorted images in the `output_visualized/sorted_imgs_png` folder. Note that the images will most likely appear to be sorted by name (default by the OS). You need to change the the View option to be sorted by "Date Created" so they match the order of the sorted list.
 Note that the default values of all the parameters could be found in the `globals.py` file.
 
 ___
