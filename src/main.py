@@ -25,13 +25,6 @@ def read_args_and_adjust():
 
     # data preparation args
     parser.add_argument('--create_img_registry', action='store_true')
-    parser.add_argument('--rename_test_imgs', action='store_true')
-    parser.add_argument('--convert_test_imgs_to_png', action='store_true')
-    parser.add_argument('--convert_to_png', action='store_true')
-    parser.add_argument('--image_list', type=str)
-    parser.add_argument('--make_seed_list', action='store_true')
-    parser.add_argument('--resize_data', action='store_true')
-    parser.add_argument('--get_size_stats', action='store_true')
 
     arguments = parser.parse_args()
 
@@ -83,6 +76,15 @@ def manage_sessions_and_run(args):
         ui_verbosity = 4
     elif args.ui_verbosity is not None:
         ui_verbosity = args.ui_verbosity
+
+    # image basenames should always be available
+    if not os.path.isfile(globals.params[f'{args.data_mode}_basenames']):
+        show_visual_error('', f'The basename file for {args.data_mode} data does not exists')
+        exit(1)
+
+    # now that the basename file exists, create image registry if not available - img registry is dependent on the laptop paths
+    if not os.path.isfile(globals.params['img_registry']):
+        data_prep.create_img_registry(args.data_mode)
 
     # make seed list for annotator if this is the first time
     if args.session_name == 'sort' and args.data_mode == 'test' and args.new:
@@ -160,7 +162,7 @@ def set_global_paths(session_name, data_mode, annotator=None, other_annotator=No
             globals.params['img_registry'] = os.path.join(annotator_path, 'variability_inter_registry.txt')
             globals.params['ratings'] = os.path.join(annotator_path, 'variability_inter_ratings.txt')
 
-        if create_registry:  # original rating file is also needed for creating registries
+        if create_registry:  # for variability checks - original rating file is also needed for creating registries
             if session_name == 'variability_intra':
                 globals.params['orig_ratings'] = os.path.join(annotator_path, 'ratings.txt')
             else:
@@ -190,7 +192,7 @@ def check_args(args):
         # checking for annotators paths
         annotator_out_path = get_annotator_path(args.annotator)
         if args.new and os.path.exists(annotator_out_path):
-            message = f'Another annotator with name {args.annotator} exists. Please choose a different name when using --annotator.'
+            message = f'Another annotator with name {args.annotator} exists. If you have already used the tool, use \n --already.'
             show_visual_error("Arguments specified incorrectly", message)
             exit(1)
 
@@ -220,61 +222,18 @@ def check_args(args):
 
 def main():
     args = read_args_and_adjust()
-    check_args(args)
 
-    if args.email_results:  # used only for emailing results
+    # emailing results
+    if args.email_results:
         log('In [main]: emailing results...')
         logic.email_results()
+        return
 
-    elif args.rename_test_imgs:
-        data_prep.rename_test_imgs(globals.params['registry_file'],
-                                   globals.params['test_imgs_dir'],
-                                   globals.params['test_imgs_renamed_dir'])
+    # make sure args are correct
+    check_args(args)
 
-    elif args.convert_test_imgs_to_png:  # will probably no longer be used
-        data_prep.convert_test_imgs_to_png()
-
-    elif args.convert_to_png:
-        if args.image_list == 'data':
-            for image_folder in ['test_imgs_dir', 'train_imgs_dir']:
-                print(f'Doing for: {image_folder}')
-                convert_imgs_to_png(source_dir=globals.params[image_folder],
-                                    dest_dir=f'{globals.params[image_folder]}_png')
-
-        elif args.image_list == 'results':  # only supports the perfectly sorted list for now
-            image_list = helper.read_file_to_list(globals.params['sorted'])
-            # print('read list:', image_list)
-            save_path = os.path.join('..', 'output_visualized', 'sorted_imgs_png')
-            helper.make_dir_if_not_exists(save_path)
-            image_list_to_png(image_list, save_path=save_path)
-
-    elif args.make_seed_list:
-        data_prep.make_seed_list()
-
-    elif args.resize_data:
-        print('Resizing data...')
-        resize_factor = 4
-        mean_width, mean_height = 3219, 5400  # taken from some 50 ddsm images
-        resize_width, resize_height = mean_width // resize_factor, mean_height // resize_factor
-
-        # for test data
-        image_dir = globals.params['test_imgs_dir']
-        save_dir = os.path.join(globals.params['data_path'], 'test_imgs_resized')
-        data_prep.resize_data(image_dir, save_dir, resize_width, resize_height)
-        print('\nResizing for test data: done\n')
-
-        # for train data
-        image_dir = globals.params['train_imgs_dir']
-        save_dir = os.path.join(globals.params['data_path'], 'train_imgs_resized')
-        data_prep.resize_data(image_dir, save_dir, resize_width, resize_height)
-        print('Resizing for train data: done')
-
-    elif args.get_size_stats:
-        data_prep.get_size_stats(globals.params['test_imgs_dir'])
-        data_prep.get_size_stats(globals.params['train_imgs_dir'])
-
-    # creating registries for variability
-    elif args.create_img_registry:
+    # creating registries ONLY for variability - creation of test and train image registries are done in the first session
+    if args.create_img_registry:
         set_global_paths(session_name=args.session_name, data_mode='test',
                          annotator=args.annotator, other_annotator=args.other_annotator, create_registry=True)  # other_annotator is None for intra
 

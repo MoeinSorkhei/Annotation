@@ -3,8 +3,8 @@ from matplotlib import cm
 import pydicom
 import numpy as np
 import os
-from pathlib import Path
 import glob
+import cv2
 
 import globals
 from .helper import log
@@ -25,10 +25,17 @@ def dicom_as_dataset(dicom_file):
     return pydicom.dcmread(dicom_file)
 
 
-def resize_pixel_array(dicom_file, resize_width, resize_height, save_dir):
+def resize_pixel_array(dicom_file, resize_factor, save_dir):
     dataset = pydicom.dcmread(dicom_file)
     pixel_array = dataset.pixel_array
-    resized_pixel_array = np.array(Image.fromarray(pixel_array).resize(size=(resize_width, resize_height)))
+
+    # print('pixel array:', pixel_array.shape)
+    resize_height, resize_width = pixel_array.shape[0] // resize_factor, pixel_array.shape[1] // resize_factor
+
+    # resized_pixel_array = np.array(Image.fromarray(pixel_array).resize(size=(resize_width, resize_height)))
+    resized_pixel_array = cv2.resize(pixel_array, dsize=(resize_width, resize_height))
+
+    # print('resized pixel array shape:', resized_pixel_array.shape)
 
     dataset.PixelData = resized_pixel_array.tobytes()  # copy the data back to the original data set
     dataset.Rows, dataset.Columns = resized_pixel_array.shape  # update the information about the shape of the data array
@@ -56,6 +63,8 @@ def read_dicom_and_resize(file, save_to=None):
     resize_factor = globals.params['resize_factor']
     if resize_factor is not None:
         image = image.resize((pixels.shape[1] // resize_factor, pixels.shape[0] // resize_factor))
+
+    # intensity fix here
 
     if save_to:
         image.save(save_to)

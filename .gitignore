@@ -15,5 +15,6 @@ __pycache__/
 scripts.sh
 output_visualized
 trial_results/
-
+data_local/
+outputs/
 outputs.zip

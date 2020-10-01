@@ -65,84 +65,141 @@ def dict_val_lens(dictionary):
     return np.array([len(v) for k, v in dictionary.items()])
 
 
-def merge_densities(cancer_csv, healthy_csv, density_csv, config, x_labels, save_path=None):
-    cancer_orig_dict, cancer_uniform_dict = sample_from_densities(cancer_csv, density_csv, n_samples=config['cancer_samples'], density_threshold=config['cancer_threshold'])
-    cancer_orig_lens, cancer_uniform_lens = dict_val_lens(cancer_orig_dict), dict_val_lens(cancer_uniform_dict)
-    # draw_hist(values=cancer_orig_lens, labels={'x_label': f'{x_labels["cancer"]} - Original Density', 'y_label': 'Count'}, save_path=save_path)  # original densities
-    # draw_hist(values=cancer_uniform_lens, labels={'x_label': f'{x_labels["cancer"]} - Sampled density', 'y_label': 'Count'}, save_path=save_path)  # sampled densities
-
-    healthy_orig_dict, healthy_uniform_dict = sample_from_densities(healthy_csv, density_csv, n_samples=config['healthy_samples'], density_threshold=config['healthy_threshold'])
-    healthy_orig_lens, healthy_uniform_lens = dict_val_lens(healthy_orig_dict), dict_val_lens(healthy_uniform_dict)
-    # draw_hist(values=healthy_orig_lens, labels={'x_label': f'{x_labels["healthy"]} - Original Density', 'y_label': 'Count'}, save_path=save_path)  # sampled densities
-    # draw_hist(values=healthy_uniform_lens, labels={'x_label': f'{x_labels["healthy"]} - Original Density', 'y_label': 'Count'}, save_path=save_path)  # sampled densities
-    # input()
-    cancer_uniform_count, healthy_uniform_count = np.sum(cancer_uniform_lens), np.sum(healthy_uniform_lens)
-
-    merged_dict = {key: [] for key in cancer_uniform_dict.keys()}
-    for key, value in merged_dict.items():
-        merged_dict[key] = cancer_uniform_dict[key] + healthy_uniform_dict[key]
-
-    merged_dict_lens = dict_val_lens(merged_dict)
-    total_count = np.sum(merged_dict_lens)
-    print('Total count:', total_count, f'cancer count: {cancer_uniform_count}, healthy count: {healthy_uniform_count}  - '
-                                       f'cancer/healthy: {round(cancer_uniform_count / total_count, 2)}/{round(healthy_uniform_count / total_count, 2)}')
-    # print(merged_dict_lens)
-    draw_hist(values=merged_dict_lens, labels={'x_label': f'{x_labels["merged"]} - Density', 'y_label': 'Count'}, save_path=save_path)
+def list_lens(the_list):  # lens of a 2d list
+    return [len(lst) for lst in the_list]
 
 
-def sample_from_densities(query_csv, density_csv, n_samples, density_threshold, x_label=None, save_path=None):
+def total_len(the_list):
+    return np.sum([len(lst) for lst in the_list])
+
+
+def count_between(the_list, low, high):
+    count = 0
+    for j in range(len(the_list)):
+        if low <= j <= high:
+            count += len(the_list[j])
+    return count
+
+
+def make_bin_edges(low_threshold, high_threshold):  # defines the left edges of the bins
+    middle = list(range(low_threshold + 1, high_threshold))  # low + 1 until high - 1
+    return np.array([0, *middle, high_threshold, 101])  # the last bin also has right edge
+
+
+def make_non_uniform(orig_list, custom_densities):
+    non_uniform = [[] for _ in range(len(custom_densities))]
+    for density in range(len(orig_list)):
+        max_dens = max([dens for dens in custom_densities if dens <= density])
+        non_uniform[custom_densities.index(max_dens)].extend(orig_list[density])
+    return non_uniform
+
+
+# def merge_densities(cancer_csv, healthy_csv, density_csv, config, x_labels, save_path=None):
+#     cancer_orig_dict, cancer_uniform_dict = get_density_list(cancer_csv, density_csv, n_samples=config['cancer_samples'], density_threshold=config['cancer_threshold'])
+#     cancer_orig_lens, cancer_uniform_lens = dict_val_lens(cancer_orig_dict), dict_val_lens(cancer_uniform_dict)
+#     # draw_hist(values=cancer_orig_lens, labels={'x_label': f'{x_labels["cancer"]} - Original Density', 'y_label': 'Count'}, save_path=save_path)  # original densities
+#     # draw_hist(values=cancer_uniform_lens, labels={'x_label': f'{x_labels["cancer"]} - Sampled density', 'y_label': 'Count'}, save_path=save_path)  # sampled densities
+#
+#     healthy_orig_dict, healthy_uniform_dict = get_density_list(healthy_csv, density_csv, n_samples=config['healthy_samples'], density_threshold=config['healthy_threshold'])
+#     healthy_orig_lens, healthy_uniform_lens = dict_val_lens(healthy_orig_dict), dict_val_lens(healthy_uniform_dict)
+#     # draw_hist(values=healthy_orig_lens, labels={'x_label': f'{x_labels["healthy"]} - Original Density', 'y_label': 'Count'}, save_path=save_path)  # sampled densities
+#     # draw_hist(values=healthy_uniform_lens, labels={'x_label': f'{x_labels["healthy"]} - Original Density', 'y_label': 'Count'}, save_path=save_path)  # sampled densities
+#     # input()
+#     cancer_uniform_count, healthy_uniform_count = np.sum(cancer_uniform_lens), np.sum(healthy_uniform_lens)
+#
+#     merged_dict = {key: [] for key in cancer_uniform_dict.keys()}
+#     for key, value in merged_dict.items():
+#         merged_dict[key] = cancer_uniform_dict[key] + healthy_uniform_dict[key]
+#
+#     merged_dict_lens = dict_val_lens(merged_dict)
+#     total_count = np.sum(merged_dict_lens)
+#     print('Total count:', total_count, f'cancer count: {cancer_uniform_count}, healthy count: {healthy_uniform_count}  - '
+#                                        f'cancer/healthy: {round(cancer_uniform_count / total_count, 2)}/{round(healthy_uniform_count / total_count, 2)}')
+#     # print(merged_dict_lens)
+#     draw_hist(values=merged_dict_lens, labels={'x_label': f'{x_labels["merged"]} - Density', 'y_label': 'Count'}, save_path=save_path)
+
+
+def sample_densities(orig_list, n_samples):
+    samples_list = []
+    random.seed(0)  # to get the same sequence every time
+    for i in range(len(orig_list)):
+        orig = orig_list[i]
+        num_samples = n_samples[i] if type(n_samples) is list else n_samples  # int or list
+        samples_list.append(random.sample(orig, num_samples) if len(orig) > num_samples else orig)
+    return samples_list
+
+
+def get_density_list(query_csv, density_csv):
     query_df = pd.read_csv(query_csv, sep=',', engine='python')
-    files = [file.split('/')[-1] for file in query_df['full_path_clio']]
+    files = query_df['full_path_clio']
+    pure_names = [file.split('/')[-1] for file in files]  # the extracted files
     print('files len:', len(files))
 
     density_df = pd.read_csv(density_csv, sep=';', engine='python')
-    density_df = density_df[density_df['basename'].isin(files)]  # the ones whose basenames are in files
+    density_df = density_df[density_df['basename'].isin(pure_names)]  # the ones whose basenames are in files
     print('density df len', len(density_df))
 
-    original_dict, uniform_dict = {}, {}
-    for i in range(101):
-        original_dict.update({str(i): []})
-        uniform_dict.update({str(i): []})
+    orig_list = [[] for _ in range(101)]
 
-    for i, filename in enumerate(files):
-        density_as_series = density_df[density_df['basename'] == filename]['BreastDensity___']
+    for i_file, pure_filename in enumerate(pure_names):
+        density_as_series = density_df[density_df['basename'] == pure_filename]['BreastDensity___']
         if len(density_as_series) != 1:  # ignore the file if density not available
             continue
 
-        # density = int(round(density_df[density_df['basename'] == filename]['BreastDensity___']))  # round density values to nearest int
         density = int(round(density_as_series))  # round density values to nearest int
-        for key, value in original_dict.items():
-            if key == str(density):  # insert into the corresponding list
-                value.append(filename)
+        orig_list[density].append(files[i_file])
 
-    orig_counts = dict_val_lens(original_dict)
-    print('orig_counts:', orig_counts)
-
-    random.seed(0)  # to get the same sequence every time
-    for key, value in original_dict.items():
-        if density_threshold[0] <= int(key) <= density_threshold[1]:  # exclude densities over and below thresholds (to ensure uniformity of distribution)
-            if n_samples is None:  # include all the samples
-                uniform_dict[key] = original_dict[key]
-            else:
-                sample_list = random.sample(value, n_samples) if len(value) > n_samples else value  # take random samples from each density list
-                uniform_dict[key] = sample_list
-
-    final_samples = []  # final samples
-    for k, v in uniform_dict.items():
-        final_samples.extend(v)
-    print('final samples len', len(final_samples))
-
-    samples_counts = dict_val_lens(uniform_dict)
-    print('samples_counts:', samples_counts, '\n')
-    return original_dict, uniform_dict
+    orig_list_lens = [len(lst) for lst in orig_list]
+    print('list lens:', orig_list_lens, f'total sum: {total_len(orig_list)}')
+    return orig_list
 
 
-def draw_hist(values, labels, save_path, count_or_prob='count', logscale=False):
+def draw_hist(bin_edges, bin_heights, x_label=None):
+    assert len(bin_edges) == len(bin_heights) + 1, f'bin edges: {len(bin_edges)} - bin heights: {len(bin_heights)}'
+    if type(bin_edges) != np.ndarray:
+        bin_edges = np.array(bin_edges)  # so it support the - operand
+
+    print('In [draw_hist]: bin heights are:', bin_heights)
+    print('In [draw_hist]: sum of bin heights is:', np.sum(bin_heights))
+    plt.xticks(range(0, 105, 10))  # bin_edges ticks
+    plt.bar(bin_edges[:-1], bin_heights, width=bin_edges[1:] - bin_edges[:-1], align='edge', edgecolor='black')
+    plt.xlabel(f'{x_label if x_label is not None else ""}')
+    plt.ylabel('Count')
+    plt.show()
+
+
+def draw_hist_stacked(bin_edges, bin_heights_1, bin_heights_2=None, x_label=None, legend_names=None):
+    assert len(bin_edges) == len(bin_heights_1) + 1, f'bin edges: {len(bin_edges)} - bin heights: {len(bin_heights_1)}'
+    assert len(bin_heights_1) == len(bin_heights_2)
+
+    if type(bin_edges) != np.ndarray:
+        bin_edges = np.array(bin_edges)  # so it support the - operand
+
+    print('In [draw_hist]: bin heights_1 are:', bin_heights_1)
+    print('In [draw_hist]: sum of bin heights_1 is:', np.sum(bin_heights_1))
+    print('In [draw_hist]: bin heights_2 are:', bin_heights_2)
+    print('In [draw_hist]: sum of bin heights_2 is:', np.sum(bin_heights_2))
+    print('Sum of both in total:', np.sum(bin_heights_1) + np.sum(bin_heights_2))
+
+    plt.bar(bin_edges[:-1], bin_heights_1, width=bin_edges[1:] - bin_edges[:-1], align='edge', edgecolor='black', label=legend_names[0])
+    plt.bar(bin_edges[:-1], bin_heights_2, width=bin_edges[1:] - bin_edges[:-1], align='edge', edgecolor='black', label=legend_names[1], bottom=bin_heights_1)
+
+    plt.xticks(range(0, 105, 10))  # bin_edges ticks
+    plt.xlabel(f'{x_label if x_label is not None else ""}')
+    plt.ylabel('Count')
+    plt.legend()
+    plt.show()
+
+
+def draw_hist_prev(values, labels, bins=None, save_path=None, count_or_prob='count', logscale=False):
     plt.clf()
 
     # vertical_is_prob = count_or_prob == 'prob'
     # plt.hist(values, density=vertical_is_prob, bins='auto')  # `density=False` would make counts
-    plt.bar(np.arange(101), values)
+    if bins:
+        plt.hist(values, bins=bins)
+    else:
+        plt.bar(np.arange(101), values)
 
     if logscale:
         plt.xscale('log')
@@ -230,18 +287,18 @@ def extract_stats():
         input()
 
 
-def prepare_for_db(data_source):
-    csv_file = globals.params['ks_csv_file']['diagnosis']
+def prepare_for_db(csv_file):
+    # csv_file = globals.params['ks_csv_file']['diagnosis']
     common_columns = ['patient', 'split', 'x_case',
                       'dicom_viewposition', 'x_cancer_laterality', 'dicom_imagelaterality',
                       'dicom_manufacturer', 'full_path_clio', 'x_diadate', 'dicom_studydate']
 
-    if data_source == 'KS_diagnosis':
-        db_path = globals.params['ks_db_path']['diagnosis']
-        columns = common_columns
-    else:  # not used
-        db_path = os.path.join('..', 'data', 'databases', 'ks_diagnosis_complete.sqlite')
-        columns = common_columns + ['x_cancer_laterality']
+    columns = common_columns
+    # if data_source == 'KS_diagnosis':
+    # db_path = globals.params['ks_db_path']['diagnosis']
+    # else:  # not used
+    #     db_path = os.path.join('..', 'data', 'databases', 'ks_diagnosis_complete.sqlite')
+    #     columns = common_columns + ['x_cancer_laterality']
 
     # read the csv file
     sep = ';'
@@ -270,24 +327,25 @@ def prepare_for_db(data_source):
 
     df_as_list = df.values.tolist()
 
-    if data_source == 'KS_diagnosis':
-        db_string = 'CREATE TABLE "KS_diagnosis" ' \
-                '("patient" varchar, "split" varchar, "x_case" integer, ' \
-                '"view" varchar, "cancer_laterality" varchar, "image_laterality" varchar, "rand_side" varchar,' \
-                '"manufacturer" varchar, "full_path_clio" varchar, "diag_year" varchar, "study_year" varchar);'
-        insert_command = 'INSERT INTO KS_diagnosis VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    # if data_source == 'KS_diagnosis':
+    db_string = 'CREATE TABLE "KS_diagnosis" ' \
+            '("patient" varchar, "split" varchar, "x_case" integer, ' \
+            '"view" varchar, "cancer_laterality" varchar, "image_laterality" varchar, "rand_side" varchar,' \
+            '"manufacturer" varchar, "full_path_clio" varchar, "diag_year" varchar, "study_year" varchar);'
+    insert_command = 'INSERT INTO KS_diagnosis VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 
-    else:  # not used
-        db_string = 'CREATE TABLE "KS_diagnosis_complete" ' \
-                '("patient" varchar, "split" varchar, "x_case" integer, "view" varchar, "laterality" varchar, "manufacturer" varchar, ' \
-                '"cancer_laterality" varchar, "diag_year" varchar, "study_year" varchar);'
-        insert_command = 'INSERT INTO KS_diagnosis_complete VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    # else:  # not used
+    #     db_string = 'CREATE TABLE "KS_diagnosis_complete" ' \
+    #             '("patient" varchar, "split" varchar, "x_case" integer, "view" varchar, "laterality" varchar, "manufacturer" varchar, ' \
+    #             '"cancer_laterality" varchar, "diag_year" varchar, "study_year" varchar);'
+    #     insert_command = 'INSERT INTO KS_diagnosis_complete VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
 
-    return df_as_list, db_path, db_string, insert_command
+    return df_as_list, db_string, insert_command
 
 
-def csv_to_db(data_source, recreate=False):
-    df_as_list, db_path, db_string, insert_command = prepare_for_db(data_source)
+def csv_to_db(csv_file, db_path, recreate=False):
+    # df_as_list, db_path, db_string, insert_command = prepare_for_db(data_source)
+    df_as_list, db_string, insert_command = prepare_for_db(csv_file)
 
     if os.path.exists(db_path):
         if recreate:

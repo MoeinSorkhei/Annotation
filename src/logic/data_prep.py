@@ -5,14 +5,14 @@ import logic
 import random
 
 
-def create_img_registry(img_folder, output_file):
-    all_dicoms = glob.glob(f'{img_folder}/**/*.dcm', recursive=True)  # it assumes '/' path separator
-    print(f'In [create_img_registry]: read {len(all_dicoms)} images from: "{img_folder}"')
-
-    all_dicoms = [filename.replace(f'{img_folder}/', '') for filename in all_dicoms]  # get relative path from the base dir
-    all_dicoms = sorted(all_dicoms)
-    write_list_to_file(all_dicoms, output_file)
-    print(f'In [create_img_registry]: creating image registry at: "{output_file}" done')
+# def create_img_registry(img_folder, output_file):
+#     all_dicoms = glob.glob(f'{img_folder}/**/*.dcm', recursive=True)  # it assumes '/' path separator
+#     print(f'In [create_img_registry]: read {len(all_dicoms)} images from: "{img_folder}"')
+#
+#     all_dicoms = [filename.replace(f'{img_folder}/', '') for filename in all_dicoms]  # get relative path from the base dir
+#     all_dicoms = sorted(all_dicoms)
+#     write_list_to_file(all_dicoms, output_file)
+#     print(f'In [create_img_registry]: creating image registry at: "{output_file}" done')
 
 
 def rename_test_imgs(registry_file, test_imgs_folder, renamed_test_imgs_folder):
@@ -43,14 +43,27 @@ def convert_test_imgs_to_png():
 
 
 def make_seed_list():
-    helper.make_dir_if_not_exists(globals.params['output_path'])
-    filename_list = ['10.dcm', '28.dcm', '33.dcm', '50.dcm', '78.dcm', '84.dcm']  # manually selected
-    seed_list = [os.path.join(os.path.abspath(globals.params['test_imgs_dir']), filename) for filename in filename_list]
+    # helper.make_dir_if_not_exists(globals.params['output_path'])
+    # filename_list = ['10.dcm', '28.dcm', '33.dcm', '50.dcm', '78.dcm', '84.dcm']  # manually selected
+    # seed_list = [os.path.join(os.path.abspath(globals.params['test_imgs_dir']), filename) for filename in filename_list]
+    print('ATTENTION: SEED LIST SHOULD BE CHANGED')
+    seed_list = read_file_to_list(globals.params['img_registry'])[:6]
+
     helper.write_list_to_file(seed_list, globals.params['sorted'])
     log(f'Wrote seed list of len {len(seed_list)} to: "{globals.params["sorted"]}"')
 
 
-def create_image_registry(data_mode):
+def create_img_registry(data_mode):
+    basenames = read_file_to_list(globals.params[f'{data_mode}_basenames'])
+    imgs_dir_abs = os.path.abspath(globals.params[f'{data_mode}_imgs_dir'])
+    full_paths = [os.path.join(imgs_dir_abs, name) for name in basenames]
+
+    registry_file = globals.params[f'img_registry']
+    write_list_to_file(full_paths, registry_file)  # img_registry set in globals path
+    log(f'Created image registry at: "{registry_file}": done')
+
+
+def create_image_registry_prev(data_mode):
     print('Creating image registry for data_mode:', data_mode)
     if data_mode == 'test':
         img_lst = logic.get_dicom_files_paths(imgs_dir=globals.params['test_imgs_dir'])  # the dicom files
