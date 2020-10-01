@@ -229,59 +229,57 @@ def get_rate_if_already_exists(left_file, right_file):
     return None
 
 
-def email_results():
-    # output_path = globals.params['output_path']
-    # fromaddr = "m.moein.sorkhei@gmail.com"
-    # toaddr = "m.moein.sorkhei@gmail.com"
-    fromaddr = "kthannotation@gmail.com"
-    toaddr = "kthannotation@gmail.com"
+def email_results(annotator, no_log=False):
+    try:
+        # output_path = globals.params['output_path']
+        # fromaddr = "m.moein.sorkhei@gmail.com"
+        # toaddr = "m.moein.sorkhei@gmail.com"
+        fromaddr = "kthannotation@gmail.com"
+        toaddr = "kthannotation@gmail.com"
 
-    # instance of MIMEMultipart
-    msg = MIMEMultipart()
-    # storing the senders email address
-    msg['From'] = fromaddr
-    # storing the receivers email address
-    msg['To'] = toaddr
-    # storing the subject
-    msg['Subject'] = "Annotation Results"
-    # string to store the body of the mail
-    body = ""
-    # attach the body with the msg instance
-    msg.attach(MIMEText(body, 'plain'))
+        # instance of MIMEMultipart
+        msg = MIMEMultipart()
+        # storing the senders email address
+        msg['From'] = fromaddr
+        # storing the receivers email address
+        msg['To'] = toaddr
+        # storing the subject
+        msg['Subject'] = f"Annotation Results from {annotator} - {get_datetime(underscored=True)}"
+        # string to store the body of the mail
+        body = ""
+        # attach the body with the msg instance
+        msg.attach(MIMEText(body, 'plain'))
 
-    # creating zip file from output folder
-    dirname = os.path.join('..', 'outputs')  # static address, the whole output folder
-    zipped = os.path.join('..', 'outputs')  # it adds the .zip extension
-    shutil.make_archive(zipped, 'zip', dirname)
+        # creating zip file from output folder
+        dirname = os.path.join('..', 'outputs')  # static address, the whole output folder
+        zipped = os.path.join('..', 'outputs')  # it adds the .zip extension
+        shutil.make_archive(zipped, 'zip', dirname)
 
-    # for file_name in os.listdir(output_path):
-    #     file_path = os.path.join(output_path, file_name)
+        zipped_filepath = f'{zipped}.zip'
+        attachment = open(zipped_filepath, "rb")
+        part = MIMEBase('application', "octet-stream")
+        part.set_payload(attachment.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', 'attachment', filename='outputs.zip')
+        msg.attach(part)
 
-    zipped_filepath = f'{zipped}.zip'
-    attachment = open(zipped_filepath, "rb")
-    part = MIMEBase('application', "octet-stream")
-    part.set_payload(attachment.read())
-    encoders.encode_base64(part)
-    part.add_header('Content-Disposition', 'attachment', filename='outputs.zip')
-    msg.attach(part)
+        # creates SMTP session
+        s = smtplib.SMTP('smtp.gmail.com', 587)
+        # start TLS for security
+        s.starttls()
+        # Authentication
+        # s.login(fromaddr, "13747576")
+        s.login(fromaddr, "eByte10Tonj##")
+        # Converts the Multipart msg into a string
+        text = msg.as_string()
+        # sending the mail
+        s.sendmail(fromaddr, toaddr, text)
+        # terminating the session
+        s.quit()
 
-    # creates SMTP session
-    s = smtplib.SMTP('smtp.gmail.com', 587)
-    # start TLS for security
-    s.starttls()
-    # Authentication
-    # s.login(fromaddr, "13747576")
-    s.login(fromaddr, "eByte10Tonj##")
-    # Converts the Multipart msg into a string
-    text = msg.as_string()
-    # sending the mail
-    s.sendmail(fromaddr, toaddr, text)
-    # terminating the session
-    s.quit()
-    # log(f'In [email_results]: emailed all the results\n')
-    log(f'In [email_results]: creating zip file at: {zipped_filepath} and emailing: done.\n')
-
-
-
-
-
+        if no_log:  # sometimes we do not want this to be in the log file
+            print(f'In [email_results]: creating zip file at: {zipped_filepath} and emailing: done.\n')
+        else:
+            log(f'In [email_results]: creating zip file at: {zipped_filepath} and emailing: done.\n')
+    except:
+        globals.email_error = True

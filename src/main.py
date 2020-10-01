@@ -82,7 +82,7 @@ def manage_sessions_and_run(args):
         show_visual_error('', f'The basename file for {args.data_mode} data does not exists')
         exit(1)
 
-    # now that the basename file exists, create image registry if not available - img registry is dependent on the laptop paths
+    # now that the basename file exists, create image registry if not available - img registry is dependent on the laptop paths regardless of the annotator
     if not os.path.isfile(globals.params['img_registry']):
         data_prep.create_img_registry(args.data_mode)
 
@@ -178,7 +178,7 @@ def annotator_exists(annotator):
 
 
 def check_args(args):
-    if args.session_name != 'split' and args.annotator is None:
+    if (args.session_name != 'split' or args.email_results) and args.annotator is None:
         message = 'Please provide annotator name using the --annotator argument'
         show_visual_error("Arguments specified incorrectly", message)
         exit(1)  # unsuccessful exit
@@ -222,15 +222,15 @@ def check_args(args):
 
 def main():
     args = read_args_and_adjust()
+    check_args(args)  # make sure args are correct
 
     # emailing results
     if args.email_results:
-        log('In [main]: emailing results...')
-        logic.email_results()
+        print('In [main]: emailing results...')
+        logic.email_results(annotator=args.annotator, no_log=True)
+        if globals.email_error:
+            show_visual_error('Email error', 'Could not email the results. Please disable emailing option by using --no_email.')
         return
-
-    # make sure args are correct
-    check_args(args)
 
     # creating registries ONLY for variability - creation of test and train image registries are done in the first session
     if args.create_img_registry:

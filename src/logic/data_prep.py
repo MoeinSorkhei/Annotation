@@ -5,16 +5,6 @@ import logic
 import random
 
 
-# def create_img_registry(img_folder, output_file):
-#     all_dicoms = glob.glob(f'{img_folder}/**/*.dcm', recursive=True)  # it assumes '/' path separator
-#     print(f'In [create_img_registry]: read {len(all_dicoms)} images from: "{img_folder}"')
-#
-#     all_dicoms = [filename.replace(f'{img_folder}/', '') for filename in all_dicoms]  # get relative path from the base dir
-#     all_dicoms = sorted(all_dicoms)
-#     write_list_to_file(all_dicoms, output_file)
-#     print(f'In [create_img_registry]: creating image registry at: "{output_file}" done')
-
-
 def rename_test_imgs(registry_file, test_imgs_folder, renamed_test_imgs_folder):
     img_registry = read_file_to_list(registry_file)
     make_dir_if_not_exists(renamed_test_imgs_folder)
@@ -43,11 +33,19 @@ def convert_test_imgs_to_png():
 
 
 def make_seed_list():
-    # helper.make_dir_if_not_exists(globals.params['output_path'])
-    # filename_list = ['10.dcm', '28.dcm', '33.dcm', '50.dcm', '78.dcm', '84.dcm']  # manually selected
-    # seed_list = [os.path.join(os.path.abspath(globals.params['test_imgs_dir']), filename) for filename in filename_list]
-    print('ATTENTION: SEED LIST SHOULD BE CHANGED')
-    seed_list = read_file_to_list(globals.params['img_registry'])[:6]
+    seed_list_basenames = [
+        '4A7752346C424E4B3275595838797A6D5450506270513D3D_537153536F422F464D67367258752B663746777852414455364A6367436A4C48_20150129_1.dcm',
+        '2B4A4748517956492B77423063754F7A7A6C625736513D3D_537153536F422F464D67344B6D3735393553587861514455364A6367436A4C48_20160607_2.dcm',
+        '4E6B4E66536D594A674F2F6166332F354C732B5256513D3D_537153536F422F464D67343033324B4D52526E664A674455364A6367436A4C48_20150820_2.dcm',
+        '5A757377306C54784A355A3078534D7348537A6D45773D3D_537153536F422F464D67376E415A5552585A4D706C774455364A6367436A4C48_20120611_1.dcm',
+        '6A4E616D692B4B334A4A6862445737347162614A61673D3D_537153536F422F464D67377233564F686D425A4F4F674455364A6367436A4C48_20120629_4.dcm',
+        '6D4B576170507A64373675426C4D66314B634D3571773D3D_537153536F422F464D673748424D2B716C496E3852414455364A6367436A4C48_20141007_2.dcm'
+    ]
+    seed_list = []
+    for basename in seed_list_basenames:
+        for filename in read_file_to_list(globals.params['img_registry']):
+            if filename.endswith(basename):
+                seed_list.append(filename)
 
     helper.write_list_to_file(seed_list, globals.params['sorted'])
     log(f'Wrote seed list of len {len(seed_list)} to: "{globals.params["sorted"]}"')

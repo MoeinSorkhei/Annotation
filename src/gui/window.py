@@ -448,7 +448,7 @@ class Window:
         log(f'In [finalize_session]: Clicked "finalize_session."')
 
         if globals.params['email_interval'] is not None:
-            logic.email_results()
+            logic.email_results(annotator=self.annotator)
 
         log(f'In [finalize_session]: All done')
         exit(0)
@@ -605,6 +605,11 @@ class Window:
                             f'Updating window to get the rate....')
             log(f'{"*" * 100}\n', no_time=True)
             return update_file_called
+
+        # break if emailing error has occurred
+        if globals.email_error:
+            show_visual_error('Email error', 'Could not email the results. Please disable emailing option by using --no_email.')
+            sys.exit(1)
 
         # ignore keyboard press for the final page
         if self.current_index == len(self.cases):

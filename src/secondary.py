@@ -11,6 +11,7 @@ def parse_args():
     parser.add_argument('--resize_data', action='store_true')
     parser.add_argument('--png', action='store_true')
     parser.add_argument('--assert_reg', action='store_true')
+    parser.add_argument('--assert_bve', action='store_true')
     return parser.parse_args()
 
 
@@ -129,14 +130,23 @@ def adjust_clio_paths(data_mode):
 
 
 def assert_existence(mode, data_mode):
-    if mode == 'backup_equality':
-        assert mode == 'test'
-        l1 = read_file_to_list('../data_local/downloaded/extracted_test.txt')
-        l2 = read_file_to_list('../data_local/databases/test/extracted_test_backup.txt')
+    def _assert_pure_names_equality(l1, l2):
         l1 = [os.path.split(file)[-1] for file in l1]
         l2 = [os.path.split(file)[-1] for file in l2]
         print('assert equality result:', l1 == l2)
         assert l1 == l2
+
+    assert data_mode == 'test'
+
+    if mode == 'backup_equality':  # extracted with backup
+        extracted = read_file_to_list('../data_local/downloaded/extracted_test.txt')
+        backup = read_file_to_list('../data_local/databases/test/extracted_test_backup.txt')
+        _assert_pure_names_equality(extracted, backup)
+
+    elif mode == 'extracted_equality':
+        extracted = read_file_to_list('../data_local/downloaded/extracted_test.txt')
+        basenames = read_file_to_list('../data/test_basenames.txt')
+        _assert_pure_names_equality(extracted, basenames)
 
     elif mode == 'img_registry':
         registry_list = read_file_to_list('../data/test_img_registry.txt')
@@ -187,6 +197,9 @@ if __name__ == '__main__':
 
     elif args.png:
         convert_to_png('test')
+
+    elif args.assert_bve:  # base v. extracted
+        assert_existence('extracted_equality', 'test')
 
     elif args.assert_reg:
         assert_existence('img_registry', 'test')

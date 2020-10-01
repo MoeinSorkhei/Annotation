@@ -18,3 +18,4 @@ trial_results/
 data_local/
 outputs/
 outputs.zip
+*.zip

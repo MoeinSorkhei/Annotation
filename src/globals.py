@@ -2,6 +2,7 @@ import os
 
 # ===== running the program in debug mode
 debug = False
+email_error = False
 
 params = {
     "test_basenames": os.path.join('..', 'data', 'test_basenames.txt'),
