@@ -73,12 +73,6 @@ def create_image_registry_prev(data_mode):
     print(f'Saved image registry of len: {len(img_lst)} to: "{path}"')
 
 
-def resize_data(image_dir, save_dir, new_width, new_height):
-    all_dicoms = get_all_dicom_files(image_dir)
-    for dicom in all_dicoms:
-        resize_pixel_array(dicom, new_width, new_height, save_dir)
-
-
 def get_size_stats(image_dir):
     all_dicoms = get_all_dicom_files(image_dir)
     all_widths, all_heights = [], []

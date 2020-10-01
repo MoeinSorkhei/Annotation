@@ -155,16 +155,8 @@ def assert_existence(mode, data_mode):
 
 
 def resize_data(resize_factor=2):
-    # mean_width, mean_height = 3219, 5400  # taken from some 50 ddsm images
-    # mean_width, mean_height = 3328, 5400  # taken from some 50 ddsm images
-    # resize_width, resize_height = mean_width // resize_factor, mean_height // resize_factor
-
-    # mean_height, mean_width = 3328, 2560
-    # resize_height, resize_width = mean_height // resize_factor, mean_width // resize_factor
-
     save_dir = '/storage/sorkhei/resized_test'
     file_list = read_file_to_list('../data_local/downloaded/extracted_test.txt')
-    # assert_backup_equality(mode='test')  # only run locally
 
     print('File list has len:', len(file_list))
     make_dir_if_not_exists(save_dir)

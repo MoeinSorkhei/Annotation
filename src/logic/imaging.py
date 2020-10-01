@@ -4,7 +4,6 @@ import pydicom
 import numpy as np
 import os
 import glob
-import cv2
 
 import globals
 from .helper import log
@@ -33,6 +32,7 @@ def resize_pixel_array(dicom_file, resize_factor, save_dir):
     resize_height, resize_width = pixel_array.shape[0] // resize_factor, pixel_array.shape[1] // resize_factor
 
     # resized_pixel_array = np.array(Image.fromarray(pixel_array).resize(size=(resize_width, resize_height)))
+    import cv2  # should be here
     resized_pixel_array = cv2.resize(pixel_array, dsize=(resize_width, resize_height))
 
     # print('resized pixel array shape:', resized_pixel_array.shape)
