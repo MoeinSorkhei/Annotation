@@ -21,6 +21,6 @@ params = {
 
     "variability_samples_percentage": 10,
     "max_imgs_per_session": 10,
-    "resize_factor": 1,
-    "email_interval": None
+    "resize_factor": 4,
+    "email_interval": 5
 }
