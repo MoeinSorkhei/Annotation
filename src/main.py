@@ -222,15 +222,20 @@ def check_args(args):
 
 def main():
     args = read_args_and_adjust()
-    check_args(args)  # make sure args are correct
 
     # emailing results
     if args.email_results:
+        if args.annotator is None:
+            show_visual_error('', 'Please provide your name using --annotator option.')
+            sys.exit(1)
+
         print('In [main]: emailing results...')
         logic.email_results(annotator=args.annotator, no_log=True)
         if globals.email_error:
             show_visual_error('Email error', 'Could not email the results. Please disable emailing option by using --no_email.')
         return
+
+    check_args(args)  # make sure args are correct
 
     # creating registries ONLY for variability - creation of test and train image registries are done in the first session
     if args.create_img_registry:
