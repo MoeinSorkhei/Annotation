@@ -115,7 +115,7 @@ def create_db():
 def create_image_basenames(data_mode):
     assert data_mode == 'test'
     extracted = read_file_to_list('../data_local/downloaded/extracted_test.txt')
-    base_names = [os.path.split(filepath)[-1] for filepath in extracted]
+    base_names = [os_sys.path.split(filepath)[-1] for filepath in extracted]
     write_list_to_file(base_names, '../data/test_basenames.txt')
 
 
@@ -132,8 +132,8 @@ def adjust_clio_paths(data_mode):
 
 def assert_existence(mode, data_mode):
     def _assert_pure_names_equality(l1, l2):
-        l1 = [os.path.split(file)[-1] for file in l1]
-        l2 = [os.path.split(file)[-1] for file in l2]
+        l1 = [os_sys.path.split(file)[-1] for file in l1]
+        l2 = [os_sys.path.split(file)[-1] for file in l2]
         print('assert equality result:', l1 == l2)
         assert l1 == l2
 
@@ -151,7 +151,7 @@ def assert_existence(mode, data_mode):
 
     elif mode == 'img_registry':
         registry_list = read_file_to_list('../data/test_img_registry.txt')
-        existence = all([os.path.isfile(reg_file) for reg_file in registry_list])
+        existence = all([os_sys.path.isfile(reg_file) for reg_file in registry_list])
         print('img registry existence:', existence)
 
 
@@ -191,7 +191,7 @@ def convert_to_png(sorted_list_path, source_dir, dest_dir, op_sys):
         # print('sorted save path:', os.path.join(dest_dir, sorted_pure))
         # input()
 
-        read_dicom_and_resize(os.path.join(source_dir, pure), save_to=os.path.join(dest_dir, sorted_pure))
+        read_dicom_and_resize(os_sys.path.join(source_dir, pure), save_to=os_sys.path.join(dest_dir, sorted_pure))
 
 
 def count_dicom_errors():
@@ -205,7 +205,6 @@ def count_dicom_errors():
         except:
             print('Excpetion for file:', filename)
             counts += 1
-    print('Total errors:', counts)
 
 
 if __name__ == '__main__':
@@ -226,10 +225,18 @@ if __name__ == '__main__':
         resize_data()
 
     elif args.png:
-        convert_to_png('../test_results/output_Fredrik/old_aborted (2).txt',
+        # file = '../test_results/output_Fredrik/old_aborted (2).txt'
+        # dest = '../test_results/output_Fredrik_aborted'
+        # os_sys = 'windows'
+
+        file = '../data/test_img_registry.txt'
+        dest = '../data/test_img_registry_visualized'
+        os_sys = 'mac'
+
+        convert_to_png(file,
                        source_dir='../data/test_imgs',
-                       dest_dir='../test_results/output_Fredrik_aborted',
-                       op_sys='windows')
+                       dest_dir=dest,
+                       op_sys=os_sys)
 
     elif args.assert_bve:  # base v. extracted
         assert_existence('extracted_equality', 'test')
