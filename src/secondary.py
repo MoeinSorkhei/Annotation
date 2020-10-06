@@ -115,7 +115,7 @@ def create_db():
 def create_image_basenames(data_mode):
     assert data_mode == 'test'
     extracted = read_file_to_list('../data_local/downloaded/extracted_test.txt')
-    base_names = [os_sys.path.split(filepath)[-1] for filepath in extracted]
+    base_names = [os.path.split(filepath)[-1] for filepath in extracted]
     write_list_to_file(base_names, '../data/test_basenames.txt')
 
 
@@ -132,8 +132,8 @@ def adjust_clio_paths(data_mode):
 
 def assert_existence(mode, data_mode):
     def _assert_pure_names_equality(l1, l2):
-        l1 = [os_sys.path.split(file)[-1] for file in l1]
-        l2 = [os_sys.path.split(file)[-1] for file in l2]
+        l1 = [os.path.split(file)[-1] for file in l1]
+        l2 = [os.path.split(file)[-1] for file in l2]
         print('assert equality result:', l1 == l2)
         assert l1 == l2
 
@@ -151,7 +151,7 @@ def assert_existence(mode, data_mode):
 
     elif mode == 'img_registry':
         registry_list = read_file_to_list('../data/test_img_registry.txt')
-        existence = all([os_sys.path.isfile(reg_file) for reg_file in registry_list])
+        existence = all([os.path.isfile(reg_file) for reg_file in registry_list])
         print('img registry existence:', existence)
 
 
@@ -191,7 +191,7 @@ def convert_to_png(sorted_list_path, source_dir, dest_dir, op_sys):
         # print('sorted save path:', os.path.join(dest_dir, sorted_pure))
         # input()
 
-        read_dicom_and_resize(os_sys.path.join(source_dir, pure), save_to=os_sys.path.join(dest_dir, sorted_pure))
+        read_dicom_and_resize(os.path.join(source_dir, pure), save_to=os.path.join(dest_dir, sorted_pure))
 
 
 def count_dicom_errors():
