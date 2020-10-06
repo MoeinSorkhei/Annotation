@@ -165,9 +165,32 @@ def resize_data(resize_factor=2):
         resize_pixel_array(file_path, resize_factor, save_dir)
 
 
-def convert_to_png(data_mode):
-    assert data_mode == 'test'
-    convert_imgs_to_png('../data_local/downloaded/test', '../data_local/test_imgs_png')
+def convert_to_png(sorted_list_path, source_dir, dest_dir, op_sys):
+    # assert data_mode == 'test'
+    # convert_imgs_to_png('../data_local/downloaded/test', '../data_local/test_imgs_png')
+    sep = "\\" if op_sys == 'windows' else '/'
+
+    sorted_list = read_file_to_list(sorted_list_path)
+    print('Sorted list len:', len(sorted_list))
+
+    make_dir_if_not_exists(dest_dir)
+
+    for i, filepath in enumerate(sorted_list):
+        print(f'Reading image {i + 1} of sorted list')
+
+        if 'aborted' in sorted_list_path:  # to be removed
+            filepath = parsed(filepath, '$')[0]
+
+        pure = filepath.split(sep)[-1]
+        print(f'pure name:', pure)
+
+        sorted_pure = f'{i + 1} - {pure[:-4]}.png'  # also remove .dcm
+        # print('sorted pure:', sorted_pure)
+        # sorted_save_path = os.path.join(dest_dir, sorted_pure)
+        # print('sorted save path:', os.path.join(dest_dir, sorted_pure))
+        # input()
+
+        read_dicom_and_resize(os.path.join(source_dir, pure), save_to=os.path.join(dest_dir, sorted_pure))
 
 
 if __name__ == '__main__':
@@ -188,10 +211,14 @@ if __name__ == '__main__':
         resize_data()
 
     elif args.png:
-        convert_to_png('test')
+        convert_to_png('../test_results/output_Fredrik/old_aborted (2).txt',
+                       source_dir='../data/test_imgs',
+                       dest_dir='../test_results/output_Fredrik_aborted',
+                       op_sys='windows')
 
     elif args.assert_bve:  # base v. extracted
         assert_existence('extracted_equality', 'test')
 
     elif args.assert_reg:
         assert_existence('img_registry', 'test')
+

@@ -19,3 +19,4 @@ data_local/
 outputs/
 outputs.zip
 *.zip
+test_results/
