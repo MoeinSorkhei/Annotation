@@ -12,6 +12,7 @@ def parse_args():
     parser.add_argument('--png', action='store_true')
     parser.add_argument('--assert_reg', action='store_true')
     parser.add_argument('--assert_bve', action='store_true')
+    parser.add_argument('--dicom_errors', action='store_true')
     return parser.parse_args()
 
 
@@ -193,6 +194,20 @@ def convert_to_png(sorted_list_path, source_dir, dest_dir, op_sys):
         read_dicom_and_resize(os.path.join(source_dir, pure), save_to=os.path.join(dest_dir, sorted_pure))
 
 
+def count_dicom_errors():
+    files = read_file_to_list('../data/test_img_registry.txt')
+    print('read image regitry of len:', len(files))
+
+    counts = 0
+    for filename in files:
+        try:
+            dataset = pydicom.dcmread(filename)
+        except:
+            print('Excpetion for file:', filename)
+            counts += 1
+    print('Total errors:', counts)
+
+
 if __name__ == '__main__':
     # create_db()
 
@@ -221,4 +236,7 @@ if __name__ == '__main__':
 
     elif args.assert_reg:
         assert_existence('img_registry', 'test')
+
+    elif args.dicom_errors:
+        count_dicom_errors()
 
