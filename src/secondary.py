@@ -177,7 +177,7 @@ def convert_to_png(sorted_list_path, source_dir, dest_dir, op_sys):
     make_dir_if_not_exists(dest_dir)
 
     for i, filepath in enumerate(sorted_list):
-        print(f'Reading image {i + 1} of sorted list')
+        print(f'Reading image {i + 1} of list')
 
         if 'aborted' in sorted_list_path:  # to be removed
             filepath = parsed(filepath, '$')[0]
@@ -205,6 +205,7 @@ def count_dicom_errors():
         except:
             print('Excpetion for file:', filename)
             counts += 1
+    print('Total errors:', counts)
 
 
 if __name__ == '__main__':
