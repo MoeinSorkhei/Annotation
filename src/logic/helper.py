@@ -59,6 +59,21 @@ def pure_name(file_path):
     return file_path.split(os.path.sep)[-1]
 
 
+def pure_names(the_list, sep):
+    assert type(the_list) == list, 'Input should be of type list'
+    return [filename.split(sep)[-1] for filename in the_list]
+
+
+def prepend_to_paths(the_list, string):
+    assert string.endswith('/'), 'String should end with /'
+    return [f'{string}{filename}' for filename in the_list]
+
+
+def files_with_suffix(directory, suffix):
+    files = [os.path.abspath(path) for path in glob.glob(f'{directory}/**/*{suffix}', recursive=True)]  # full paths
+    return files
+
+
 def print_list(sorted_list):
     log('________________________________________________________________', no_time=True)
     log(f'In [binary_search_step]: sorted_list:')

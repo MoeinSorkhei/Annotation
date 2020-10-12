@@ -20,3 +20,4 @@ outputs/
 outputs.zip
 *.zip
 test_results/
+radiologists_test_results/

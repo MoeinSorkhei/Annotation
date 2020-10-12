@@ -8,11 +8,14 @@ CUSTOM_DENSITIES = [0, *list(range(5, 40, 5)), 40]
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Annotation tool')
+    parser.add_argument('--other', action='store_true')
     parser.add_argument('--resize_data', action='store_true')
+    parser.add_argument('--subset', type=str)  # for resize
+    parser.add_argument('--place', type=str)  # remote or local
     parser.add_argument('--png', action='store_true')
     parser.add_argument('--assert_reg', action='store_true')
     parser.add_argument('--assert_bve', action='store_true')
-    parser.add_argument('--dicom_errors', action='store_true')
+    parser.add_argument('--dicoms_sanity', action='store_true')
     return parser.parse_args()
 
 
@@ -130,6 +133,54 @@ def adjust_clio_paths(data_mode):
     print('Wrote adjusted of len:', len(adjusted))
 
 
+def check_train_files_unique(version):
+    if version == 1:
+        extracted = '../data_local/downloaded/extracted_train.txt'
+        lst = read_file_to_list(extracted)
+        lst = [filename.split('/')[-1] for filename in lst]
+
+    if version == 2:
+        lst = []
+        for i in range(10):
+            ind = f'{i + 1}' if i == 9 else f'0{i + 1}'
+            lst.extend(read_file_to_list(f'../data_local/downloaded/extracted_train_{ind}.txt'))
+        lst = [filename.split('/')[-1] for filename in lst]
+
+    print('list len:', len(lst))
+    print('len set:', len(set(lst)))
+    print('equal len?', len(lst) == len(set(lst)))
+
+
+def check_all_train_exist():
+    for i in range(1, 6):  # todo: change the range to 10
+        ind = i if i == 10 else f'0{i}'
+        print('Checking for:', ind)
+
+        the_list = read_file_to_list(f'../data_local/downloaded/extracted_train_{ind}.txt')
+        the_list = pure_names(the_list, '/')
+        the_list = prepend_to_paths(the_list, string=f'../data_local/downloaded/extracted_train_{ind}_resized/')
+
+        # print(the_list[:10])
+        # input()
+
+        print('List len:', len(the_list))
+
+        existence = [os.path.isfile(filename) for filename in the_list]
+        print('All exist?', all(existence), '\n')
+
+
+def split_train_extracted():
+    extracted = '../data_local/downloaded/extracted_train.txt'
+    lst = read_file_to_list(extracted)
+    print('list len:', len(lst))
+
+    splitted = np.array_split(lst, 10)
+    for i, sublist in enumerate(splitted):
+        filename = f'../data_local/downloaded/extracted_train_{i + 1}.txt'
+        write_list_to_file(sublist, filename)
+        print(f'Wrote list of len {len(sublist)} to {filename}')
+
+
 def assert_existence(mode, data_mode):
     def _assert_pure_names_equality(l1, l2):
         l1 = [os.path.split(file)[-1] for file in l1]
@@ -155,30 +206,41 @@ def assert_existence(mode, data_mode):
         print('img registry existence:', existence)
 
 
-def resize_data(resize_factor=2):
-    save_dir = '/storage/sorkhei/resized_test'
-    file_list = read_file_to_list('../data_local/downloaded/extracted_test.txt')
+def resize_data(subset, resize_factor=2):
+    if subset == 'test':
+        save_dir = '/storage/sorkhei/resized_test'
+        file_list = read_file_to_list('../data_local/downloaded/extracted_test.txt')
+        raise NotImplementedError('Need refactoring the file_path before calling resize_pixel_array')
+
+    else:  # e.g. extracted_train_01
+        # source_dir = f'/storage/sorkhei/{subset}'
+        save_dir = f'/storage/sorkhei/{subset}_resized'
+        file_list = read_file_to_list(f'../data_local/downloaded/{subset}.txt')
+        file_list = pure_names(file_list, sep='/')
+        file_list = [f'/storage/sorkhei/{subset}/{filename}' for filename in file_list]
 
     print('File list has len:', len(file_list))
+    # confirm all files exist
+    assert all([os.path.isfile(filename) for filename in file_list])
+    print('All files exists: OK')
     make_dir_if_not_exists(save_dir)
 
     for file_path in file_list:
-        resize_pixel_array(file_path, resize_factor, save_dir)
+        resize_pixel_array(file_path, resize_factor, save_dir)  # saves with purname in the save_dir folder
 
 
-def convert_to_png(sorted_list_path, source_dir, dest_dir, op_sys):
-    # assert data_mode == 'test'
-    # convert_imgs_to_png('../data_local/downloaded/test', '../data_local/test_imgs_png')
+def convert_to_png(sorted_list_path, source_dir, dest_dir, op_sys, limit=None):
     sep = "\\" if op_sys == 'windows' else '/'
 
-    sorted_list = read_file_to_list(sorted_list_path)
-    print('Sorted list len:', len(sorted_list))
+    the_list = read_file_to_list(sorted_list_path)
+    if limit is not None:
+        the_list = the_list[:limit]
+    print('List len:', len(the_list))
 
     make_dir_if_not_exists(dest_dir)
 
-    for i, filepath in enumerate(sorted_list):
+    for i, filepath in enumerate(the_list):
         print(f'Reading image {i + 1} of list')
-
         if 'aborted' in sorted_list_path:  # to be removed
             filepath = parsed(filepath, '$')[0]
 
@@ -186,25 +248,75 @@ def convert_to_png(sorted_list_path, source_dir, dest_dir, op_sys):
         print(f'pure name:', pure)
 
         sorted_pure = f'{i + 1} - {pure[:-4]}.png'  # also remove .dcm
-        # print('sorted pure:', sorted_pure)
-        # sorted_save_path = os.path.join(dest_dir, sorted_pure)
-        # print('sorted save path:', os.path.join(dest_dir, sorted_pure))
-        # input()
-
         read_dicom_and_resize(os.path.join(source_dir, pure), save_to=os.path.join(dest_dir, sorted_pure))
 
 
-def count_dicom_errors():
-    files = read_file_to_list('../data/test_img_registry.txt')
-    print('read image regitry of len:', len(files))
+def check_whole_train_data():
+    folder_1 = '../data_local_downloaded/extracted_train_01_05'
+    folder_2 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
+    all_files_1 = helper.files_with_suffix(folder_1, '.dcm')
+    all_files_2 = helper.files_with_suffix(folder_2, '.dcm')
+    all_files = all_files_1 + all_files_2
+    # then
+
+
+def dicoms_sanity(subset, place):
+    if subset == '01_05':
+        for i in [1, 2, 3, 4, 5]:
+            dicoms_sanity_subset(f'extracted_train_0{i}', place)
+    elif subset == '06_10':
+        for i in [6, 7, 8, 9]:
+            dicoms_sanity_subset(f'extracted_train_0{i}', place)
+        dicoms_sanity_subset(f'extracted_train_10', place)
+    else:
+        dicoms_sanity_subset(subset, place)
+
+
+def dicoms_sanity_subset(subset, place):
+    if place == 'remote':
+        text_file = f'/home/sorkhei/Annotation/data_local/downloaded/{subset}.txt'
+        prepend_text = f'/storage/sorkhei/{subset}/'
+    else:
+        text_file = f'../data_local/downloaded/{subset}.txt'
+        prepend_text = f'../data_local/downloaded/{subset}_resized/'
+
+    print('Reading files from:', text_file)
+    files = read_file_to_list(text_file)
+    files = pure_names(files, '/')
+    files = prepend_to_paths(files, prepend_text)
+    print('read file list of len:', len(files))
 
     counts = 0
     for filename in files:
         try:
             dataset = pydicom.dcmread(filename)
         except:
-            print('Excpetion for file:', filename)
+            print('Exception for file:', filename)
             counts += 1
+    print('Total errors:', counts)
+
+
+def dicoms_sanity_whole_train():
+    path2 = '/Users/user/PycharmProjects/Annotation/data_local/downloaded/extracted_train_01_05'
+    path1 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
+
+    list1 = files_with_suffix(path1, '.dcm')
+    list2 = files_with_suffix(path2, '.dcm')
+
+    total_list = list1 + list2
+    print('total len:', len(total_list))
+    print('total uniques:', len(set(total_list)))
+    input()
+
+    counts = 0
+    for i_file, filename in enumerate(total_list):
+        try:
+            dataset = pydicom.dcmread(filename)
+        except:
+            print('Exception for file:', filename)
+            counts += 1
+        if i_file % 500 == 0:
+            print('Read for file:', i_file, ' => OK')
     print('Total errors:', counts)
 
 
@@ -219,25 +331,26 @@ if __name__ == '__main__':
 
     # extract_samples(data_mode='train')
     args = parse_args()
-    # adjust_clio_paths(data_mode='test')
-    # create_image_basenames('test')
 
-    if args.resize_data:
-        resize_data()
+    if args.other:
+        check_all_train_exist()
+        # check_train_files_unique(version=2)
+        # split_train_extracted()
 
-    elif args.png:
-        # file = '../test_results/output_Fredrik/old_aborted (2).txt'
-        # dest = '../test_results/output_Fredrik_aborted'
-        # os_sys = 'windows'
+    elif args.resize_data:  # needs --subset
+        resize_data(args.subset)
 
-        file = '../data/test_img_registry.txt'
-        dest = '../data/test_img_registry_visualized'
+    elif args.png:  # needs --subset
+        if 'extracted_train' not in args.subset:
+            raise NotImplementedError
+
+        file = f'../data_local/downloaded/{args.subset}.txt'
+        source = f'../data_local/downloaded/{args.subset}_resized'
+        dest = f'../data_local/downloaded/{args.subset}_resized_visualized'
         os_sys = 'mac'
+        limit = 10
 
-        convert_to_png(file,
-                       source_dir='../data/test_imgs',
-                       dest_dir=dest,
-                       op_sys=os_sys)
+        convert_to_png(file, source, dest, os_sys, limit)
 
     elif args.assert_bve:  # base v. extracted
         assert_existence('extracted_equality', 'test')
@@ -245,6 +358,7 @@ if __name__ == '__main__':
     elif args.assert_reg:
         assert_existence('img_registry', 'test')
 
-    elif args.dicom_errors:
-        count_dicom_errors()
+    elif args.dicoms_sanity:  # needs --subset --place
+        # dicoms_sanity(args.subset, args.place)
+        dicoms_sanity_whole_train()
 
