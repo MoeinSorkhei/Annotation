@@ -71,8 +71,9 @@ def insert_into_bin_and_save(which_bin, pos, img):
 def del_from_bin_and_save(which_bin, pos):
     bin_imgs = read_imgs_from_bin(which_bin)
     del_index = len(bin_imgs) - 1 if pos == 'last' else len(bin_imgs) - 2
+    to_be_removed = bin_imgs[del_index]
     del bin_imgs[del_index]
-    log(f'In [del_from_bin_and_save]: deleting image from the "{pos}" of the bin_{which_bin}.txt: done')
+    log(f'In [del_from_bin_and_save]: deleting image from the "{pos}" of the bin_{which_bin}.txt: done - image: {to_be_removed}')
     save_bin(which_bin, bin_imgs)
 
 

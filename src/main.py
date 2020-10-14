@@ -12,8 +12,8 @@ def read_args_and_adjust():
     parser.add_argument('--new', action='store_true')
     parser.add_argument('--already', action='store_true')
     parser.add_argument('--session_name', type=str, default='sort')
-    parser.add_argument('--data_mode', type=str, default='test')
-    parser.add_argument('--n_bins', type=int)
+    parser.add_argument('--data_mode', type=str, default='train')
+    parser.add_argument('--n_bins', type=int, default=12)
     parser.add_argument('--resize_factor', type=int)
     parser.add_argument('--max_imgs_per_session', type=int)
     parser.add_argument('--email_interval', type=int)
@@ -78,13 +78,13 @@ def manage_sessions_and_run(args):
         ui_verbosity = args.ui_verbosity
 
     # image basenames should always be available
-    if not os.path.isfile(globals.params[f'{args.data_mode}_basenames']):
-        show_visual_error('', f'The basename file for {args.data_mode} data does not exists')
-        exit(1)
+    # if not os.path.isfile(globals.params[f'{args.data_mode}_basenames']):
+    #     show_visual_error('', f'The basename file for {args.data_mode} data does not exists')
+    #     exit(1)
 
     # now that the basename file exists, create image registry if not available - img registry is dependent on the laptop paths regardless of the annotator
-    if not os.path.isfile(globals.params['img_registry']):
-        data_prep.create_img_registry(args.data_mode)
+    # if not os.path.isfile(globals.params['img_registry']):
+    #     data_prep.create_img_registry(args.data_mode)
 
     # make seed list for annotator if this is the first time
     if args.session_name == 'sort' and args.data_mode == 'test' and args.new:
@@ -107,8 +107,9 @@ def manage_sessions_and_run(args):
     img_lst, not_already_sorted, already_sorted, aborted_cases, discarded_cases, n_bins, text = to_be_rated(session_name, data_mode)
 
     log(f'In [manage_sessions]: \n'
-        f'read img_list of len: {len(img_lst)} \n'
-        f'{text}: {len(already_sorted)} \n'
+        f'read img_list of len: {len(img_lst)}\n'
+        f'{text}: {len(already_sorted)} '
+        f'({len([img for img in already_sorted if "train_imgs" in img])} train, {len([img for img in already_sorted if "test_imgs" in img])} test)\n'
         f'aborted cases: {len(aborted_cases)} \n'
         f'discarded cases: {len(discarded_cases)} \n'
         f'images left to be rated: {len(not_already_sorted)} \n')
@@ -131,18 +132,20 @@ def manage_sessions_and_run(args):
 
 def set_global_paths(session_name, data_mode, annotator=None, other_annotator=None, create_registry=False):
     if data_mode == 'train':
-        globals.params['img_registry'] = os.path.join('..', 'data', 'train_img_registry.txt')
-        train_out_path = os.path.join(globals.params['output_path'], 'output_train')  # outputs/output_train
-        globals.params['output_path'] = train_out_path
-        globals.params['sorted'] = os.path.join(train_out_path, 'sorted.txt')
-        globals.params['discarded'] = os.path.join(train_out_path, 'discarded.txt')
-        globals.params['aborted'] = os.path.join(train_out_path, 'aborted.txt')
-        globals.params['error'] = os.path.join(train_out_path, 'error.txt')
-        globals.params['ratings'] = os.path.join(train_out_path, 'ratings.txt')
+        # globals.params['img_registry'] = os.path.join('..', 'data', 'train_img_registry.txt')
+        # train_out_path = os.path.join(globals.params['output_path'], 'output_train')  # outputs/output_train
+        # train_out_path = os.path.join(globals.params['output_path'], f'output_{annotator}')
+        annotator_path = get_annotator_path(data_mode, annotator)
+        globals.params['output_path'] = annotator_path
+        globals.params['sorted'] = os.path.join(annotator_path, 'sorted.txt')
+        globals.params['discarded'] = os.path.join(annotator_path, 'discarded.txt')
+        globals.params['aborted'] = os.path.join(annotator_path, 'aborted.txt')
+        globals.params['error'] = os.path.join(annotator_path, 'error.txt')
+        globals.params['ratings'] = os.path.join(annotator_path, 'ratings.txt')
 
     else:
-        annotator_path = get_annotator_path(annotator)
-        other_annotator_path = get_annotator_path(other_annotator)  # only needed for variability_inter
+        annotator_path = get_annotator_path(data_mode, annotator)
+        other_annotator_path = get_annotator_path(data_mode, other_annotator)  # only needed for variability_inter
 
         globals.params['output_path'] = annotator_path
         globals.params['sorted'] = os.path.join(annotator_path, 'sorted.txt')
@@ -169,12 +172,14 @@ def set_global_paths(session_name, data_mode, annotator=None, other_annotator=No
                 globals.params['orig_ratings'] = os.path.join(other_annotator_path, 'ratings.txt')
 
 
-def get_annotator_path(annotator):
-    return os.path.join(globals.params['output_path'], f'output_{annotator}')  # outputs/output_Moein
+def get_annotator_path(data_mode, annotator):
+    # if data_mode == 'test':
+    return os.path.join(globals.params[f'output_path_{data_mode}'], f'output_{annotator}')  # outputs/output_Moein
+    # return os.path.join(globals.params['output_path'], f'output_{annotator}')
 
 
-def annotator_exists(annotator):
-    return os.path.exists(get_annotator_path(annotator))
+def annotator_exists(data_mode, annotator):
+    return os.path.exists(get_annotator_path(data_mode, annotator))
 
 
 def check_args(args):
@@ -183,14 +188,14 @@ def check_args(args):
         show_visual_error("Arguments specified incorrectly", message)
         exit(1)  # unsuccessful exit
 
-    if args.session_name == 'sort' and args.data_mode == 'test':
+    if args.session_name == 'sort':
         if not args.new and not args.already:  # one of the arguments should be specified
             message = 'Please use argument --new if it is the first time you are rating the images, or --already if you have already rated some images.'
             show_visual_error("Arguments specified incorrectly", message)
             exit(1)
 
         # checking for annotators paths
-        annotator_out_path = get_annotator_path(args.annotator)
+        annotator_out_path = get_annotator_path(args.data_mode, args.annotator)
         if args.new and os.path.exists(annotator_out_path):
             message = f'Another annotator with name {args.annotator} exists. If you have already used the tool, use \n --already.'
             show_visual_error("Arguments specified incorrectly", message)
@@ -208,13 +213,13 @@ def check_args(args):
             exit(1)
 
         # check if annotator exists
-        if not os.path.exists(get_annotator_path(args.annotator)):
+        if not os.path.exists(get_annotator_path(args.data_mode, args.annotator)):
             message = f'No annotator with name: {args.annotator} found. Are you specifying your name correctly?'
             show_visual_error("Arguments specified incorrectly", message)
             exit(1)
 
     if args.session_name == 'variability_inter' and \
-            (args.other_annotator is None or not annotator_exists(args.other_annotator) or args.annotator == args.other_annotator):
+            (args.other_annotator is None or not annotator_exists(args.data_mode, args.other_annotator) or args.annotator == args.other_annotator):
         message = 'For inter_variability, a valid other_annotator should also be provided'
         show_visual_error("Arguments specified incorrectly", message)
         exit(1)  # unsuccessful exit
@@ -248,7 +253,7 @@ def main():
 
     # sort, variability rating, and split
     else:
-        check_args(args)
+        # check_args(args)
         if args.data_mode == 'train' or args.session_name == 'split':
             data_mode = 'train'
         elif args.data_mode == 'test' or (args.session_name == 'variability_intra' or args.session_name == 'variability_inter'):

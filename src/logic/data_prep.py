@@ -51,14 +51,14 @@ def make_seed_list():
     log(f'Wrote seed list of len {len(seed_list)} to: "{globals.params["sorted"]}"')
 
 
-def create_img_registry(data_mode):
-    basenames = read_file_to_list(globals.params[f'{data_mode}_basenames'])
-    imgs_dir_abs = os.path.abspath(globals.params[f'{data_mode}_imgs_dir'])
-    full_paths = [os.path.join(imgs_dir_abs, name) for name in basenames]
-
-    registry_file = globals.params[f'img_registry']
-    write_list_to_file(full_paths, registry_file)  # img_registry set in globals path
-    log(f'Created image registry at: "{registry_file}": done')
+# def create_img_registry(data_mode):
+#     basenames = read_file_to_list(globals.params[f'{data_mode}_basenames'])
+#     imgs_dir_abs = os.path.abspath(globals.params[f'{data_mode}_imgs_dir'])
+#     full_paths = [os.path.join(imgs_dir_abs, name) for name in basenames]
+#
+#     registry_file = globals.params[f'img_registry']
+#     write_list_to_file(full_paths, registry_file)  # img_registry set in globals path
+#     log(f'Created image registry at: "{registry_file}": done')
 
 
 def create_image_registry_prev(data_mode):

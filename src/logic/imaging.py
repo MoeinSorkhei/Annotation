@@ -46,7 +46,7 @@ def resize_pixel_array(dicom_file, resize_factor, save_dir):
     log(f'In [resize_pixel_array]: saved resized file to: "{save_path}"')
 
 
-def read_dicom_and_resize(file, save_to=None):
+def read_dicom_and_resize(file, save_to=None, extra_log=True):
     dataset = pydicom.dcmread(file)
     pixels = dataset.pixel_array
     pixels = pixels / np.max(pixels)  # normalize to 0-1
@@ -54,7 +54,8 @@ def read_dicom_and_resize(file, save_to=None):
     orientation = str(dataset.get('PatientOrientation', "(missing)"))
     if 'A' in orientation:  # anterior view, should be flipped
         pixels = np.flip(pixels, axis=1)
-    log('', no_time=True)  # extra print in log file for more readability
+    if extra_log:
+        log('', no_time=True)  # extra print in log file for more readability
 
     # apply color map, rescale to 0-255, convert to int
     image = Image.fromarray(np.uint8(cm.bone(pixels) * 255))
@@ -74,7 +75,9 @@ def read_dicom_and_resize(file, save_to=None):
 def image_list_to_png(image_list, save_path):
     for filepath in image_list:  # image_list should have absolute file paths
         png_filename = helper.pure_name(filepath).replace('.dcm', '.png')
-        read_dicom_and_resize(filepath, save_to=os.path.join(save_path, png_filename))
+        final_name = os.path.join(save_path, png_filename)
+        read_dicom_and_resize(filepath, save_to=final_name, extra_log=False)
+        print('saved png to:', final_name)
 
 
 def convert_imgs_to_png(source_dir, dest_dir):

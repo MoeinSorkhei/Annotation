@@ -261,12 +261,14 @@ class Window:
 
         if self.prev_result is not None:
             if 'aborted' in self.prev_result.keys() and self.prev_result['aborted'] is True:
-                abort_message, bg_color = ('', 'white') if self.ui_verbosity == 1 else ('--- Previous image was aborted ---', 'orange')
+                # abort_message, bg_color = ('', 'white') if self.ui_verbosity == 1 else ('--- Previous image was aborted ---', 'orange')
+                abort_message, bg_color = ('', 'white')
                 self.result_panel.pack(side=TOP)
                 self.result_panel.configure(text=abort_message, fg='blue', bg=bg_color)
 
             elif 'insert_index' in self.prev_result.keys():
-                success_message, bg_color = ('', 'white') if self.ui_verbosity == 1 else ('--- Previous image successfully inserted ---', 'pale green')
+                # success_message, bg_color = ('', 'white') if self.ui_verbosity == 1 else ('--- Previous image successfully inserted ---', 'pale green')
+                success_message, bg_color = ('', 'white')
                 self.result_panel.pack(side=TOP)
                 self.result_panel.configure(text=success_message, fg='green', bg=bg_color)
 

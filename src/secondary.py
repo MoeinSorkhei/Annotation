@@ -296,28 +296,70 @@ def dicoms_sanity_subset(subset, place):
     print('Total errors:', counts)
 
 
-def dicoms_sanity_whole_train():
-    path2 = '/Users/user/PycharmProjects/Annotation/data_local/downloaded/extracted_train_01_05'
-    path1 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
-
+def extract_common_images():
+    path1 = '/Users/user/PycharmProjects/Annotation/data_local/extracted_train_01_05'
+    path2 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
     list1 = files_with_suffix(path1, '.dcm')
     list2 = files_with_suffix(path2, '.dcm')
-
     total_list = list1 + list2
-    print('total len:', len(total_list))
-    print('total uniques:', len(set(total_list)))
-    input()
+    total_list = pure_names(total_list, '/')
+    total_list = list(set(total_list))
+    print('len total list:', len(total_list))
 
-    counts = 0
-    for i_file, filename in enumerate(total_list):
-        try:
-            dataset = pydicom.dcmread(filename)
-        except:
-            print('Exception for file:', filename)
-            counts += 1
-        if i_file % 500 == 0:
-            print('Read for file:', i_file, ' => OK')
-    print('Total errors:', counts)
+    samples = random.sample(total_list, 500)
+    helper.write_list_to_file(samples, '../data_local/common_imgs.txt')
+    print(f'wrote {len(samples)}')
+
+
+def create_tmp_bins(annotator):
+    filenames = [
+        '7556785866615A476345416852764A2F6641532B45413D3D_537153536F422F464D673565502F684F436A686741774455364A6367436A4C48_20140128_2.dcm',
+        '36416E44625342622B446A42442B4B306861433144413D3D_537153536F422F464D6736684E6534476332796E70514455364A6367436A4C48_20140408_2.dcm',
+        '4F467455436C2F696274706B4B6C6477527451626A413D3D_537153536F422F464D6735424A6E486F644C54764B774455364A6367436A4C48_20120312_2.dcm',
+        '4A664F396632432B2F3079374E61794F7964476852673D3D_537153536F422F464D67364D6161474A4651526C66774455364A6367436A4C48_20130111_2.dcm',
+        '6865323064616F54494D30597A7A3668644944375A673D3D_537153536F422F464D67352B383742747465623249674455364A6367436A4C48_20091214_2.dcm',
+        '6D51396F337A4B753259757473687669484B56646E673D3D_537153536F422F464D6736516E6A454E6258474961514455364A6367436A4C48_20090608_1.dcm',
+        '4264666E77566854436F45665243466E5977386A67513D3D_537153536F422F464D6736324E4D556C4E5A463271514455364A6367436A4C48_20081203_2.dcm',
+        '684F32716377653968517732505A574C4544483054513D3D_537153536F422F464D67376676624667376163304C514455364A6367436A4C48_20090604_2.dcm',
+        '464D4333554B3358676D2F53386D73794B417A7074673D3D_537153536F422F464D67354E57694945756D367536774455364A6367436A4C48_20120509_2.dcm',
+        '676B7A4566754D4C59426542524E6B2B354C547849413D3D_537153536F422F464D67374D52596A32686F657A45514455364A6367436A4C48_20081113_1.dcm',
+        '4C6E4E6D3265363342535930426F702B5A51484C71773D3D_537153536F422F464D6737783954684C454B575649514455364A6367436A4C48_20081125_1.dcm',
+        '45627A446D6161483435747078436F55574F6B6B4D413D3D_537153536F422F464D67367349676F69493154466E774455364A6367436A4C48_20120418_2.dcm'
+    ]
+
+    path = f'../outputs_train/output_{annotator}'
+    if not os.path.isdir(path):
+        os.mkdir(path)
+
+    for i in range(12):
+        with open(f'../outputs_train/output_{annotator}/bin_{i}.txt', 'a') as f:
+            print('opened:', f'../outputs_train/output_{annotator}/bin_{i}.txt')
+            f.write(f'{os.path.join(os.path.abspath(globals.params["test_imgs_dir"]), filenames[i])}\n')
+            print('wrote:', filenames[i])
+            print('don for i:', i)
+
+
+def create_bins(annotator):
+    df = pd.read_csv('../data_local/select_ref_images_201014.csv', sep=',', engine='python')
+    print('len initial df:', len(df))
+
+    if annotator == 'fredrik':
+        df = df[df['select_fredrik'] == 1][['filename', 'select_fredrik', 'rank_fredrik_bin']]
+        print('len reduced after selecting to:', len(df))
+        # print(df[df['rank_fredrik_bin'] == 12])
+
+        output_path = f'../outputs_train/output_{annotator}'
+        make_dir_if_not_exists(output_path, verbose=False)
+
+        for i in range(12):
+            bin_num = i + 1
+            files = df[df['rank_fredrik_bin'] == bin_num]['filename'].to_list()  # pure names
+            # files = [os.path.join(globals.params['test_imgs_dir'], f) for f in files]  # abs paths
+            # files = [os.path.join(os.path.abspath(globals.params['test_imgs_dir']), f) for f in files]  # abs paths
+
+            bin_filename = f'{output_path}/bin_{i}.txt'
+            write_list_to_file(files, bin_filename)
+            print(f'Extracted {len(files)} for bin num: {bin_num} and write to: {bin_filename}')
 
 
 if __name__ == '__main__':
@@ -333,9 +375,15 @@ if __name__ == '__main__':
     args = parse_args()
 
     if args.other:
-        check_all_train_exist()
         # check_train_files_unique(version=2)
         # split_train_extracted()
+        # check_all_train_exist()
+        # create_tmp_bins('Kevin')
+        # confirm_bin_imgs_exist()
+        # dicoms_sanity_whole_train()
+        # extract_common_images()
+        # copy_common_imgs()
+        create_bins('fredrik')
 
     elif args.resize_data:  # needs --subset
         resize_data(args.subset)

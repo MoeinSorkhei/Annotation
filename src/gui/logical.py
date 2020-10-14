@@ -12,6 +12,10 @@ def keystroke_is_valid(pressed):
 
 
 def robust_checking_needed(window, print_details=False):
+    # no robust checking for train
+    if window.data_mode == 'train':
+        return False
+
     robust_levels = globals.params['robust_levels']
     min_length = globals.params['robust_min_length']
 
@@ -75,7 +79,7 @@ def matches_binary_insert_rule(window, rate):
         return True
     # special insertion rule for tran data with random representatives
     if window.data_mode == 'train' and globals.params['bin_rep_type'] == 'random' \
-            and (window.high - window.low == 1 and rate == '1'):
+            and ((window.high - window.low == 1 and rate == '1') or (window.high - window.low == 2)):
         return True
     return False
 
@@ -320,7 +324,9 @@ def insert_with_binary_inds(window, rate, item):
     # for train data
     else:
         # the first condition applies only to random representative, already checked in insertion rule
-        if (window.high - window.low == 1) and rate == '1':
+        if window.high - window.low == 2:
+            which_bin = mid if rate == '9' else mid - 1 if rate == '2' else mid + 1
+        elif (window.high - window.low == 1) and rate == '1':
             which_bin = mid + 1  # special additional insertion rule for train data with random representatives
         else:
             which_bin = mid  # bin number to insert to
@@ -335,7 +341,7 @@ def insert_with_binary_inds(window, rate, item):
                 pos = 'last'  # if new image is harder
 
         log(f'In [insert_with_binary_inds]: bin_rep_type is "{bin_rep_type}", '
-            f'inserting into position "{pos}" of bin {which_bin}')
+            f'inserting into position "{pos}" of bin {which_bin} - image: {item}')
 
         insert_into_bin_and_save(which_bin, pos, item)
         window.prev_result.update({'insert_index': which_bin, 'insert_pos': pos})
@@ -461,7 +467,8 @@ def save_to_aborted_list(case, annotator, timestamp):
 
 
 def to_be_rated(session_name, data_mode):
-    img_lst = helper.read_file_to_list(globals.params['img_registry'])
+    # img_lst = helper.read_file_to_list(globals.params['img_registry'])
+    img_lst = helper.files_with_suffix(globals.params['train_imgs_dir'], '.dcm')
     if session_name == 'sort':
         if data_mode == 'test':
             already_sorted = read_sorted_imgs()
