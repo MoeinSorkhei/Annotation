@@ -5,8 +5,12 @@ import argparse
 
 
 # Moein
-PATH1 = '/Users/user/PycharmProjects/Annotation/data_local/extracted_train_01_05'
-PATH2 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
+# PATH1 = '/Users/user/PycharmProjects/Annotation/data_local/extracted_train_01_05'
+# PATH2 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
+
+# Fredrik
+PATH1 = '/Users/fredrikstrand/Desktop/MammoAI Annotation/Annotation/data_local/extracted_train_01_05'
+PATH2 = '/Users/fredrikstrand/Desktop/MammoAI Annotation/Annotation/data_local/extracted_train_06_10'
 
 
 def parse_args():
