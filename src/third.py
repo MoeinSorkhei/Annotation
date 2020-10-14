@@ -4,6 +4,7 @@ import random
 import argparse
 
 
+# Moein
 PATH1 = '/Users/user/PycharmProjects/Annotation/data_local/extracted_train_01_05'
 PATH2 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
 
@@ -21,8 +22,6 @@ def parse_args():
 
 
 def copy_common_imgs():
-    # path1 = '/Users/user/PycharmProjects/Annotation/data_local/extracted_train_01_05'
-    # path2 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
     total_list = files_with_suffix(PATH1, '.dcm') + files_with_suffix(PATH2, '.dcm')
     common_list = read_file_to_list(os.path.join('..', 'data_local', 'common_imgs.txt'))
 
@@ -41,10 +40,6 @@ def copy_common_imgs():
 
 
 def dicoms_sanity_train(all_imgs):
-    # path1 = '/Users/user/PycharmProjects/Annotation/data_local/extracted_train_01_05'
-    # path2 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
-    # path3 = ''   # the 500 common images????
-
     if all_imgs:
         list1 = files_with_suffix(PATH1, '.dcm')
         list2 = files_with_suffix(PATH2, '.dcm')
