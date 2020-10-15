@@ -10,18 +10,18 @@ PATH1 = os.path.join('..', 'data_local', 'extracted_train_01_05')
 PATH2 = os.path.join('..', 'data_local', 'extracted_train_06_10')
 
 
-def get_train_paths(annotator):
-    if annotator == 'moein':
-        path1 = '/Users/user/PycharmProjects/Annotation/data_local/extracted_train_01_05'
-        path2 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
-
-    elif annotator == 'fredrik':
-        path1 = '/Users/fredrikstrand/Desktop/MammoAI Annotation/Annotation/data_local/extracted_train_01_05'
-        path2 = '/Users/fredrikstrand/Desktop/MammoAI Annotation/Annotation/data_local/extracted_train_06_10'
-
-    else:
-        raise NotImplementedError
-    return path1, path2
+# def get_train_paths(annotator):
+#     if annotator == 'moein':
+#         path1 = '/Users/user/PycharmProjects/Annotation/data_local/extracted_train_01_05'
+#         path2 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
+#
+#     elif annotator == 'fredrik':
+#         path1 = '/Users/fredrikstrand/Desktop/MammoAI Annotation/Annotation/data_local/extracted_train_01_05'
+#         path2 = '/Users/fredrikstrand/Desktop/MammoAI Annotation/Annotation/data_local/extracted_train_06_10'
+#
+#     else:
+#         raise NotImplementedError
+#     return path1, path2
 
 
 def parse_args():
@@ -61,10 +61,10 @@ def copy_common_imgs():
 
 def get_chunk_path(chunk_num):
     if chunk_num <= 5:
-        return f'../data_local/extracted_train_01_05/extracted_train_0{chunk_num}_resized'
+        return os.path.join('..', 'data_local', 'extracted_train_01_05', f'extracted_train_0{chunk_num}_resized')
     elif chunk_num < 10:
-        return f'../data_local/extracted_train_06_10/extracted_train_0{chunk_num}_resized'
-    return f'../data_local/extracted_train_06_10/extracted_train_10_resized'
+        return os.path.join('..', 'data_local', 'extracted_train_06_10', f'extracted_train_0{chunk_num}_resized')
+    return os.path.join('..', 'data_local', 'extracted_train_06_10', f'extracted_train_10_resized')
 
 
 def transfer_files(source_files_list, dest_folder):
@@ -87,13 +87,11 @@ def transfer_between_chunk(dest_chunk):
     dest_chunk_files = files_with_suffix(dest_chunk_path, '.dcm')
     print(f'Total files in source_chunk {source_chunk} is: {len(source_chunk_files)}')
     print(f'Total files in dest_chunk {dest_chunk} is: {len(dest_chunk_files)}')
-    # input()
 
-    cancer_file = f'../data_local/train_cancers_chunk{dest_chunk}.txt'
-    cancer_list = prepend_to_paths(read_file_to_list(cancer_file), f'{source_chunk_path}/')
+    cancer_file = os.path.join('..', 'data_local', f'train_cancers_chunk{dest_chunk}.txt')
+    cancer_list = prepend_to_paths(read_file_to_list(cancer_file), f'{source_chunk_path}{os.path.sep}')
     len_cancer = len(cancer_list)
     print(f'Cancer file: {cancer_file} has len: {len_cancer}')
-    # input()
 
     samples = random.sample(dest_chunk_files, len_cancer)
     print(f'Selected {len_cancer} files randomly from chunk path: {dest_chunk_path}')
@@ -108,22 +106,21 @@ def transfer_between_chunk(dest_chunk):
     input()
 
     print('All done')
-    # print(f'Moving all random samples from {source_chunk_path} to {dest_chunk_path}: done')
     print(f'Now source chunk path {source_chunk_path} has len: {len(files_with_suffix(source_chunk_path, ".dcm"))}'
           f'\nand dest chunk path {dest_chunk_path} has len: {len(files_with_suffix(dest_chunk_path, ".dcm"))} \n\n')
 
 
 def count_cancers(chunk_num):
     chunk_path = get_chunk_path(chunk_num)
-    chunk_files_purenames = pure_names(files_with_suffix(chunk_path, '.dcm'), '/')
-    train_cancers = read_file_to_list('../data_local/train_cancers.txt')
+    chunk_files_purenames = pure_names(files_with_suffix(chunk_path, '.dcm'), os.path.sep)
+    train_cancers = read_file_to_list(os.path.join('..', 'data_local', 'train_cancers.txt'))
     count = sum([file in train_cancers for file in chunk_files_purenames])
     print(f'Path: {chunk_path} has {len(chunk_files_purenames)} files, cancer: {count}')
 
 
 def count_total(with_sanity=True):
-    total_files = pure_names(files_with_suffix('../data_local/extracted_train_01_05', '.dcm') +
-                             files_with_suffix('../data_local/extracted_train_06_10', '.dcm'), '/')
+    total_files = pure_names(files_with_suffix(os.path.join('..', 'data_local', 'extracted_train_01_05'), '.dcm') +
+                             files_with_suffix(os.path.join('..', 'data_local', 'extracted_train_06_10'), '.dcm'), os.path.sep)
     total_files = list(set(total_files))
     print('Total files:', len(total_files))
     print('_' * 50)

@@ -2,8 +2,12 @@ from copy import deepcopy
 from logic import *
 import random
 import argparse
+import pydicom
 
 CUSTOM_DENSITIES = [0, *list(range(5, 40, 5)), 40]
+
+PATH1 = os.path.join('..', 'data_local', 'extracted_train_01_05')
+PATH2 = os.path.join('..', 'data_local', 'extracted_train_06_10')
 
 
 def parse_args():
@@ -16,6 +20,7 @@ def parse_args():
     parser.add_argument('--assert_reg', action='store_true')
     parser.add_argument('--assert_bve', action='store_true')
     parser.add_argument('--dicoms_sanity', action='store_true')
+    parser.add_argument('--train_stats', action='store_true')
     return parser.parse_args()
 
 
@@ -365,6 +370,66 @@ def extract_common_images():
     print(f'wrote {len(samples)}')
 
 
+def get_train_statistics(data_mode):
+    assert data_mode == 'train'
+    train_all = files_with_suffix(PATH1, '.dcm') + files_with_suffix(PATH2, '.dcm')
+    print('train_all count:', len(train_all))
+
+    # create the list of institutions and devices
+    # inst_list, device_list = [], []
+
+    # if predefined_train:
+    #     # inst_set = ['Karolinska Mammo lab 2', 'Karolinska Mammo Lab 3', 'Karolinska Solna', 'Karolinska Universitetssjukhuset']
+    #     inst_dict = {
+    #         'Karolinska Mammo lab 2': 0,
+    #         'Karolinska Mammo Lab 3': 0,
+    #         'Karolinska Solna': 0,
+    #         'Karolinska Universitetssjukhuset': 0
+    #     }
+    #
+    #     # device_set = ['HOLOGIC, Inc.']
+    #     device_dict = {'HOLOGIC, Inc.': 0}
+
+    inst_dict = {}
+    device_dict = {}
+
+    for i in range(len(train_all)):
+        dataset = pydicom.dcmread(train_all[i])
+        inst = dataset.get('InstitutionName', 'missing')  # Institution Name
+        device = dataset.get('Manufacturer', 'missing')  # Manufacturer
+
+        if inst not in inst_dict.keys():
+            inst_dict.update({inst: 1})
+        else:
+            inst_dict[inst] = inst_dict[inst] + 1
+
+        if device not in device_dict.keys():
+            device_dict.update({device: 1})
+        else:
+            device_dict[device] = device_dict[device] + 1
+
+        if i % 1000 == 0:
+            print('Done for', i)
+
+    print(inst_dict)
+    print(device_dict, '\n')
+
+    total_inst_count = 0
+    total_device_count = 0
+
+    for k, v in inst_dict.items():
+        print(f'{k} - count: {v}, percent: {v / len(train_all)}')
+        total_inst_count += v
+
+    for k, v in device_dict.items():
+        print(f'{k} - count: {v}, percent: {v / len(train_all)}')
+        total_device_count += v
+
+    print(f'total_inst_count: {total_inst_count}')
+    print(f'total_device_count: {total_device_count}')
+    assert total_inst_count == len(train_all) and total_device_count == len(train_all)
+
+
 def create_tmp_bins(annotator):
     filenames = [
         '7556785866615A476345416852764A2F6641532B45413D3D_537153536F422F464D673565502F684F436A686741774455364A6367436A4C48_20140128_2.dcm',
@@ -441,7 +506,7 @@ if __name__ == '__main__':
         # make_train_basenames()
         # extract_train_cancers()
         # make_sections()
-        distribute_cancers()
+        pass
 
     elif args.resize_data:  # needs --subset
         resize_data(args.subset)
@@ -464,6 +529,8 @@ if __name__ == '__main__':
     elif args.assert_reg:
         assert_existence('img_registry', 'test')
 
+    elif args.train_stats:
+        get_train_statistics(data_mode='train')
     # elif args.dicoms_sanity:  # needs --subset --place
     #     # dicoms_sanity(args.subset, args.place)
     #     dicoms_sanity_whole_train()
