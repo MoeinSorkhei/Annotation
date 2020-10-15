@@ -4,13 +4,24 @@ import random
 import argparse
 
 
-# Moein
-# PATH1 = '/Users/user/PycharmProjects/Annotation/data_local/extracted_train_01_05'
-# PATH2 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
+# PATH1 = '../data_local/extracted_train_01_05'
+# PATH2 = '../data_local/extracted_train_06_10'
+PATH1 = os.path.join('..', 'data_local', 'extracted_train_01_05')
+PATH2 = os.path.join('..', 'data_local', 'extracted_train_06_10')
 
-# Fredrik
-PATH1 = '/Users/fredrikstrand/Desktop/MammoAI Annotation/Annotation/data_local/extracted_train_01_05'
-PATH2 = '/Users/fredrikstrand/Desktop/MammoAI Annotation/Annotation/data_local/extracted_train_06_10'
+
+def get_train_paths(annotator):
+    if annotator == 'moein':
+        path1 = '/Users/user/PycharmProjects/Annotation/data_local/extracted_train_01_05'
+        path2 = '/Volumes/BOOTCAMP/Users/moein/Desktop/Annotation/Train data/extracted_train_06_10'
+
+    elif annotator == 'fredrik':
+        path1 = '/Users/fredrikstrand/Desktop/MammoAI Annotation/Annotation/data_local/extracted_train_01_05'
+        path2 = '/Users/fredrikstrand/Desktop/MammoAI Annotation/Annotation/data_local/extracted_train_06_10'
+
+    else:
+        raise NotImplementedError
+    return path1, path2
 
 
 def parse_args():
@@ -21,16 +32,21 @@ def parse_args():
     parser.add_argument('--bins_exist', action='store_true')
     parser.add_argument('--prep_bins', action='store_true')
     parser.add_argument('--vis_bins', action='store_true')
+    parser.add_argument('--redistribute', action='store_true')
     parser.add_argument('--annotator', type=str)
     return parser.parse_args()
 
 
 def copy_common_imgs():
+    # path1, path2 = get_train_paths(annotator)
     total_list = files_with_suffix(PATH1, '.dcm') + files_with_suffix(PATH2, '.dcm')
     common_list = read_file_to_list(os.path.join('..', 'data_local', 'common_imgs.txt'))
 
     print('len total list:', len(total_list))
     print('len common list:', len(common_list))
+
+    print('waiting for input...')
+    input()
 
     from shutil import copyfile
     count = 0
@@ -43,8 +59,95 @@ def copy_common_imgs():
                 print(f'Copied {count} files')
 
 
-def dicoms_sanity_train(all_imgs):
+def get_chunk_path(chunk_num):
+    if chunk_num <= 5:
+        return f'../data_local/extracted_train_01_05/extracted_train_0{chunk_num}_resized'
+    elif chunk_num < 10:
+        return f'../data_local/extracted_train_06_10/extracted_train_0{chunk_num}_resized'
+    return f'../data_local/extracted_train_06_10/extracted_train_10_resized'
+
+
+def transfer_files(source_files_list, dest_folder):
+    for i_file, source_filename in enumerate(source_files_list):
+        dest_filename = os.path.join(dest_folder, pure_name(source_filename))
+        # print('source_filename:', source_filename)
+        # print('dest filename:', dest_filename)
+        # input()
+        shutil.move(source_filename, dest_filename)
+        if (i_file % 50 == 0) or (i_file == len(source_files_list) - 1):
+            print(f'Moving file {i_file + 1}: done')
+
+
+def transfer_between_chunk(dest_chunk):
+    source_chunk = 1
+    source_chunk_path = get_chunk_path(source_chunk)
+    dest_chunk_path = get_chunk_path(dest_chunk)
+
+    source_chunk_files = files_with_suffix(source_chunk_path, '.dcm')
+    dest_chunk_files = files_with_suffix(dest_chunk_path, '.dcm')
+    print(f'Total files in source_chunk {source_chunk} is: {len(source_chunk_files)}')
+    print(f'Total files in dest_chunk {dest_chunk} is: {len(dest_chunk_files)}')
+    # input()
+
+    cancer_file = f'../data_local/train_cancers_chunk{dest_chunk}.txt'
+    cancer_list = prepend_to_paths(read_file_to_list(cancer_file), f'{source_chunk_path}/')
+    len_cancer = len(cancer_list)
+    print(f'Cancer file: {cancer_file} has len: {len_cancer}')
+    # input()
+
+    samples = random.sample(dest_chunk_files, len_cancer)
+    print(f'Selected {len_cancer} files randomly from chunk path: {dest_chunk_path}')
+    input()
+
+    print(f'{"=" * 10} Transferring samples from chunk {dest_chunk}')
+    transfer_files(source_files_list=samples, dest_folder=source_chunk_path)  # from other chunk to chunk 1
+    input()
+
+    print(f'{"=" * 10} Transferring cancers from chunk {source_chunk}')
+    transfer_files(source_files_list=cancer_list, dest_folder=dest_chunk_path)  # from chunk 1 to other chunk
+    input()
+
+    print('All done')
+    # print(f'Moving all random samples from {source_chunk_path} to {dest_chunk_path}: done')
+    print(f'Now source chunk path {source_chunk_path} has len: {len(files_with_suffix(source_chunk_path, ".dcm"))}'
+          f'\nand dest chunk path {dest_chunk_path} has len: {len(files_with_suffix(dest_chunk_path, ".dcm"))} \n\n')
+
+
+def count_cancers(chunk_num):
+    chunk_path = get_chunk_path(chunk_num)
+    chunk_files_purenames = pure_names(files_with_suffix(chunk_path, '.dcm'), '/')
+    train_cancers = read_file_to_list('../data_local/train_cancers.txt')
+    count = sum([file in train_cancers for file in chunk_files_purenames])
+    print(f'Path: {chunk_path} has {len(chunk_files_purenames)} files, cancer: {count}')
+
+
+def count_total(with_sanity=True):
+    total_files = pure_names(files_with_suffix('../data_local/extracted_train_01_05', '.dcm') +
+                             files_with_suffix('../data_local/extracted_train_06_10', '.dcm'), '/')
+    total_files = list(set(total_files))
+    print('Total files:', len(total_files))
+    print('_' * 50)
+
+    for i in range(10):
+        count_cancers(i + 1)
+        if i % 2 == 1:
+            print('\n')
+
+    if with_sanity:
+        dicoms_sanity(all_imgs=True)
+
+
+def distribute_cancers():
+    # transfer_between_chunk(dest_chunk=3)
+    # transfer_between_chunk(dest_chunk=5)
+    # transfer_between_chunk(dest_chunk=7)
+    # transfer_between_chunk(dest_chunk=9)
+    count_total(with_sanity=True)
+
+
+def dicoms_sanity(all_imgs):
     if all_imgs:
+        # path1, path2 = get_train_paths(annotator)
         list1 = files_with_suffix(PATH1, '.dcm')
         list2 = files_with_suffix(PATH2, '.dcm')
         total_list = list1 + list2
@@ -69,7 +172,7 @@ def confirm_bin_imgs_exist(annotator):
     _, imgs = all_imgs_in_all_bins()
     print('all bin images are:', len(imgs))
     existence = [os.path.isfile(img) for img in imgs]
-    print('Existence:', all(existence))
+    print('existence of all images in the bins:', all(existence))
 
 
 def prepend_path_to_bins(annotator):
@@ -91,21 +194,27 @@ def visualize_bins(annotator, bins_list):
         image_list_to_png(bin_img_list, vis_path,)
 
 
-if __name__ == '__main__':
+def main():
     args = parse_args()
-    if args.copy_common:  # python third.py --copy_common
+    # assert args.annotator is not None
+
+    if args.copy_common:   # python third.py --copy_common
         copy_common_imgs()
 
-    elif args.prep_bins:
+    elif args.redistribute:  # python third.py --redistribute
+        distribute_cancers()  # NOTE: UNCOMMENT THE COMMENTS IN THE FUNCTION
+
+    elif args.prep_bins:  # python third.py --prep_bins --annotator fredrik
         assert args.annotator is not None
         prepend_path_to_bins(args.annotator)
-
-    elif args.bins_exist:  # python third.py --bin_exist --annotator Moein
-        assert args.annotator is not None
         confirm_bin_imgs_exist(args.annotator)
 
+    # not so important
     elif args.sanity:  # python third.py --sanity --all
-        dicoms_sanity_train(all_imgs=args.all)
+        dicoms_sanity(all_imgs=args.all)
+    # elif args.bins_exist:  # python third.py --bin_exist --annotator fredrik
+    #     assert args.annotator is not None
+    #     confirm_bin_imgs_exist(args.annotator)
 
     elif args.vis_bins:
         assert args.annotator is not None
@@ -113,3 +222,7 @@ if __name__ == '__main__':
 
     else:
         print('No argument specified')
+
+
+if __name__ == '__main__':
+    main()

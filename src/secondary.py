@@ -133,6 +133,60 @@ def adjust_clio_paths(data_mode):
     print('Wrote adjusted of len:', len(adjusted))
 
 
+def make_train_basenames():
+    full_names = read_file_to_list('../data_local_me/downloaded/extracted_train.txt')
+    basenames = pure_names(full_names, '/')
+    write_list_to_file(basenames, '../data_local_me/downloaded/extracted_train_basenames.txt')
+
+
+def extract_train_cancers():
+    csv_file = '../data_local/data_ks_all_200630.csv'
+    df = pd.read_csv(csv_file, sep=';', engine='python')
+    print('Read csv: done. df has len:', len(df))
+    train_basenames = read_file_to_list('../data_local_me/downloaded/extracted_train_basenames.txt')
+    # cancer_df = df[df['x_case'] == 1]
+    # density_df = density_df[density_df['basename'].isin(pure_names)]  # the ones whose basenames are in files
+    train_df = df[df['basename'].isin(train_basenames)]
+    print('len train_df:', len(train_df))
+
+    train_cancer_df = train_df[train_df['x_case'] == 1]
+    print('len caner_train_df:', len(train_cancer_df))
+    train_cancers = train_cancer_df['basename'].tolist()
+    write_list_to_file(train_cancers, '../data_local/train_cancers.txt')
+    # print(df[df['basename'] == '64684250344D73575444716D556B586E4E32535178673D3D_537153536F422F464D6734433670763862384B636E414455364A6367436A4C48_20100114_1.dcm'])
+
+
+def make_sections():
+    chunk1_pure = pure_names(files_with_suffix('../data_local/extracted_train_01_05/extracted_train_01_resized', '.dcm'), '/')
+    train_cancers = read_file_to_list('../data_local/train_cancers.txt')
+
+    # existence = all([filename in chunk1_pure for filename in train_cancers])
+    # print('Existence all in chunk 1:', existence)
+    sections = np.array_split(train_cancers, 5)
+    for i in [1, 2, 3, 4]:  # for chunk1 is is already there
+        chunk_num = (i * 2) + 1
+        # print(chunk_num)
+        file = f'../data_local/train_cancers_chunk{chunk_num}.txt'
+        write_list_to_file(sections[i], file)
+        print(f'Wrote section {i} to {file}')
+
+
+# def count_files_in_chunk(chunk_num):
+#     if chunk_num <= 5:
+#         return len(files_with_suffix(f'../data_local/extracted_train_01_05/extracted_train_0{chunk_num}_resized', 'dcm'))
+#     elif chunk_num < 10:
+#         return len(files_with_suffix(f'../data_local/extracted_train_6_10/extracted_train_0{chunk_num}_resized', '.dcm'))
+#     return len(files_with_suffix(f'../data_local/extracted_train_6_10/extracted_train_10_resized', '.dcm'))
+
+
+# def files_in_chunk(chunk_num):
+#     return files_with_suffix(get_chunk_path(chunk_num), '.dcm')
+    # if chunk_num <= 5:
+    # elif chunk_num < 10:
+    #     return files_with_suffix(f'../data_local/extracted_train_6_10/extracted_train_0{chunk_num}_resized', '.dcm')
+    # return files_with_suffix(f'../data_local/extracted_train_6_10/extracted_train_10_resized', '.dcm')
+
+
 def check_train_files_unique(version):
     if version == 1:
         extracted = '../data_local/downloaded/extracted_train.txt'
@@ -383,7 +437,11 @@ if __name__ == '__main__':
         # dicoms_sanity_whole_train()
         # extract_common_images()
         # copy_common_imgs()
-        create_bins('fredrik')
+        # create_bins('fredrik')
+        # make_train_basenames()
+        # extract_train_cancers()
+        # make_sections()
+        distribute_cancers()
 
     elif args.resize_data:  # needs --subset
         resize_data(args.subset)
@@ -392,13 +450,13 @@ if __name__ == '__main__':
         if 'extracted_train' not in args.subset:
             raise NotImplementedError
 
-        file = f'../data_local/downloaded/{args.subset}.txt'
+        txt_file = f'../data_local/downloaded/{args.subset}.txt'
         source = f'../data_local/downloaded/{args.subset}_resized'
         dest = f'../data_local/downloaded/{args.subset}_resized_visualized'
         os_sys = 'mac'
         limit = 10
 
-        convert_to_png(file, source, dest, os_sys, limit)
+        convert_to_png(txt_file, source, dest, os_sys, limit)
 
     elif args.assert_bve:  # base v. extracted
         assert_existence('extracted_equality', 'test')
@@ -406,7 +464,7 @@ if __name__ == '__main__':
     elif args.assert_reg:
         assert_existence('img_registry', 'test')
 
-    elif args.dicoms_sanity:  # needs --subset --place
-        # dicoms_sanity(args.subset, args.place)
-        dicoms_sanity_whole_train()
+    # elif args.dicoms_sanity:  # needs --subset --place
+    #     # dicoms_sanity(args.subset, args.place)
+    #     dicoms_sanity_whole_train()
 
