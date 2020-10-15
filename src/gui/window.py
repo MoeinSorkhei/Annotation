@@ -569,7 +569,7 @@ class Window:
                updated low and high indices.
         """
         def _rate_automatically():
-            log(f'\n{"*" * 100}', no_time=True)
+            log(f'\n{"*" * 10}', no_time=True)
             log('In [keyboard_press] - automatic rate: Checking if '
                 'rate is already available for the next case.\n')
             self.update_files()
@@ -605,7 +605,7 @@ class Window:
                     if rate is None:
                         log(f'In [keyboard_press] - automatic rate: rate NOT already available. '
                             f'Updating window to get the rate....')
-            log(f'{"*" * 100}\n', no_time=True)
+            log(f'{"*" * 10}\n', no_time=True)
             return update_file_called
 
         # break if emailing error has occurred

@@ -75,12 +75,21 @@ def calc_rule(m1_rate, m2_rate):
 
 
 def matches_binary_insert_rule(window, rate):
-    if rate == '9' or window.high == window.low or (window.high - window.low == 1 and rate == '2'):
-        return True
+    if window.data_mode == 'train':
+        low_high_diff = window.high - window.low
+        if rate == '9':
+            log('In [matches_binary_insert_rule]: matches rule because 9 is pressed')
+            return True
+        if low_high_diff == 2 or low_high_diff == 1 or low_high_diff == 0:
+            log(f'In [matches_binary_insert_rule]: matches rule because low_high_diff = {low_high_diff}')
+            return True
+    else:  # test rules ( should be checked again later - if needed)
+        if rate == '9' or window.high == window.low or (window.high - window.low == 1 and rate == '2'):
+            return True
     # special insertion rule for tran data with random representatives
-    if window.data_mode == 'train' and globals.params['bin_rep_type'] == 'random' \
-            and ((window.high - window.low == 1 and rate == '1') or (window.high - window.low == 2)):
-        return True
+    # if window.data_mode == 'train' and globals.params['bin_rep_type'] == 'random' \
+    #         and ((window.high - window.low == 1 and rate == '1') or (window.high - window.low == 2)):
+    #     return True
     return False
 
 
@@ -274,18 +283,26 @@ def update_binary_inds(window, rate):
     :return:
     """
     mid = (window.low + window.high) // 2  # for train data, this represents bin number
-    if rate == '1':  # rated as harder, go to the right half of the list
-        window.low = mid if (window.high - window.low) > 1 else window.high
-        log(f'In [binary_search_step]: '
-            f'low increased to {window.low}')
+    if window.data_mode == 'train':
+        if rate == '1':
+            window.low = mid + 1
+            log(f'In [binary_search_step]: low increased to {window.low}')
+        else:  # '2'
+            window.high = mid - 1
+            log(f'In [binary_search_step]: high decreased to {window.high}')
 
-    else:  # rated as easier, go to the left half of the list
-        window.high = mid
-        log(f'In [binary_search_step]: '
-            f'high decreased to {window.high}')
+    else:  # previous version for test mode (should be checked again - if needed)
+        if rate == '1':  # rated as harder, go to the right half of the list
+            window.low = mid if (window.high - window.low) > 1 else window.high
+            log(f'In [binary_search_step]: '
+                f'low increased to {window.low}')
 
-    log(f'In [binary_search_step]: Updated indices: '
-        f'low = {window.low}, high = {window.high}')
+        else:  # rated as easier, go to the left half of the list
+            window.high = mid
+            log(f'In [binary_search_step]: '
+                f'high decreased to {window.high}')
+
+    log(f'In [binary_search_step]: Updated indices: low = {window.low}, high = {window.high}')
 
 
 def insert_with_ternary_inds(window, anchor, item):
@@ -325,10 +342,10 @@ def insert_with_binary_inds(window, rate, item):
     else:
         # the first condition applies only to random representative, already checked in insertion rule
         if window.high - window.low == 2:
-            which_bin = mid if rate == '9' else mid - 1 if rate == '2' else mid + 1
-        elif (window.high - window.low == 1) and rate == '1':
-            which_bin = mid + 1  # special additional insertion rule for train data with random representatives
-        else:
+            which_bin = mid - 1 if rate == '2' else mid if rate == '9' else mid + 1
+        elif window.high - window.low == 1:
+            which_bin = mid if (rate == '9' or rate == '2') else mid + 1
+        else:  # 9 pressed or high - low = 0, which does not happen with 12 bins
             which_bin = mid  # bin number to insert to
         bin_rep_type = globals.params['bin_rep_type']
 
@@ -341,7 +358,7 @@ def insert_with_binary_inds(window, rate, item):
                 pos = 'last'  # if new image is harder
 
         log(f'In [insert_with_binary_inds]: bin_rep_type is "{bin_rep_type}", '
-            f'inserting into position "{pos}" of bin {which_bin} - image: {item}')
+            f'inserting into position "{pos}" of bin {which_bin} - image: {pure_name(item)}')
 
         insert_into_bin_and_save(which_bin, pos, item)
         window.prev_result.update({'insert_index': which_bin, 'insert_pos': pos})
