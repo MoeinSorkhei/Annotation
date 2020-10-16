@@ -20,7 +20,8 @@ def parse_args():
     parser.add_argument('--assert_reg', action='store_true')
     parser.add_argument('--assert_bve', action='store_true')
     parser.add_argument('--dicoms_sanity', action='store_true')
-    parser.add_argument('--train_stats', action='store_true')
+    parser.add_argument('--stats', action='store_true')
+    parser.add_argument('--data_mode', type=str)
     return parser.parse_args()
 
 
@@ -174,22 +175,6 @@ def make_sections():
         file = f'../data_local/train_cancers_chunk{chunk_num}.txt'
         write_list_to_file(sections[i], file)
         print(f'Wrote section {i} to {file}')
-
-
-# def count_files_in_chunk(chunk_num):
-#     if chunk_num <= 5:
-#         return len(files_with_suffix(f'../data_local/extracted_train_01_05/extracted_train_0{chunk_num}_resized', 'dcm'))
-#     elif chunk_num < 10:
-#         return len(files_with_suffix(f'../data_local/extracted_train_6_10/extracted_train_0{chunk_num}_resized', '.dcm'))
-#     return len(files_with_suffix(f'../data_local/extracted_train_6_10/extracted_train_10_resized', '.dcm'))
-
-
-# def files_in_chunk(chunk_num):
-#     return files_with_suffix(get_chunk_path(chunk_num), '.dcm')
-    # if chunk_num <= 5:
-    # elif chunk_num < 10:
-    #     return files_with_suffix(f'../data_local/extracted_train_6_10/extracted_train_0{chunk_num}_resized', '.dcm')
-    # return files_with_suffix(f'../data_local/extracted_train_6_10/extracted_train_10_resized', '.dcm')
 
 
 def check_train_files_unique(version):
@@ -370,10 +355,35 @@ def extract_common_images():
     print(f'wrote {len(samples)}')
 
 
-def get_train_statistics(data_mode):
-    assert data_mode == 'train'
-    train_all = files_with_suffix(PATH1, '.dcm') + files_with_suffix(PATH2, '.dcm')
-    print('train_all count:', len(train_all))
+def count_test_cancer():
+    all_files = files_with_suffix(os.path.join('..', 'data', 'test_imgs'), '.dcm')
+    all_pure = pure_names(all_files, '/')
+    print('all files count:', len(all_pure))
+
+    csv_file = '../data_local/data_ks_all_200630.csv'
+    df = pd.read_csv(csv_file, sep=';', engine='python')
+    print('Read csv: done. df has len:', len(df))
+
+    test_df = df[df['basename'].isin(all_pure)]
+    print('len df for test reduced to:', len(test_df))
+
+    all_test = test_df[test_df['split'] == 'test']
+    cancer = test_df[test_df['x_case'] == 1]
+    healthy = test_df[test_df['x_case'] == 0]
+
+    print('All:', len(all_test))
+    print('Cancer:', len(cancer))
+    print('Healthy:', len(healthy))
+
+
+def get_statistics(data_mode):
+    assert data_mode is not None
+    if data_mode == 'train':
+        all_files = files_with_suffix(PATH1, '.dcm') + files_with_suffix(PATH2, '.dcm')
+    else:
+        all_files = files_with_suffix(os.path.join('..', 'data', 'test_imgs'), '.dcm')
+    print('all files count:', len(all_files))
+    # input()
 
     # create the list of institutions and devices
     # inst_list, device_list = [], []
@@ -393,8 +403,8 @@ def get_train_statistics(data_mode):
     inst_dict = {}
     device_dict = {}
 
-    for i in range(len(train_all)):
-        dataset = pydicom.dcmread(train_all[i])
+    for i in range(len(all_files)):
+        dataset = pydicom.dcmread(all_files[i])
         inst = dataset.get('InstitutionName', 'missing')  # Institution Name
         device = dataset.get('Manufacturer', 'missing')  # Manufacturer
 
@@ -418,16 +428,16 @@ def get_train_statistics(data_mode):
     total_device_count = 0
 
     for k, v in inst_dict.items():
-        print(f'{k} - count: {v}, percent: {v / len(train_all)}')
+        print(f'{k} - count: {v}, percent: {v / len(all_files)}')
         total_inst_count += v
 
     for k, v in device_dict.items():
-        print(f'{k} - count: {v}, percent: {v / len(train_all)}')
+        print(f'{k} - count: {v}, percent: {v / len(all_files)}')
         total_device_count += v
 
     print(f'total_inst_count: {total_inst_count}')
     print(f'total_device_count: {total_device_count}')
-    assert total_inst_count == len(train_all) and total_device_count == len(train_all)
+    assert total_inst_count == len(all_files) and total_device_count == len(all_files)
 
 
 def create_tmp_bins(annotator):
@@ -504,7 +514,8 @@ if __name__ == '__main__':
         # make_train_basenames()
         # extract_train_cancers()
         # make_sections()
-        create_bins(annotator='edward')
+        count_test_cancer()
+        # create_bins(annotator='edward')
 
     elif args.resize_data:  # needs --subset
         resize_data(args.subset)
@@ -527,8 +538,8 @@ if __name__ == '__main__':
     elif args.assert_reg:
         assert_existence('img_registry', 'test')
 
-    elif args.train_stats:
-        get_train_statistics(data_mode='train')
+    elif args.stats:  # python secondary.py --stats --data_mode test
+        get_statistics(data_mode=args.data_mode)
     # elif args.dicoms_sanity:  # needs --subset --place
     #     # dicoms_sanity(args.subset, args.place)
     #     dicoms_sanity_whole_train()

@@ -123,7 +123,7 @@ def count_total(with_sanity=True):
     total_files = pure_names(files_with_suffix(os.path.join('..', 'data_local', 'extracted_train_01_05'), '.dcm') +
                              files_with_suffix(os.path.join('..', 'data_local', 'extracted_train_06_10'), '.dcm'), os.path.sep)
     total_files = list(set(total_files))
-    print('Total files:', len(total_files))
+    print('Total unique files:', len(total_files))
     print('_' * 50)
 
     for i in range(10):
