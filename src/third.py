@@ -212,9 +212,6 @@ def main():
     # ========= not so important
     elif args.sanity:  # python third.py --sanity --all
         dicoms_sanity(all_imgs=args.all)
-    # elif args.bins_exist:  # python third.py --bin_exist --annotator fredrik
-    #     assert args.annotator is not None
-    #     confirm_bin_imgs_exist(args.annotator)
 
     elif args.vis_bins:
         assert args.annotator is not None
