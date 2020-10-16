@@ -33,6 +33,7 @@ def parse_args():
     parser.add_argument('--prep_bins', action='store_true')
     parser.add_argument('--vis_bins', action='store_true')
     parser.add_argument('--redistribute', action='store_true')
+    parser.add_argument('--count_total', action='store_true')
     parser.add_argument('--annotator', type=str)
     return parser.parse_args()
 
@@ -135,10 +136,10 @@ def count_total(with_sanity=True):
 
 
 def distribute_cancers():
-    # transfer_between_chunk(dest_chunk=3)
-    # transfer_between_chunk(dest_chunk=5)
-    # transfer_between_chunk(dest_chunk=7)
-    # transfer_between_chunk(dest_chunk=9)
+    transfer_between_chunk(dest_chunk=3)
+    transfer_between_chunk(dest_chunk=5)
+    transfer_between_chunk(dest_chunk=7)
+    transfer_between_chunk(dest_chunk=9)
     count_total(with_sanity=True)
 
 
@@ -160,7 +161,7 @@ def dicoms_sanity(all_imgs):
             print('Exception for file:', filename)
             counts += 1
         if i_file % 500 == 0:
-            print('Read for file:', i_file, ' => OK')
+            print('Sanity check for file:', i_file, ' => OK')
     print('Total errors:', counts)
 
 
@@ -186,14 +187,13 @@ def visualize_bins(annotator, bins_list):
     output_path = os.path.join('..', 'outputs_train', f'output_{annotator}')
     for i_bin in bins_list:
         bin_img_list = read_file_to_list(os.path.join(output_path, f'bin_{i_bin}.txt'))
-        vis_path = os.path.join('..', 'data_local', f'bins_visualized_{annotator}', f'bin_{i_bin}')
+        vis_path = os.path.join('..', 'data_local_me', f'bins_visualized_{annotator}', f'bin_{i_bin}')
         make_dir_if_not_exists(vis_path, verbose=False)
         image_list_to_png(bin_img_list, vis_path,)
 
 
 def main():
     args = parse_args()
-    # assert args.annotator is not None
 
     if args.copy_common:   # python third.py --copy_common
         copy_common_imgs()
@@ -201,12 +201,15 @@ def main():
     elif args.redistribute:  # python third.py --redistribute
         distribute_cancers()  # NOTE: UNCOMMENT THE COMMENTS IN THE FUNCTION
 
+    elif args.count_total:  # python third.py --count_total
+        count_total(with_sanity=True)  # confirm redistribution
+
     elif args.prep_bins:  # python third.py --prep_bins --annotator fredrik
         assert args.annotator is not None
         prepend_path_to_bins(args.annotator)
         confirm_bin_imgs_exist(args.annotator)
 
-    # not so important
+    # ========= not so important
     elif args.sanity:  # python third.py --sanity --all
         dicoms_sanity(all_imgs=args.all)
     # elif args.bins_exist:  # python third.py --bin_exist --annotator fredrik

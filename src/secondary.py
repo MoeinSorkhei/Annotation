@@ -462,23 +462,22 @@ def create_bins(annotator):
     df = pd.read_csv('../data_local/select_ref_images_201014.csv', sep=',', engine='python')
     print('len initial df:', len(df))
 
-    if annotator == 'fredrik':
-        df = df[df['select_fredrik'] == 1][['filename', 'select_fredrik', 'rank_fredrik_bin']]
-        print('len reduced after selecting to:', len(df))
-        # print(df[df['rank_fredrik_bin'] == 12])
+    df = df[df[f'select_{annotator}'] == 1][['filename', f'select_{annotator}', f'rank_{annotator}_bin']]
+    print('len reduced after selecting to:', len(df))
 
-        output_path = f'../outputs_train/output_{annotator}'
-        make_dir_if_not_exists(output_path, verbose=False)
+    # print(df[f'rank_{annotator}_bin'])
+    # input()
 
-        for i in range(12):
-            bin_num = i + 1
-            files = df[df['rank_fredrik_bin'] == bin_num]['filename'].to_list()  # pure names
-            # files = [os.path.join(globals.params['test_imgs_dir'], f) for f in files]  # abs paths
-            # files = [os.path.join(os.path.abspath(globals.params['test_imgs_dir']), f) for f in files]  # abs paths
+    output_path = f'../outputs_train/output_{annotator}'
+    make_dir_if_not_exists(output_path, verbose=False)
+    print('Output path for annotator:', output_path)
 
-            bin_filename = f'{output_path}/bin_{i}.txt'
-            write_list_to_file(files, bin_filename)
-            print(f'Extracted {len(files)} for bin num: {bin_num} and write to: {bin_filename}')
+    for i in range(12):
+        bin_num = i + 1
+        files = df[df[f'rank_{annotator}_bin'] == bin_num]['filename'].to_list()  # pure names
+        bin_filename = f'{output_path}/bin_{i}.txt'
+        write_list_to_file(files, bin_filename)
+        print(f'Extracted {len(files)} for bin num: {bin_num} and write to: {bin_filename}')
 
 
 if __name__ == '__main__':
@@ -502,11 +501,10 @@ if __name__ == '__main__':
         # dicoms_sanity_whole_train()
         # extract_common_images()
         # copy_common_imgs()
-        # create_bins('fredrik')
         # make_train_basenames()
         # extract_train_cancers()
         # make_sections()
-        pass
+        create_bins(annotator='edward')
 
     elif args.resize_data:  # needs --subset
         resize_data(args.subset)
