@@ -199,7 +199,7 @@ def main():
         copy_common_imgs()
 
     elif args.redistribute:  # python third.py --redistribute
-        distribute_cancers()  # NOTE: UNCOMMENT THE COMMENTS IN THE FUNCTION
+        distribute_cancers()
 
     elif args.count_total:  # python third.py --count_total
         count_total(with_sanity=True)  # confirm redistribution
