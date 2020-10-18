@@ -48,7 +48,7 @@ def copy_common_imgs():
 
     print('waiting for input...')
     input()
-    make_dir_if_not_exists(globals.params['train_imgs_dir'])
+    make_dir_if_not_exists(globals.params['train_imgs_dir'], verbose=False)
 
     from shutil import copyfile
     count = 0
