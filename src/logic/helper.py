@@ -45,6 +45,12 @@ def log(string, no_time=False):
         file.write(line)
 
 
+def print_and_wait(string):
+    print(string)
+    print('====== Waiting for input')
+    input()
+
+
 def split_to_lines(inp):
     if len(inp) == 3:
         string = f'({inp[0]}, \n{inp[1]}, {inp[2]})'

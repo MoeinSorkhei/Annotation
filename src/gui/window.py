@@ -110,6 +110,11 @@ class Window:
 
                 self.low = 0
                 self.high = len(self.bins_list) - 1
+                # init mid
+                self.mid = None
+                log(f'In [__init__]: initializing mid...')
+                calc_and_set_mid_for_train(self)
+                # self.mid = None  # will be updated in the update_files function (and update_binary_inds)
 
         else:  # variability
             self.current_index = 0
@@ -221,9 +226,7 @@ class Window:
                     # return f'{self.m2_anchor}' if self.data_mode == 'test' else f'{self.m2_anchor + 1}'
                     return f'{self.m2_anchor}'
             else:  # binary
-                return f'{(self.low + self.high) // 2}'
-                # return f'{(self.low + self.high) // 2}' if self.data_mode == 'test' \
-                #     else f'{(self.low + self.high) // 2 + 1}'
+                return f'{(self.low + self.high) // 2 if self.data_mode == "test" else self.mid}'  # this is not valid for train mode
 
         if self.ui_verbosity < 3:
             return ''
@@ -293,7 +296,7 @@ class Window:
 
         self.stat_panel.configure(text=stat_text)
 
-    def update_files(self):
+    def update_files(self, re_calc_mid=True):
         if self.session_name == 'sort':
             # ======== update left and right files
             self.curr_left_file = self.cases[self.current_index]  # left photo unchanged as reference
@@ -314,16 +317,20 @@ class Window:
                         f'show representative: "{pure_name(_curr_rep)}" of bin_{_curr_anchor}.txt\n')
 
             else:
-                mid = (self.low + self.high) // 2
                 if self.data_mode == 'test':
+                    mid = (self.low + self.high) // 2
                     self.curr_right_file = self.sorted_list[mid]  # right photo changed to be compared against
                     log(f'In [update_files]: Updated right photo to index middle: '
                         f'{mid} of sorted_list')
                 else:
+                    # mid = calc_and_set_mid_for_train(self) if re_calc_mid else self.mid  # mid will be updated here
+                    mid = self.mid  # should already be set
+                    log(f'In [update_files]: mid is already set to mid = {mid}')
+
                     rep = init_or_use_rep(self, mid)
                     self.curr_right_file = rep
-                    log(f'In [update_files]: Updated right photo to show rep: '
-                        f'"{pure_name(rep)}" of bin_{mid}.txt')
+                    log(f'In [update_files]: Updated right photo to show from bin_{mid}.txt, rep: '
+                        f'"{pure_name(rep)}"\n')
 
             logic.log(f'In [update_files]: Left file: "{pure_name(self.curr_left_file)}"')
             logic.log(f'In [update_files]: Right file: "{pure_name(self.curr_right_file)}"\n\n')
@@ -521,6 +528,8 @@ class Window:
             self.prev_result['comp_level'] = self.comp_level
             self.prev_result['low'] = self.low
             self.prev_result['high'] = self.high
+            if self.data_mode == 'train':
+                self.prev_result['mid'] = self.mid
             self.prev_result['rate'] = eval(pressed)  # regardless of search mode
 
             # ternary attributes (will remain None for binary)
@@ -690,10 +699,18 @@ class Window:
                     # update indices
                     else:
                         update_binary_inds(self, eval(pressed))
-                        reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)
+                        reset_attributes(self, exclude_inds=True, new_comp_level=self.comp_level + 1)  # do not touch indices, they are already updated
+                        # insert directly if window length is zero after updating inds
+                        if self.low == self.high:
+                            log(f'In [keyboard_press]: insertion should happen because low = high')
+                            insert_with_binary_inds(self, rate=None, item=self.curr_left_file)
+                            reset_attributes_and_increase_index(self)
+                            insert_happened = True
+                            log(f'In [keyboard_press]: reset attributes after binary insert - '
+                                f'current_index increased to: {self.current_index}\n')
 
-                # check automatically if the rate is available for the next page(s)
-                if not insert_happened and not abort_happened and not robust_checking_needed(self):
+                # check automatically if the rate is available for the next page(s) - only for test data
+                if self.data_mode == 'test' and not insert_happened and not abort_happened and not robust_checking_needed(self):
                     files_already_updated = _rate_automatically()
 
             else:  # for variability

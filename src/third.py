@@ -175,8 +175,9 @@ def confirm_bin_imgs_exist(annotator):
 
 
 def prepend_path_to_bins(annotator):
+    n_bins = 8
     output_path = os.path.join('..', 'outputs_train', f'output_{annotator}')
-    for i in range(12):
+    for i in range(n_bins):
         bin_file = os.path.join(output_path, f'bin_{i}.txt')
         files = read_file_to_list(bin_file)  # pure names
         files = [os.path.join(os.path.abspath(globals.params['test_imgs_dir']), f) for f in files]  # abs paths

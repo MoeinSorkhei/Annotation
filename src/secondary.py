@@ -21,7 +21,9 @@ def parse_args():
     parser.add_argument('--assert_bve', action='store_true')
     parser.add_argument('--dicoms_sanity', action='store_true')
     parser.add_argument('--stats', action='store_true')
+    parser.add_argument('--create_bins', action='store_true')
     parser.add_argument('--data_mode', type=str)
+    parser.add_argument('--annotator', type=str)
     return parser.parse_args()
 
 
@@ -469,25 +471,29 @@ def create_tmp_bins(annotator):
 
 
 def create_bins(annotator):
-    df = pd.read_csv('../data_local/select_ref_images_201014.csv', sep=',', engine='python')
+    n_bins = 8
+    csv_file = '../data_local/select_ref_images_201014.csv' if n_bins == 12 else '../data_local/select_8bin_ref_images_201018.csv'
+
+    df = pd.read_csv(csv_file, sep=',', engine='python')
     print('len initial df:', len(df))
+    # print_and_wait('')
 
     df = df[df[f'select_{annotator}'] == 1][['filename', f'select_{annotator}', f'rank_{annotator}_bin']]
     print('len reduced after selecting to:', len(df))
-
-    # print(df[f'rank_{annotator}_bin'])
-    # input()
+    # print_and_wait('')
 
     output_path = f'../outputs_train/output_{annotator}'
     make_dir_if_not_exists(output_path, verbose=False)
     print('Output path for annotator:', output_path)
+    # print_and_wait('')
 
-    for i in range(12):
+    for i in range(n_bins):
         bin_num = i + 1
         files = df[df[f'rank_{annotator}_bin'] == bin_num]['filename'].to_list()  # pure names
         bin_filename = f'{output_path}/bin_{i}.txt'
         write_list_to_file(files, bin_filename)
-        print(f'Extracted {len(files)} for bin num: {bin_num} and write to: {bin_filename}')
+        print(f'Extracted {len(files)} images for bin: {i} and write to: {bin_filename}')
+        # print_and_wait('')
 
 
 if __name__ == '__main__':
@@ -516,6 +522,9 @@ if __name__ == '__main__':
         # make_sections()
         count_test_cancer()
         # create_bins(annotator='edward')
+
+    elif args.create_bins:  # python second.by --create_bins --annotator fredrik
+        create_bins(args.annotator)
 
     elif args.resize_data:  # needs --subset
         resize_data(args.subset)

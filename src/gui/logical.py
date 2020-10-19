@@ -4,6 +4,7 @@ import concurrent.futures
 from logic import *
 import logic
 import globals
+import math
 
 
 # ========== functions for checking things/resetting
@@ -153,6 +154,9 @@ def revert_attributes(window):
     window.current_index = window.prev_result['current_index']
     window.comp_level = window.prev_result['comp_level']
     window.low, window.high = window.prev_result['low'], window.prev_result['high']
+    if window.data_mode == 'train':
+        window.mid = window.prev_result['mid']
+        log(f'In [revert_attributes]: reverted indices to: low = {window.low}, high = {window.high}, mid = {window.mid}')
 
     # for print purposes
     attrs_as_dict = {
@@ -210,6 +214,8 @@ def reset_attributes(window, exclude_inds=False, new_comp_level=None):
         else:
             window.low = 0
             window.high = len(window.bins_list) - 1
+            log(f'In [reset_attributes]: calling calc_and_set_mid_for_train...')
+            calc_and_set_mid_for_train(window)
 
     # reset comp level
     if new_comp_level is not None:
@@ -272,6 +278,43 @@ def update_ternary_indices(window, update_type):
         raise NotImplementedError('In [update_ternary_indices]: unexpected update_type')
 
 
+def is_in_lower_half(window):
+    assert len(window.bins_list) == 8
+    return window.high <= 3
+
+
+def is_in_higher_half(window):
+    assert len(window.bins_list) == 8
+    return window.low >= 4
+
+
+def calc_and_set_mid_for_train(window):
+    float_mid = (window.low + window.high) / 2
+    log(f'In [calc_and_set_mid_for_train]: low = {window.low}, high = {window.high}')
+
+    # initial mid selection
+    if window.low == 0 and window.high == len(window.bins_list) - 1:
+        mid = random.choice([math.floor(float_mid), math.ceil(float_mid)])
+        log(f'In [calc_mid_for_train]: float_mid = {float_mid}, RANDOMLY chosen mid: {mid}')
+        # mid = 4
+        # log(f'Hard-coded mid: {mid}')
+
+    else:  # hard-coded for 8 bins
+        if is_in_lower_half(window):
+            mid = math.ceil(float_mid)
+            log(f'In [calc_mid_for_train]: float_mid = {float_mid}, mid = {mid} CEILED since it is in the first lower half')
+
+        elif is_in_higher_half(window):
+            mid = math.floor(float_mid)
+            log(f'In [calc_mid_for_train]: float_mid = {float_mid}, mid = {mid} FLOORED since it is in the first higher half')
+
+        else:
+            raise NotImplementedError
+    window.mid = mid
+    log(f'In [calc_mid_for_train]: window attributed mid set to: {mid}\n')
+    return mid
+
+
 def update_binary_inds(window, rate):
     """
     This will update the low and high indices for the binary search. In case binary search is completed or 9 is
@@ -282,14 +325,20 @@ def update_binary_inds(window, rate):
     :param rate:
     :return:
     """
-    mid = (window.low + window.high) // 2  # for train data, this represents bin number
+    mid = (window.low + window.high) // 2 if window.data_mode == 'test' else window.mid  # for train data, this represents bin number
+    log(f'In [update_binary_inds]: mid is: {mid}')
+
     if window.data_mode == 'train':
         if rate == '1':
             window.low = mid + 1
-            log(f'In [binary_search_step]: low increased to {window.low}')
+            log(f'In [update_binary_inds]: low increased to {window.low}')
         else:  # '2'
             window.high = mid - 1
-            log(f'In [binary_search_step]: high decreased to {window.high}')
+            log(f'In [update_binary_inds]: high decreased to {window.high}')
+
+        # updating mid
+        log(f'In [update_binary_inds]: calling calc_and_set_mid_for_train...')
+        calc_and_set_mid_for_train(window)
 
     else:  # previous version for test mode (should be checked again - if needed)
         if rate == '1':  # rated as harder, go to the right half of the list
@@ -302,7 +351,8 @@ def update_binary_inds(window, rate):
             log(f'In [binary_search_step]: '
                 f'high decreased to {window.high}')
 
-    log(f'In [binary_search_step]: Updated indices: low = {window.low}, high = {window.high}')
+    mid_str = f', mid = {window.mid}' if hasattr(window, "mid") else ""
+    log(f'In [update_binary_inds]: Updated indices: low = {window.low}, high = {window.high}{mid_str}')
 
 
 def insert_with_ternary_inds(window, anchor, item):
@@ -327,7 +377,9 @@ def insert_with_ternary_inds(window, anchor, item):
 
 def insert_with_binary_inds(window, rate, item):
     # for test data
-    mid = (window.low + window.high) // 2  # for train data, this represents bin number
+    mid = (window.low + window.high) // 2 if window.data_mode == 'test' else window.mid  # for train data, this represents bin number
+    log(f'In [insert_with_binary_inds]: mid is: {mid}')
+
     if window.data_mode == 'test':
         if rate == '9' or rate == '2':  # 9 is pressed, so we insert directly
             insert_index = mid
@@ -344,8 +396,13 @@ def insert_with_binary_inds(window, rate, item):
         if window.high - window.low == 2:
             which_bin = mid - 1 if rate == '2' else mid if rate == '9' else mid + 1
         elif window.high - window.low == 1:
-            which_bin = mid if (rate == '9' or rate == '2') else mid + 1
-        else:  # 9 pressed or high - low = 0, which does not happen with 12 bins
+            if is_in_lower_half(window):
+                which_bin = mid if (rate == '9' or rate == '1') else mid - 1
+            elif is_in_higher_half(window):
+                which_bin = mid if (rate == '9' or rate == '2') else mid + 1
+            else:
+                raise NotImplementedError
+        else:  # 9 pressed or high = low
             which_bin = mid  # bin number to insert to
         bin_rep_type = globals.params['bin_rep_type']
 
@@ -389,6 +446,8 @@ def window_attributes(window):
         'low': window.low,
         'high': window.high
     }
+    if hasattr(window, 'mid'):
+        as_dict['mid'] = window.mid
 
     if hasattr(window, 'm1_anchor'):
         as_dict['m1_anchor'] = window.m1_anchor
@@ -472,7 +531,7 @@ def save_to_discarded_list(case, annotator, timestamp):
     filename = globals.params['discarded']
     string = f'{case} $ {annotator} $ {timestamp}'
     append_to_file(filename, string)
-    log(f'In [save_to_discarded_list]: saved case "{case}" to discarded list.')
+    log(f'In [save_to_discarded_list]: saved case "{case}" to discarded list.\n')
 
 
 def save_to_aborted_list(case, annotator, timestamp):
