@@ -23,3 +23,4 @@ test_results/
 radiologists_test_results/
 data_local_me/
 outputs_test
+outputs_test/*
