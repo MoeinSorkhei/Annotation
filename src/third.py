@@ -205,9 +205,6 @@ def main():
     if args.copy_common:   # python third.py --copy_common
         copy_common_imgs()
 
-    elif args.redistribute:  # python third.py --redistribute
-        distribute_cancers()
-
     elif args.count_total:  # python third.py --count_total
         count_total(with_sanity=True)  # confirm redistribution
 
@@ -215,6 +212,9 @@ def main():
         assert args.annotator is not None
         prepend_path_to_bins(args.annotator)
         confirm_bin_imgs_exist(args.annotator)
+
+    elif args.redistribute:  # python third.py --redistribute
+        distribute_cancers()
 
     # ========= not so important
     elif args.sanity:  # python third.py --sanity --all
