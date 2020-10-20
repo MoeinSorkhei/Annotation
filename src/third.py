@@ -189,7 +189,7 @@ def visualize_bins(annotator, bins_list):
     output_path = os.path.join('..', 'outputs_train', f'output_{annotator}')
     for i_bin in bins_list:
         bin_img_list = read_file_to_list(os.path.join(output_path, f'bin_{i_bin}.txt'))
-        vis_path = os.path.join('..', 'data_local_me', f'bins_visualized_{annotator}', f'bin_{i_bin}')
+        vis_path = os.path.join('..', 'data_local_me', f'bins_visualized_{annotator}_{len(bins_list)}bins', f'bin_{i_bin}')
         make_dir_if_not_exists(vis_path, verbose=False)
         image_list_to_png(bin_img_list, vis_path,)
 
@@ -217,7 +217,7 @@ def main():
 
     elif args.vis_bins:
         assert args.annotator is not None
-        visualize_bins(args.annotator, list(range(12)))
+        visualize_bins(args.annotator, list(range(8)))
 
     else:
         print('No argument specified')
