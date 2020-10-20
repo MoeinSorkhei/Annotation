@@ -132,6 +132,11 @@ def count_total(with_sanity=True):
         if i % 2 == 1:
             print('\n')
 
+    common_images = read_file_to_list(os.path.join('..', 'data_local', 'common_imgs.txt'))
+    train_imgs = pure_names(files_with_suffix(globals.params['train_imgs_dir'], '.dcm'), sep=os.path.sep)
+    existence_list = [file in train_imgs for file in common_images]
+    print(f'train_imgs has len: {len(train_imgs)}, all common_imgs exists: {all(existence_list)}\n')
+
     if with_sanity:
         dicoms_sanity(all_imgs=True)
 
