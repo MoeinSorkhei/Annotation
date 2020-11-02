@@ -518,7 +518,7 @@ class Window:
 
     def keep_current_state_in_prev_result(self, pressed):
         if self.session_name == 'sort':
-            if self.prev_result is None:  # either for m1 or normal case
+            if (self.data_mode == 'test' and self.prev_result is None) or self.data_mode == 'train':  # either for m1 (for test) or always (for train)
                 self.prev_result = {}
                 log(f'In [keep_current_state_in_prev_result]: prev_result is None ==> initialized prev_result with: '
                     f'an empty dictionary')
