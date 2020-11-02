@@ -24,3 +24,8 @@ radiologists_test_results/
 data_local_me/
 outputs_test
 outputs_test/*
+outputs_for_detect
+data_allocation
+radiologists_results
+src/detect.py
+src/secondary.py
