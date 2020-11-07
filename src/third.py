@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument('--vis_bins', action='store_true')
     parser.add_argument('--redistribute', action='store_true')
     parser.add_argument('--count_total', action='store_true')
+    parser.add_argument('--check_bins', action='store_true')
     parser.add_argument('--annotator', type=str)
     return parser.parse_args()
 
@@ -223,6 +224,9 @@ def main():
     elif args.vis_bins:
         assert args.annotator is not None
         visualize_bins(args.annotator, list(range(8)))
+
+    elif args.check_bins:
+        confirm_bin_imgs_exist(args.annotator)
 
     else:
         print('No argument specified')
